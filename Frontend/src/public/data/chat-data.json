@@ -1,0 +1,114 @@
+{
+  "default": {
+    "messages": [
+      {
+        "id": 1,
+        "type": "ai",
+        "content": "Welcome to NodPT! I'm your AI assistant ready to help you build powerful workflows. How can I assist you today?",
+        "timestamp": "2024-01-20T10:00:00Z"
+      },
+      {
+        "id": 2,
+        "type": "user",
+        "content": "Hi! I'm new to this. Can you show me how to create a simple data processing workflow?",
+        "timestamp": "2024-01-20T10:01:00Z"
+      },
+      {
+        "id": 3,
+        "type": "ai",
+        "content": "Absolutely! Let me guide you through creating a basic workflow:\n\n1. **Add an Input Node** - This will be your data source\n2. **Add a Process Node** - To transform your data\n3. **Add an Output Node** - To save your results\n\nWould you like me to help you add these nodes to get started?",
+        "timestamp": "2024-01-20T10:01:30Z"
+      },
+      {
+        "id": 4,
+        "type": "user",
+        "content": "Yes, that sounds perfect! How do I add the first node?",
+        "timestamp": "2024-01-20T10:02:00Z"
+      },
+      {
+        "id": 5,
+        "type": "ai",
+        "content": "Great! Here are two ways to add nodes:\n\n🔹 **Method 1:** Click the \"Nodes\" button in the top toolbar, then select \"Add Node\"\n🔹 **Method 2:** Right-click on the canvas and choose \"Add Node\" from the context menu\n\nTry adding your first Input Node now! I'll be here to help with the next steps.",
+        "timestamp": "2024-01-20T10:02:15Z"
+      },
+      {
+        "id": 6,
+        "type": "user",
+        "content": "I added a node! What's next?",
+        "timestamp": "2024-01-20T10:03:00Z"
+      },
+      {
+        "id": 7,
+        "type": "ai",
+        "content": "Excellent work! 🎉 Now you can:\n\n📝 **Configure the node** - Click on it and check the Properties tab\n🔗 **Connect nodes** - Drag from one node's output to another's input\n⚡ **Run your workflow** - Use the Build & Run buttons in the toolbar\n\nWhat would you like to explore next?",
+        "timestamp": "2024-01-20T10:03:30Z"
+      }
+    ]
+  },
+  "Process Data": {
+    "messages": [
+      {
+        "id": 1,
+        "type": "ai",
+        "content": "This is a data processing node. What would you like to configure?",
+        "timestamp": "2024-01-20T10:00:00Z"
+      },
+      {
+        "id": 2,
+        "type": "user",
+        "content": "How do I optimize the processing speed?",
+        "timestamp": "2024-01-20T10:01:00Z"
+      },
+      {
+        "id": 3,
+        "type": "ai",
+        "content": "You can optimize processing speed by:\n1. Increasing batch size\n2. Using parallel processing\n3. Optimizing data formats\n\nWould you like me to help configure any of these?",
+        "timestamp": "2024-01-20T10:01:30Z"
+      }
+    ]
+  },
+  "Filter Results": {
+    "messages": [
+      {
+        "id": 1,
+        "type": "ai",
+        "content": "This is a filter node. I can help you set up filtering criteria.",
+        "timestamp": "2024-01-20T11:00:00Z"
+      },
+      {
+        "id": 2,
+        "type": "user",
+        "content": "What filtering options are available?",
+        "timestamp": "2024-01-20T11:01:00Z"
+      },
+      {
+        "id": 3,
+        "type": "ai",
+        "content": "Available filters include:\n• Value-based filtering\n• Date range filtering\n• Pattern matching\n• Custom expressions\n\nWhich type would you like to configure?",
+        "timestamp": "2024-01-20T11:01:15Z"
+      }
+    ]
+  },
+  "Output": {
+    "messages": [
+      {
+        "id": 1,
+        "type": "ai",
+        "content": "This is an output node. I can help you configure export settings.",
+        "timestamp": "2024-01-20T11:00:00Z"
+      },
+      {
+        "id": 2,
+        "type": "user",
+        "content": "What export formats are supported?",
+        "timestamp": "2024-01-20T11:01:00Z"
+      },
+      {
+        "id": 3,
+        "type": "ai",
+        "content": "Supported formats include:\n• JSON\n• CSV\n• XML\n• Parquet\n• Excel\n\nWhich format would you prefer?",
+        "timestamp": "2024-01-20T11:01:15Z"
+      }
+    ]
+  }
+}

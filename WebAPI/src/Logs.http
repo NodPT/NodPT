@@ -1,0 +1,17 @@
+### Get All Logs
+GET https://localhost:7000/api/logs
+Accept: application/json
+
+###
+
+### Get All Projects (to test error logging if something fails)
+GET https://localhost:7000/api/projects
+Accept: application/json
+
+###
+
+### Get Project by ID (to test error logging if ID doesn't exist)
+GET https://localhost:7000/api/projects/999999
+Accept: application/json
+
+###

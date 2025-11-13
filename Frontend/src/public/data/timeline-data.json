@@ -1,0 +1,164 @@
+{
+  "default": [
+    {
+      "id": 1,
+      "action": "Project created",
+      "timestamp": "2024-01-20T09:00:00Z",
+      "user": "System",
+      "icon": "bi-plus-circle"
+    },
+    {
+      "id": 2,
+      "action": "First node added",
+      "timestamp": "2024-01-20T09:05:00Z",
+      "user": "User",
+      "icon": "bi-diagram-3"
+    },
+    {
+      "id": 3,
+      "action": "Node connection created",
+      "timestamp": "2024-01-20T09:07:00Z",
+      "user": "User",
+      "icon": "bi-arrow-right"
+    }
+  ],
+  "Process Data": [
+    {
+      "id": 1,
+      "action": "Node created: Data Processing",
+      "timestamp": "2024-01-20T10:05:00Z",
+      "user": "User",
+      "icon": "bi-plus-circle"
+    },
+    {
+      "id": 2,
+      "action": "Properties configured",
+      "timestamp": "2024-01-20T10:05:30Z",
+      "user": "User",
+      "icon": "bi-gear"
+    },
+    {
+      "id": 3,
+      "action": "Input connection added",
+      "timestamp": "2024-01-20T10:06:00Z",
+      "user": "User",
+      "icon": "bi-arrow-down"
+    },
+    {
+      "id": 4,
+      "action": "Validation rules updated",
+      "timestamp": "2024-01-20T10:08:00Z",
+      "user": "User",
+      "icon": "bi-check-circle"
+    },
+    {
+      "id": 5,
+      "action": "Processing logic modified",
+      "timestamp": "2024-01-20T10:12:00Z",
+      "user": "User",
+      "icon": "bi-code-square"
+    },
+    {
+      "id": 6,
+      "action": "Test run completed",
+      "timestamp": "2024-01-20T10:15:00Z",
+      "user": "System",
+      "icon": "bi-play-circle"
+    },
+    {
+      "id": 7,
+      "action": "Performance optimized",
+      "timestamp": "2024-01-20T10:20:00Z",
+      "user": "User",
+      "icon": "bi-speedometer2"
+    }
+  ],
+  "Filter Results": [
+    {
+      "id": 1,
+      "action": "Node created: Output Export",
+      "timestamp": "2024-01-20T10:10:00Z",
+      "user": "User",
+      "icon": "bi-plus-circle"
+    },
+    {
+      "id": 2,
+      "action": "Export format set to JSON",
+      "timestamp": "2024-01-20T10:10:30Z",
+      "user": "User",
+      "icon": "bi-file-earmark-code"
+    },
+    {
+      "id": 3,
+      "action": "Output path configured",
+      "timestamp": "2024-01-20T10:11:00Z",
+      "user": "User",
+      "icon": "bi-folder"
+    },
+    {
+      "id": 4,
+      "action": "Connection from processing node",
+      "timestamp": "2024-01-20T10:11:30Z",
+      "user": "User",
+      "icon": "bi-arrow-right"
+    },
+    {
+      "id": 5,
+      "action": "Export validation added",
+      "timestamp": "2024-01-20T10:12:30Z",
+      "user": "User",
+      "icon": "bi-shield-check"
+    },
+    {
+      "id": 6,
+      "action": "First successful export",
+      "timestamp": "2024-01-20T10:15:30Z",
+      "user": "System",
+      "icon": "bi-check-lg"
+    }
+  ],
+  "Output": [
+    {
+      "id": 1,
+      "action": "Node created: Output Export",
+      "timestamp": "2024-01-20T10:10:00Z",
+      "user": "User",
+      "icon": "bi-plus-circle"
+    },
+    {
+      "id": 2,
+      "action": "Export format set to JSON",
+      "timestamp": "2024-01-20T10:10:30Z",
+      "user": "User",
+      "icon": "bi-file-earmark-code"
+    },
+    {
+      "id": 3,
+      "action": "Output path configured",
+      "timestamp": "2024-01-20T10:11:00Z",
+      "user": "User",
+      "icon": "bi-folder"
+    },
+    {
+      "id": 4,
+      "action": "Connection from processing node",
+      "timestamp": "2024-01-20T10:11:30Z",
+      "user": "User",
+      "icon": "bi-arrow-right"
+    },
+    {
+      "id": 5,
+      "action": "Export validation added",
+      "timestamp": "2024-01-20T10:12:30Z",
+      "user": "User",
+      "icon": "bi-shield-check"
+    },
+    {
+      "id": 6,
+      "action": "First successful export",
+      "timestamp": "2024-01-20T10:15:30Z",
+      "user": "System",
+      "icon": "bi-check-lg"
+    }
+  ]
+}

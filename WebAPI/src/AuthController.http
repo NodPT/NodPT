@@ -1,0 +1,85 @@
+### AuthController Test Requests
+
+# Base URL
+@baseUrl = http://localhost:5049/api
+
+### Login with Firebase token (remember me enabled)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "firebaseToken": "firebase_token_testuser123_john",
+  "rememberMe": true
+}
+
+### Login with Firebase token (remember me disabled)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "firebaseToken": "firebase_token_newuser456_alice",
+  "rememberMe": false
+}
+
+### Test invalid Firebase token
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "firebaseToken": "invalid_token",
+  "rememberMe": false
+}
+
+### Refresh token (replace with actual refresh token from login response)
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "REPLACE_WITH_ACTUAL_REFRESH_TOKEN_FROM_LOGIN"
+}
+
+### Logout (replace with actual refresh token)
+POST {{baseUrl}}/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "REPLACE_WITH_ACTUAL_REFRESH_TOKEN"
+}
+
+### Get all users (to verify user creation and approval status)
+GET {{baseUrl}}/users
+
+### Get specific user by Firebase UID
+GET {{baseUrl}}/users/testuser123
+
+### Approve a user (Admin only - requires authentication)
+PUT {{baseUrl}}/users/newuser456/approve
+Content-Type: application/json
+
+{
+  "approved": true
+}
+
+### Revoke user approval (Admin only - requires authentication)
+PUT {{baseUrl}}/users/newuser456/approve
+Content-Type: application/json
+
+{
+  "approved": false
+}
+
+### Ban a user (Admin only - requires authentication)
+PUT {{baseUrl}}/users/newuser456/ban
+Content-Type: application/json
+
+{
+  "banned": true
+}
+
+### Unban a user (Admin only - requires authentication)
+PUT {{baseUrl}}/users/newuser456/ban
+Content-Type: application/json
+
+{
+  "banned": false
+}

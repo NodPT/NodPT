@@ -1,0 +1,35 @@
+version: "3.9"
+
+networks:
+  backend_network:
+    external: true   #
+    
+
+services:
+  nodpt-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nodpt-api:latest
+    container_name: nodpt-api
+    pull_policy: always
+
+    # 🔹 Load external environment file
+    env_file:
+      - /home/runner_user/envs/backend.env
+
+    # 🔹 Expose backend port
+    ports:
+      - "8846:8846"
+
+    # 🔹 Environment variables specific to ASP.NET Core
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8846
+
+    # 🔹 Docker network for DB & backend
+    networks:
+      - backend_network
+
+    # 🔹 Auto restart on failure
+    restart: always

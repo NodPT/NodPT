@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis/redis-stack:latest
+    ports:
+      - "6379:6379"
+      - "8001:8001"  # RedisInsight web UI
+    environment:
+      - REDIS_ARGS=--save 60 1
+    volumes:
+      - redis-data:/data
+
+  backend-executor:
+    build: .
+    environment:
+      - REDIS_CONNECTION=redis:6379
+      - MAX_MANAGER=5
+      - MAX_INSPECTOR=10
+      - MAX_AGENT=20
+      - MAX_TOTAL=50
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+volumes:
+  redis-data:

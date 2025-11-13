@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  frontend:
+    image: nodpt-frontend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_FIREBASE_SHIT: ${VITE_FIREBASE_SHIT}
+    container_name: nodpt_frontend
+    ports:
+      - "8443:80"
+    restart: always
+
+    # Run container as runner_user (UID:GID)
+    # user: "1001:1001"
+
+    # Load environment variables
+    env_file:
+      - /home/runner_user/envs/frontend.env
+
+    # Mount the environment variables file as read-only
+    volumes:
+      - /home/runner_user/envs/frontend.env:/home/runner_user/envs/frontend.env:ro
+
+    # Attach to existing external network
+    networks:
+      - frontend_network
+
+# ✅ Tell Docker Compose not to create it — use the already-existing one
+networks:
+  frontend_network:
+    external: true

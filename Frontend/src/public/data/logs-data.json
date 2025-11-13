@@ -1,0 +1,136 @@
+{
+  "default": [
+    {
+      "id": 1,
+      "level": "info",
+      "message": "System initialized",
+      "timestamp": "2024-01-20T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "level": "info",
+      "message": "Rete.js editor loaded",
+      "timestamp": "2024-01-20T10:00:01Z"
+    },
+    {
+      "id": 3,
+      "level": "info",
+      "message": "Waiting for user input...",
+      "timestamp": "2024-01-20T10:00:02Z"
+    }
+  ],
+  "Process Data": [
+    {
+      "id": 1,
+      "level": "info",
+      "message": "Data processing node initialized",
+      "timestamp": "2024-01-20T10:05:00Z"
+    },
+    {
+      "id": 2,
+      "level": "info", 
+      "message": "Input validation completed: 1000 records",
+      "timestamp": "2024-01-20T10:05:15Z"
+    },
+    {
+      "id": 3,
+      "level": "info",
+      "message": "Data transformation started",
+      "timestamp": "2024-01-20T10:05:16Z"
+    },
+    {
+      "id": 4,
+      "level": "warning",
+      "message": "Found 5 records with missing fields, applying defaults",
+      "timestamp": "2024-01-20T10:05:18Z"
+    },
+    {
+      "id": 5,
+      "level": "info",
+      "message": "Data transformation completed: 995 valid records",
+      "timestamp": "2024-01-20T10:05:20Z"
+    },
+    {
+      "id": 6,
+      "level": "success",
+      "message": "Processing completed successfully",
+      "timestamp": "2024-01-20T10:05:21Z"
+    }
+  ],
+  "Filter Results": [
+    {
+      "id": 1,
+      "level": "info",
+      "message": "Output node initialized",
+      "timestamp": "2024-01-20T10:10:00Z"
+    },
+    {
+      "id": 2,
+      "level": "info",
+      "message": "Received 995 records for export",
+      "timestamp": "2024-01-20T10:10:05Z"
+    },
+    {
+      "id": 3,
+      "level": "info",
+      "message": "Export format: JSON",
+      "timestamp": "2024-01-20T10:10:06Z"
+    },
+    {
+      "id": 4,
+      "level": "info",
+      "message": "Writing to file: /exports/data_20240120.json",
+      "timestamp": "2024-01-20T10:10:07Z"
+    },
+    {
+      "id": 5,
+      "level": "success",
+      "message": "Export completed: 995 records written",
+      "timestamp": "2024-01-20T10:10:12Z"
+    },
+    {
+      "id": 6,
+      "level": "info",
+      "message": "File size: 2.4 MB",
+      "timestamp": "2024-01-20T10:10:13Z"
+    }
+  ],
+  "Output": [
+    {
+      "id": 1,
+      "level": "info",
+      "message": "Output node initialized",
+      "timestamp": "2024-01-20T10:10:00Z"
+    },
+    {
+      "id": 2,
+      "level": "info",
+      "message": "Received 995 records for export",
+      "timestamp": "2024-01-20T10:10:05Z"
+    },
+    {
+      "id": 3,
+      "level": "info",
+      "message": "Export format: JSON",
+      "timestamp": "2024-01-20T10:10:06Z"
+    },
+    {
+      "id": 4,
+      "level": "info",
+      "message": "Writing to file: /exports/data_20240120.json",
+      "timestamp": "2024-01-20T10:10:07Z"
+    },
+    {
+      "id": 5,
+      "level": "success",
+      "message": "Export completed: 995 records written",
+      "timestamp": "2024-01-20T10:10:12Z"
+    },
+    {
+      "id": 6,
+      "level": "info",
+      "message": "File size: 2.4 MB",
+      "timestamp": "2024-01-20T10:10:13Z"
+    }
+  ]
+}
