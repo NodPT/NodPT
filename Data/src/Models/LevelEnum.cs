@@ -6,8 +6,8 @@ namespace NodPT.Data.Models
         Manager,
         Inspector,
         Worker,
-Compiler,
-Tester,
-Runner
+        Compiler,
+        Tester,
+        Runner
     }
 }

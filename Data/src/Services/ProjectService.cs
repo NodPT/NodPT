@@ -75,9 +75,9 @@ namespace NodPT.Data.Services
 
         public List<ProjectDto> GetAllProjects()
         {
-            
+
             var projects = new XPCollection<Project>(session);
-            
+
             return projects.Select(p => new ProjectDto
             {
                 Id = p.Oid,
@@ -96,11 +96,11 @@ namespace NodPT.Data.Services
 
         public ProjectDto? GetProject(int id)
         {
-            
+
             var project = session.GetObjectByKey<Project>(id);
-            
+
             if (project == null) return null;
-            
+
             return new ProjectDto
             {
                 Id = project.Oid,
@@ -120,9 +120,9 @@ namespace NodPT.Data.Services
         public List<ProjectDto> GetProjectsByUser(string firebaseUid)
         {
             var user = User.GetUser(firebaseUid, this.session);// session.Query<User>().FirstOrDefault(x=>x.FirebaseUid == userId);
-            
+
             if (user == null) return new List<ProjectDto>();
-            
+
             return user.Projects.Select(p => new ProjectDto
             {
                 Id = p.Oid,
@@ -139,36 +139,51 @@ namespace NodPT.Data.Services
             }).ToList();
         }
 
-        public ProjectDto CreateProject(ProjectDto projectDto)
+        public ProjectDto CreateProject(ProjectDto projectDto, string firebaseUid)
         {
-            
-            session.BeginTransaction();
-            
             try
             {
-                var user = projectDto.UserId.HasValue 
-                    ? session.GetObjectByKey<User>(projectDto.UserId.Value) 
-                    : null;
-                var template = projectDto.TemplateId.HasValue 
-                    ? session.GetObjectByKey<Template>(projectDto.TemplateId.Value) 
-                    : null;
-                
+                if (session == null)
+                {
+                    throw new ArgumentNullException(nameof(session), "Session cannot be null");
+                }
+
+                var user = User.GetUser(firebaseUid, session);
+                if (user == null)
+                {
+                    throw new ArgumentException("Invalid Firebase UID", nameof(firebaseUid));
+                }
+
+                if (projectDto.TemplateId == null)
+                {
+                    throw new ArgumentException("Template ID cannot be null", nameof(projectDto.TemplateId));
+                }
+
+
+                session.BeginTransaction();
+                var template = session.Query<Template>().FirstOrDefault(t => t.Oid == projectDto.TemplateId);
+
+                if (template == null)
+                {
+                    throw new ArgumentException("Invalid Template ID", nameof(projectDto.TemplateId));
+                }
+
                 var project = new Project(session)
                 {
                     Name = projectDto.Name,
                     Description = projectDto.Description,
-                    IsActive = projectDto.IsActive,
+                    IsActive = true,
                     User = user,
                     Template = template,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
-                
+
                 session.Save(project);
-                
+
                 // Check if a default Director-level node exists for this project
                 var existingDirectorNode = project.Nodes.FirstOrDefault(n => n.Level == LevelEnum.Director);
-                
+
                 if (existingDirectorNode == null)
                 {
                     // Create a default Director-level node
@@ -185,19 +200,19 @@ namespace NodPT.Data.Services
                         UpdatedAt = DateTime.UtcNow,
                         Status = "Active"
                     };
-                    
+
                     session.Save(defaultNode);
                 }
-                
+
                 session.CommitTransaction();
-                
+
                 projectDto.Id = project.Oid;
                 projectDto.CreatedAt = project.CreatedAt;
                 projectDto.UpdatedAt = project.UpdatedAt;
                 projectDto.UserEmail = project.User?.Email;
                 projectDto.TemplateName = project.Template?.Name;
                 projectDto.Nodes = GetProjectNodes(project);
-                
+                projectDto.IsActive = true;
                 return projectDto;
             }
             catch
@@ -209,38 +224,38 @@ namespace NodPT.Data.Services
 
         public ProjectDto? UpdateProject(int id, ProjectDto projectDto)
         {
-            
+
             session.BeginTransaction();
-            
+
             try
             {
                 var project = session.GetObjectByKey<Project>(id);
-                
+
                 if (project == null) return null;
-                
-                var user = projectDto.UserId.HasValue 
-                    ? session.GetObjectByKey<User>(projectDto.UserId.Value) 
+
+                var user = projectDto.UserId.HasValue
+                    ? session.GetObjectByKey<User>(projectDto.UserId.Value)
                     : null;
-                var template = projectDto.TemplateId.HasValue 
-                    ? session.GetObjectByKey<Template>(projectDto.TemplateId.Value) 
+                var template = projectDto.TemplateId.HasValue
+                    ? session.GetObjectByKey<Template>(projectDto.TemplateId.Value)
                     : null;
-                
+
                 project.Name = projectDto.Name;
                 project.Description = projectDto.Description;
                 project.IsActive = projectDto.IsActive;
                 project.User = user;
                 project.Template = template;
                 project.UpdatedAt = DateTime.UtcNow;
-                
+
                 session.Save(project);
                 session.CommitTransaction();
-                
+
                 projectDto.Id = project.Oid;
                 projectDto.UpdatedAt = project.UpdatedAt;
                 projectDto.UserEmail = project.User?.Email;
                 projectDto.TemplateName = project.Template?.Name;
                 projectDto.Nodes = GetProjectNodes(project);
-                
+
                 return projectDto;
             }
             catch
@@ -250,20 +265,35 @@ namespace NodPT.Data.Services
             }
         }
 
-        public bool DeleteProject(int id)
+        public bool DeleteProject(int id, string firebaseUid)
         {
-            
+
+            if (session == null)
+            {
+                throw new ArgumentNullException(nameof(session), "Session cannot be null");
+            }
+
+            var user = User.GetUser(firebaseUid, session);
+            if (user == null)
+            {
+                throw new ArgumentException("Invalid Firebase UID", nameof(firebaseUid));
+            }
+
             session.BeginTransaction();
-            
+
             try
             {
-                var project = session.GetObjectByKey<Project>(id);
-                
-                if (project == null) return false;
-                
+                var project = session.Query<Project>()
+                    .FirstOrDefault(p => p.Oid == id && p.User != null && p.User.Oid == user.Oid);
+
+                if (project == null)
+                {
+                    throw new ArgumentException("Project not found or user unauthorized", nameof(id));
+                }
+
                 session.Delete(project);
                 session.CommitTransaction();
-                
+
                 return true;
             }
             catch

@@ -10,7 +10,7 @@ namespace NodPT.Data.Services
         {
             using var session = new Session();
             var templates = new XPCollection<Template>(session);
-            
+
             return templates.Select(t => new TemplateDto
             {
                 Id = t.Oid,
@@ -28,9 +28,9 @@ namespace NodPT.Data.Services
         {
             using var session = new Session();
             var template = session.GetObjectByKey<Template>(id);
-            
+
             if (template == null) return null;
-            
+
             return new TemplateDto
             {
                 Id = template.Oid,
@@ -48,7 +48,7 @@ namespace NodPT.Data.Services
         {
             using var session = new Session();
             session.BeginTransaction();
-            
+
             try
             {
                 var template = new Template(session)
@@ -61,14 +61,14 @@ namespace NodPT.Data.Services
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
-                
+
                 session.Save(template);
                 session.CommitTransaction();
-                
+
                 templateDto.Id = template.Oid;
                 templateDto.CreatedAt = template.CreatedAt;
                 templateDto.UpdatedAt = template.UpdatedAt;
-                
+
                 return templateDto;
             }
             catch
@@ -82,26 +82,26 @@ namespace NodPT.Data.Services
         {
             using var session = new Session();
             session.BeginTransaction();
-            
+
             try
             {
                 var template = session.GetObjectByKey<Template>(id);
-                
+
                 if (template == null) return null;
-                
+
                 template.Name = templateDto.Name;
                 template.Description = templateDto.Description;
                 template.Category = templateDto.Category;
                 template.Version = templateDto.Version;
                 template.IsActive = templateDto.IsActive;
                 template.UpdatedAt = DateTime.UtcNow;
-                
+
                 session.Save(template);
                 session.CommitTransaction();
-                
+
                 templateDto.Id = template.Oid;
                 templateDto.UpdatedAt = template.UpdatedAt;
-                
+
                 return templateDto;
             }
             catch
@@ -115,16 +115,16 @@ namespace NodPT.Data.Services
         {
             using var session = new Session();
             session.BeginTransaction();
-            
+
             try
             {
                 var template = session.GetObjectByKey<Template>(id);
-                
+
                 if (template == null) return false;
-                
+
                 session.Delete(template);
                 session.CommitTransaction();
-                
+
                 return true;
             }
             catch
