@@ -59,6 +59,12 @@ jobs:
             --build-arg VITE_FIREBASE_SHIT="${VITE_FIREBASE_SHIT}"
           echo "Build completed."
 
+      # 6️⃣ Remove old container (required because container_name is fixed)
+      - name: 6. Remove old container
+        working-directory: WebAPI
+        run: |
+          docker rm -f nodpt_api || true
+
       # 6️⃣ Validate built image (Nginx config check)
       - name: 6. Validate Docker and Nginx configuration
         run: |
