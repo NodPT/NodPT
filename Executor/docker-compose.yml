@@ -12,7 +12,11 @@ services:
       - redis-data:/data
 
   backend-executor:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nodpt-backend-executor:latest
+    container_name: nodpt-backend-executor
     environment:
       - REDIS_CONNECTION=redis:6379
       - MAX_MANAGER=5

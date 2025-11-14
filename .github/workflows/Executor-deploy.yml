@@ -1,0 +1,36 @@
+name: Executor Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: Executor
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Executor container
+        run: |
+          docker compose build --pull --no-cache
+
+      - name: Restart Executor stack
+        run: |
+          docker compose down || true
+          docker compose up -d --build
+
+      - name: Show active containers
+        run: docker ps
+
+      - name: Tail logs on failure
+        if: failure()
+        run: docker compose logs

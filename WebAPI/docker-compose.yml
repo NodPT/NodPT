@@ -3,13 +3,13 @@ version: "3.9"
 networks:
   backend_network:
     external: true   #
-    
+
 
 services:
   nodpt-api:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: WebAPI/Dockerfile
     image: nodpt-api:latest
     container_name: nodpt-api
     pull_policy: always

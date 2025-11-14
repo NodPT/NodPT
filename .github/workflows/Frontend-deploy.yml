@@ -1,18 +1,22 @@
 name: Build & Deploy Static Frontend (Safe Deploy)
-permissions:
-  contents: read
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build_and_deploy:
     runs-on: self-hosted
-
     env:
-      VITE_FIREBASE_SHIT: ${{ secrets.VITE_FIREBASE_SHIT }} 
+      VITE_FIREBASE_SHIT: ${{ secrets.VITE_FIREBASE_SHIT }}
+    defaults:
+      run:
+        working-directory: Frontend
 
     steps:
       # 1️⃣ Checkout latest code (force clean pull)

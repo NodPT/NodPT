@@ -1,0 +1,21 @@
+version: "3.9"
+
+networks:
+  backend_network:
+    external: true
+
+services:
+  nodpt-signalr:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nodpt-signalr:latest
+    container_name: nodpt-signalr
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5288
+    ports:
+      - "5288:5288"
+    restart: always
+    networks:
+      - backend_network

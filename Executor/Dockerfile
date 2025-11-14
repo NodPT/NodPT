@@ -6,12 +6,12 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy project file and restore dependencies
-COPY ["BackendExecutor.csproj", "./"]
+# Copy project file and restore dependencies from the src folder
+COPY src/BackendExecutor.csproj ./
 RUN dotnet restore "BackendExecutor.csproj"
 
 # Copy source code and build
-COPY . .
+COPY src/. ./
 RUN dotnet build "BackendExecutor.csproj" -c Release -o /app/build
 
 # Publish the application
@@ -21,7 +21,7 @@ RUN dotnet publish "BackendExecutor.csproj" -c Release -o /app/publish /p:UseApp
 # Create final runtime image
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=publish /app/publish ./
 
 # Set environment variables with defaults
 ENV REDIS_CONNECTION=localhost:6379
