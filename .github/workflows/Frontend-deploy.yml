@@ -19,74 +19,78 @@ jobs:
         working-directory: Frontend
 
     steps:
+
       # 1️⃣ Checkout latest code (force clean pull)
-      - name: Checkout latest repository code
+      - name: 1. Checkout latest repository code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0          # fetch full commit history
-          clean: true             # remove old workspace files
-          ref: main               # ensure correct branch
+          fetch-depth: 0
+          clean: true
+          ref: main
 
-      # 2️⃣ Ensure the repo is truly up to date (double-safe)
-      - name: Force update repository
+      # 2️⃣ Ensure the repo is updated to latest commit
+      - name: 2. Force update repository
         run: |
           git fetch origin main
           git reset --hard origin/main
-          echo "✅ Repository now at latest commit:"
+          echo "Repository now at latest commit:"
           git log -1 --oneline
 
       # 3️⃣ Verify Docker and Compose versions
-      - name: Docker environment
+      - name: 3. Docker environment
         run: |
           docker version
           docker compose version
 
-      # 4️⃣ Clean old Docker images (optional but ensures no cache)
-      - name: Clean old Docker images
+      # 4️⃣ Clean old Docker images (optional but ensures fresh build)
+      - name: 4. Clean old Docker images
         run: |
-          echo "🧹 Cleaning up old Docker images..."
+          echo "Cleaning old Docker images..."
           docker image prune -a -f || true
-          echo "✅ Old images removed."
+          echo "Done."
 
       # 5️⃣ Build Docker image (force fresh build)
-      - name: Build Docker image (no cache)
+      - name: 5. Build Docker image (no cache)
         run: |
-          echo "🛠️ Building Docker image from latest source..."
-          docker compose build --no-cache --progress=plain --build-arg VITE_FIREBASE_SHIT="${VITE_FIREBASE_SHIT}"
-          echo "✅ Fresh Docker build completed."
+          echo "Building Docker image from latest source..."
+          docker compose build \
+            --no-cache \
+            --progress=plain \
+            --build-arg VITE_FIREBASE_SHIT="${VITE_FIREBASE_SHIT}"
+          echo "Build completed."
 
-      # 6️⃣ Test built image (verify Nginx syntax)
-      - name: Test build success
+      # 6️⃣ Validate built image (Nginx config check)
+      - name: 6. Validate Docker and Nginx configuration
         run: |
-          echo "🧪 Running container test..."
-          docker run --rm nodpt-frontend:latest nginx -t || (echo "❌ Nginx test failed" && exit 1)
-          echo "✅ Nginx syntax OK."
+          echo "Testing Nginx configuration..."
+          docker run --rm frontend:latest nginx -t
+          echo "Nginx configuration OK."
 
-      # 7️⃣ Stop current running containers safely
-      - name: Stop current deployment
+      # 7️⃣ Stop current deployment
+      - name: 7. Stop current deployment
         run: |
-          echo "🛑 Stopping existing deployment..."
+          echo "Stopping existing deployment..."
           docker compose down || true
-          echo "✅ Old containers stopped."
+          echo "Stopped."
 
-      # 8️⃣ Start new deployment (with latest build)
-      - name: Deploy new version
+      # 8️⃣ Start new deployment
+      - name: 8. Deploy new version
         run: |
-          echo "🚀 Starting new deployment..."
+          echo "Starting new deployment..."
           docker compose up -d --build
-          echo "✅ Deployment started."
+          echo "Deployment started."
 
-      # 9️⃣ Verify running containers
-      - name: Check running containers
+      # 9️⃣ List active containers
+      - name: 9. Check running containers
         run: |
-          echo "📋 Active containers:"
+          echo "Active containers:"
           docker ps
 
       # 🔟 Health check after deployment
-      - name: Health check
+      - name: 10. Health check
         run: |
-          echo "⌛ Waiting for service to start..."
+          echo "Waiting for service to start..."
           sleep 5
-          echo "🌐 Performing health check on localhost:8443"
-          curl -I http://localhost:8443 || (echo "❌ Health check failed" && exit 1)
-          echo "✅ Health check passed."
+          echo "Performing health check on http://localhost:8443"
+          curl -I http://localhost:8443 || (echo "Health check failed" && exit 1)
+          echo "Health check passed."

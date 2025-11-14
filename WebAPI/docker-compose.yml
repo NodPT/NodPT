@@ -2,8 +2,7 @@ version: "3.9"
 
 networks:
   backend_network:
-    external: true   #
-
+    external: true #
 
 services:
   nodpt-api:
