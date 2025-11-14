@@ -63,7 +63,7 @@ jobs:
       - name: 6. Validate Docker and Nginx configuration
         run: |
           echo "Testing Nginx configuration..."
-          docker run --rm frontend:latest nginx -t
+          docker run --rm nodpt-frontend:latest nginx -t
           echo "Nginx configuration OK."
 
       # 7️⃣ Stop current deployment
