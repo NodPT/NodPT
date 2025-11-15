@@ -1,6 +1,4 @@
 name: Build & Deploy Static Frontend (Safe Deploy)
-permissions:
-   contents: read
 
 on:
    push:
@@ -11,6 +9,8 @@ on:
 jobs:
    build_and_deploy:
       runs-on: self-hosted
+      permissions:
+         contents: read
       env:
          VITE_FIREBASE_SHIT: ${{ secrets.VITE_FIREBASE_SHIT }}
       defaults:
