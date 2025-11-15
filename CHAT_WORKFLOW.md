@@ -63,8 +63,8 @@ Frontend (ReceiveAIResponse)
 **Response**:
 ```json
 {
-  "status": "queued",
-  "messageId": "message-guid"
+  "Status": "queued",
+  "MessageId": "message-guid"
 }
 ```
 
