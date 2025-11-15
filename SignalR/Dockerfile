@@ -15,6 +15,7 @@ COPY  SignalR/src/ SignalR/src/
 RUN dotnet build SignalR/src/NodPT.SignalR.csproj -c Release -o /app/build
 
 # Publish the SignalR application
+FROM build AS publish
 RUN dotnet publish SignalR/src/NodPT.SignalR.csproj -c Release -o /app/publish /p:UseAppHost=false
 
 # ===== Runtime stage =====
