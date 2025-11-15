@@ -53,9 +53,17 @@ public class RedisAiListener : BackgroundService
 
                 _logger.LogInformation($"AI response sent to client: {responseDto.ConnectionId}");
             }
+            catch (JsonException jsonEx)
+            {
+                _logger.LogError(jsonEx, "JSON deserialization error processing AI response from Redis");
+            }
+            catch (RedisException redisEx)
+            {
+                _logger.LogError(redisEx, "Redis error processing AI response from Redis");
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing AI response from Redis");
+                _logger.LogError(ex, "Unexpected error processing AI response from Redis");
             }
         });
 
