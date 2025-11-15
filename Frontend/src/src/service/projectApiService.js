@@ -1,6 +1,4 @@
-import axios from 'axios';
 import { getToken } from './tokenStorage';
-import { inject } from 'vue';
 
 // Use environment variable if available, otherwise fallback to localhost
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5049/api';
@@ -9,8 +7,15 @@ class ProjectApiService {
 
 	constructor() {
 		this.baseURL = `${API_BASE_URL}/projects`;
-		this.api = inject('api');
+		this.api = null;
+	}
 
+	/**
+	 * Initialize the API plugin reference
+	 * @param {Object} api - The injected API plugin
+	 */
+	setApi(api) {
+		this.api = api;
 	}
 
 	/**
@@ -63,7 +68,7 @@ class ProjectApiService {
 	async getProject(id) {
 		try {
 			const response = await this.api.get(`${this.baseURL}/${id}`);
-			return response.data;
+			return response;
 		} catch (error) {
 			console.error('Failed to get project:', error);
 			throw error;

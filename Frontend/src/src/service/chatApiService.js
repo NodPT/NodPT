@@ -1,11 +1,18 @@
-import axios from 'axios';
-
 // Use environment variable if available, otherwise fallback to localhost
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5049/api';
 
 class ChatApiService {
     constructor() {
         this.baseURL = `${API_BASE_URL}/chat`;
+        this.api = null;
+    }
+
+    /**
+     * Initialize the API plugin reference
+     * @param {Object} api - The injected API plugin
+     */
+    setApi(api) {
+        this.api = api;
     }
 
     /**
@@ -24,8 +31,8 @@ class ChatApiService {
                 disliked: false
             };
 
-            const response = await axios.post(`${this.baseURL}/send`, messageDto);
-            return response.data;
+            const response = await this.api.post(`${this.baseURL}/send`, messageDto);
+            return response;
         } catch (error) {
             console.error('Failed to send message:', error);
             throw error;
@@ -39,10 +46,10 @@ class ChatApiService {
      */
     async markAsSolution(nodeId = null) {
         try {
-            const response = await axios.post(`${this.baseURL}/mark-solution`, {
+            const response = await this.api.post(`${this.baseURL}/mark-solution`, {
                 nodeId: nodeId
             });
-            return response.data;
+            return response;
         } catch (error) {
             console.error('Failed to mark as solution:', error);
             throw error;
@@ -56,8 +63,8 @@ class ChatApiService {
      */
     async getMessagesByNodeId(nodeId) {
         try {
-            const response = await axios.get(`${this.baseURL}/node/${nodeId}`);
-            return response.data;
+            const response = await this.api.get(`${this.baseURL}/node/${nodeId}`);
+            return response;
         } catch (error) {
             console.error('Failed to get messages by node ID:', error);
             throw error;
@@ -71,8 +78,8 @@ class ChatApiService {
      */
     async getPersistedMessagesByNodeId(nodeId) {
         try {
-            const response = await axios.get(`${API_BASE_URL}/chatmessages/node/${nodeId}`);
-            return response.data;
+            const response = await this.api.get(`/chatmessages/node/${nodeId}`);
+            return response;
         } catch (error) {
             console.error('Failed to get persisted messages by node ID:', error);
             throw error;
@@ -85,8 +92,8 @@ class ChatApiService {
      */
     async getAllMessages() {
         try {
-            const response = await axios.get(this.baseURL);
-            return response.data;
+            const response = await this.api.get(this.baseURL);
+            return response;
         } catch (error) {
             console.error('Failed to get all messages:', error);
             throw error;
@@ -100,10 +107,10 @@ class ChatApiService {
      */
     async likeMessage(messageId) {
         try {
-            const response = await axios.post(`${this.baseURL}/like`, {
+            const response = await this.api.post(`${this.baseURL}/like`, {
                 chatMessageId: messageId
             });
-            return response.data;
+            return response;
         } catch (error) {
             console.error('Failed to like message:', error);
             throw error;
@@ -117,10 +124,10 @@ class ChatApiService {
      */
     async dislikeMessage(messageId) {
         try {
-            const response = await axios.post(`${this.baseURL}/dislike`, {
+            const response = await this.api.post(`${this.baseURL}/dislike`, {
                 chatMessageId: messageId
             });
-            return response.data;
+            return response;
         } catch (error) {
             console.error('Failed to dislike message:', error);
             throw error;
@@ -134,10 +141,10 @@ class ChatApiService {
      */
     async regenerateMessage(messageId) {
         try {
-            const response = await axios.post(`${this.baseURL}/regenerate`, {
+            const response = await this.api.post(`${this.baseURL}/regenerate`, {
                 chatMessageId: messageId
             });
-            return response.data;
+            return response;
         } catch (error) {
             console.error('Failed to regenerate message:', error);
             throw error;

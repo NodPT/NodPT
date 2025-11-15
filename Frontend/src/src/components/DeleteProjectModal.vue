@@ -61,6 +61,8 @@ export default {
   name: 'DeleteProjectModal',
   setup() {
     const toast = inject('toast')
+    const api = inject('api')
+    projectApiService.setApi(api)
     const route = useRoute()
     const router = useRouter()
     const confirmProjectName = ref('')
