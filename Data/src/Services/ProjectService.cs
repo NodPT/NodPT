@@ -202,6 +202,21 @@ namespace NodPT.Data.Services
                     };
 
                     session.Save(defaultNode);
+
+                    // Add a first chat message to the Director node
+                    var firstMessage = new ChatMessage(session)
+                    {
+                        Sender = "ai",
+                        Message = "Hello, how can I help you today?",
+                        Timestamp = DateTime.UtcNow,
+                        Node = defaultNode,
+                        User = user,
+                        MarkedAsSolution = false,
+                        Liked = false,
+                        Disliked = false
+                    };
+
+                    session.Save(firstMessage);
                 }
 
                 session.CommitTransaction();
