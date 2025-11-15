@@ -1,24 +1,30 @@
 # ===== Build stage =====
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copy project file from the new structure and restore dependencies
-COPY src/NodPT.SignalR.csproj ./
-RUN dotnet restore NodPT.SignalR.csproj
+COPY SignalR/src/NodPT.SignalR.csproj SignalR/src/
+
+# Restore dependencies for the API (will also restore the Data project reference)
+RUN dotnet restore SignalR/src/NodPT.SignalR.csproj
 
 # Copy all source files
-COPY src/. ./
+COPY  SignalR/src/ SignalR/src/
+
+# Build the SignalR project
+RUN dotnet build SignalR/src/NodPT.SignalR.csproj -c Release -o /app/build
 
 # Publish the SignalR application
-RUN dotnet publish NodPT.SignalR.csproj -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish SignalR/src/NodPT.SignalR.csproj -c Release -o /app/publish /p:UseAppHost=false
 
 # ===== Runtime stage =====
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
+EXPOSE 8847
 
-ENV ASPNETCORE_URLS=http://+:5288
-EXPOSE 5288
+# Install curl
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-COPY --from=build /app/publish ./
+COPY --from=publish /app/publish ./
 
 ENTRYPOINT ["dotnet", "NodPT.SignalR.dll"]

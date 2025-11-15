@@ -3,19 +3,35 @@ version: "3.9"
 networks:
   backend_network:
     external: true
+  frontend_network:
+    external: true
 
 services:
   nodpt-signalr:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: . .
+      dockerfile: SignalR/Dockerfile
     image: nodpt-signalr:latest
     container_name: nodpt-signalr
+    pull_policy: always
+
+    # 🔹 Load external environment file
+    env_file:
+      - /home/runner_user/envs/backend.env
+
+    # 🔹 Expose backend port 
+    ports:
+      - "8847:8847"
+
+    # 🔹 Environment variables specific to ASP.NET Core
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:5288
-    ports:
-      - "5288:5288"
-    restart: always
+      - ASPNETCORE_URLS=http://+:8847
+
+   # 🔹 Docker networks for DB, backend & frontend
     networks:
       - backend_network
+      - frontend_network
+
+    # 🔹 Auto restart on failure
+    restart: always

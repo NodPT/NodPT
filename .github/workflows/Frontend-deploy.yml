@@ -1,4 +1,4 @@
-name: Build & Deploy Static Frontend (Safe Deploy)
+name: Frontend Build and Deploy (Self-Hosted)
 
 on:
    push:

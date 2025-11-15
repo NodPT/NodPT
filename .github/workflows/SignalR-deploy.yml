@@ -1,11 +1,10 @@
-name: WebAPI Build and Deploy (Self-Hosted)
+name: SignalR Build and Deploy (Self-Hosted)
 
 on:
    push:
       branches: [main, master]
       paths:
-         - 'WebAPI/**'
-         - 'Data/**'
+         - 'SignalR/**'
 
 jobs:
    build-and-deploy:
@@ -26,13 +25,9 @@ jobs:
               pwd
               ls
               echo ""
-              echo "WebAPI contents:"
-              ls WebAPI/src
-              echo ""
-              echo "Data contents:"
-              ls Data/src
-              test -f WebAPI/src/NodPT.API.csproj
-              test -f Data/src/NodPT.Data.csproj
+              echo "SignalR contents:"
+              ls SignalR/src
+              test -f SignalR/src/NodPT.SignalR.csproj
 
          # 3️⃣ Setup Docker Buildx
          - name: 3. Set up Docker Buildx
@@ -46,36 +41,36 @@ jobs:
 
          # 5️⃣ Build Docker image
          - name: 5. Build Docker image
-           working-directory: WebAPI
+           working-directory: SignalR
            run: |
               docker compose build --pull --no-cache
 
          # 6️⃣ Remove old container (required because container_name is fixed)
          - name: 6. Remove old container
-           working-directory: WebAPI
+           working-directory: SignalR
            run: |
-              docker rm -f nodpt-api || true
+              docker rm -f nodpt-signalr || true
 
          # 7️⃣ Stop current deployment
          - name: 7. Stop current deployment
-           working-directory: WebAPI
+           working-directory: SignalR
            run: |
               docker compose down || true
 
          # 8️⃣ Deploy new version
          - name: 8. Deploy new version
-           working-directory: WebAPI
+           working-directory: SignalR
            run: |
               docker compose up -d --build --pull always
 
          # 9️⃣ Verify deployment health
          - name: 9. Verify deployment health
-           working-directory: WebAPI
+           working-directory: SignalR
            run: |
-              echo "Waiting for API health endpoint..."
+              echo "Waiting for SignalR health endpoint..."
               for i in {1..3}; do
-                if curl -fsS http://localhost:8846/api/health > /dev/null; then
-                  echo "API is healthy"
+                if curl -fsS http://localhost:8847/signalR/ping > /dev/null; then
+                  echo "SignalR is healthy"
                   exit 0
                 fi
                 echo "Attempt $i/3 failed, retrying..."
@@ -88,5 +83,5 @@ jobs:
          # 🔟 Show logs on failure
          - name: 10. Show logs on failure
            if: failure()
-           working-directory: WebAPI
+           working-directory: SignalR
            run: docker compose logs
