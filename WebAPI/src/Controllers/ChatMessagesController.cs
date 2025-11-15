@@ -63,5 +63,35 @@ namespace NodPT.API.Controllers
             
             return Ok(messageDtos);
         }
+
+        [HttpGet("node/{nodeId}")]
+        
+        public IActionResult GetChatMessagesByNode(string nodeId)
+        {
+            using var session = new Session();
+            var node = session.FindObject<Node>(new DevExpress.Data.Filtering.BinaryOperator("Id", nodeId));
+            
+            if (node == null) return NotFound("Node not found");
+            
+            var messages = new XPCollection<ChatMessage>(session, 
+                new DevExpress.Data.Filtering.BinaryOperator("Node", node));
+            
+            var messageDtos = messages.OrderBy(m => m.Timestamp).Select(m => new
+            {
+                m.Oid,
+                m.Sender,
+                m.Message,
+                m.Timestamp,
+                m.MarkedAsSolution,
+                m.Liked,
+                m.Disliked,
+                NodeId = m.Node?.Id,
+                NodeName = m.Node?.Name,
+                UserFirebaseUid = m.User?.FirebaseUid,
+                UserDisplayName = m.User?.DisplayName
+            }).ToList();
+            
+            return Ok(messageDtos);
+        }
     }
 }
