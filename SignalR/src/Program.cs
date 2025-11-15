@@ -7,6 +7,9 @@ using Google.Apis.Auth.OAuth2;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
+// If credentials are not available, log a warning but continue
+// This allows the server to run in development mode without Firebase
+var logger = LoggerFactory.Create(config => config.AddConsole()).CreateLogger("Startup");
 
 // 🔹 Load .env in development
 #if DEBUG
@@ -45,41 +48,34 @@ if (string.IsNullOrWhiteSpace(firebaseProjectId))
 
 // Initialize Firebase Admin SDK
 // Note: For production, you should set GOOGLE_APPLICATION_CREDENTIALS environment variable
-// or use builder.Configuration to load credentials from appsettings.json
 try
 {
     if (FirebaseApp.DefaultInstance == null)
     {
-        // Try to get credentials from environment
-        var credential = GoogleCredential.GetApplicationDefault();
-        FirebaseApp.Create(new AppOptions()
+        var credentialJson = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
+        if (!string.IsNullOrWhiteSpace(credentialJson))
         {
-            Credential = credential,
-        });
+            try
+            {
+                FirebaseApp.Create(new AppOptions
+                {
+                    Credential = GoogleCredential.FromJson(credentialJson)
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning($"Failed to initialize FirebaseApp: {ex.Message}");
+            }
+        }
+        else
+        {
+            logger.LogWarning("WARNING: GOOGLE_APPLICATION_CREDENTIALS env var not set (expects JSON content).");
+        }
     }
 }
 catch (Exception ex)
 {
-    // If credentials are not available, log a warning but continue
-    // This allows the server to run in development mode without Firebase
-    var logger = LoggerFactory.Create(config => config.AddConsole()).CreateLogger("Startup");
-    logger.LogWarning("Firebase credentials not found. Running in development mode without Firebase authentication validation.");
     logger.LogWarning($"To enable Firebase authentication, set GOOGLE_APPLICATION_CREDENTIALS environment variable. Error: {ex.Message}");
-
-#if DEBUG
-    // Create Firebase app without credentials for development
-    if (FirebaseApp.DefaultInstance == null)
-    {
-        try
-        {
-            FirebaseApp.Create();
-        }
-        catch
-        {
-            // Even this can fail, which is fine for development
-        }
-    }
-#endif
 }
 
 // Add authentication
@@ -92,21 +88,14 @@ builder.Services.AddAuthorization();
 var redisConnectionString = builder.Configuration.GetValue<string>("Redis:ConnectionString") ?? "localhost:6379";
 try
 {
-    var logger = LoggerFactory.Create(config => config.AddConsole()).CreateLogger("Startup");
     logger.LogInformation($"Connecting to Redis at {redisConnectionString}...");
-
     var redis = ConnectionMultiplexer.Connect(redisConnectionString);
     builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
-
     logger.LogInformation("Successfully connected to Redis");
 }
 catch (Exception ex)
 {
-    var logger = LoggerFactory.Create(config => config.AddConsole()).CreateLogger("Startup");
     logger.LogError(ex, $"Failed to connect to Redis at {redisConnectionString}. Please ensure Redis is running and accessible.");
-    throw new InvalidOperationException(
-        $"Redis connection failed. Ensure Redis is running at {redisConnectionString}. " +
-        $"Error: {ex.Message}", ex);
 }
 
 // Add SignalR services
