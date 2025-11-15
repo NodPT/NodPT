@@ -8,7 +8,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_FIREBASE_SHIT: ${VITE_FIREBASE_SHIT}
-    container_name: nodpt_frontend
+    container_name: nodpt-frontend
     ports:
       - "8443:80"
     restart: always

@@ -1,32 +1,33 @@
 name: Build & Deploy Static Frontend (Safe Deploy)
-
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-
 permissions:
   contents: read
 
+on:
+   push:
+      branches: [main, master]
+      paths:
+        - "Frontend/**"
+
+permissions:
+   contents: read
+
 jobs:
   build_and_deploy:
-    runs-on: self-hosted
-    env:
-      VITE_FIREBASE_SHIT: ${{ secrets.VITE_FIREBASE_SHIT }}
-    defaults:
-      run:
-        working-directory: Frontend
+      runs-on: self-hosted
+      env:
+         VITE_FIREBASE_SHIT: ${{ secrets.VITE_FIREBASE_SHIT }}
+      defaults:
+         run:
+            working-directory: Frontend
 
-    steps:
-
+  steps:
       # 1️⃣ Checkout latest code (force clean pull)
-      - name: 1. Checkout latest repository code
+      - name: Checkout latest repository code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          clean: true
-          ref: main
+          fetch-depth: 0          # fetch full commit history
+          clean: true             # remove old workspace files
+          ref: main               # ensure correct branch
 
       # 2️⃣ Ensure the repo is updated to latest commit
       - name: 2. Force update repository
@@ -34,7 +35,7 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
           echo "Repository now at latest commit:"
-          git log -1 --oneline
+          git log -1 --online
 
       # 3️⃣ Verify Docker and Compose versions
       - name: 3. Docker environment
@@ -61,15 +62,15 @@ jobs:
 
       # 6️⃣ Remove old container (required because container_name is fixed)
       - name: 6. Remove old container
-        working-directory: WebAPI
+        working-directory: Frontend
         run: |
-          docker rm -f nodpt_frontend || true
+          docker rm -f nodpt-frontend || true
 
       # 6️⃣ Validate built image (Nginx config check)
       - name: 6. Validate Docker and Nginx configuration
         run: |
           echo "Testing Nginx configuration..."
-          docker run --rm nodpt-frontend:latest nginx -t
+          docker run --rm nodpt-frontend:latest nginx -t || (echo "❌ Nginx test failed" && exit 1)
           echo "Nginx configuration OK."
 
       # 7️⃣ Stop current deployment
