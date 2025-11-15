@@ -92,9 +92,17 @@ public class ChatJobConsumer : IChatJobConsumer
 
             _logger.LogInformation($"ChatJobConsumer: Published AI response to Redis channel for connection {chatJob.ConnectionId}");
         }
+        catch (JsonException jsonEx)
+        {
+            _logger.LogError(jsonEx, "ChatJobConsumer: JSON deserialization failed for chat job: {MessageJson}", messageJson);
+        }
+        catch (RedisException redisEx)
+        {
+            _logger.LogError(redisEx, "ChatJobConsumer: Redis publish failed for chat job: {MessageJson}", messageJson);
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "ChatJobConsumer: Failed to process chat job");
+            _logger.LogError(ex, "ChatJobConsumer: Unexpected error while processing chat job: {MessageJson}", messageJson);
         }
     }
 
