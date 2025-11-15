@@ -100,12 +100,16 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, inject } from 'vue';
 import { loginWithGoogle, loginWithFacebook, loginWithMicrosoft, notifySignIn } from '../service/authService';
 import authApiService from '../service/authApiService';
 import { useRouter } from 'vue-router';
 import { auth } from '../firebase';
 import { storeToken } from '../service/tokenStorage';
+
+// Inject API plugin
+const api = inject('api');
+authApiService.setApi(api);
 
 const router = useRouter();
 

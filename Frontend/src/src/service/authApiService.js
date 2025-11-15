@@ -1,11 +1,18 @@
-import axios from 'axios';
-
 // Use environment variable if available, otherwise fallback to localhost
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5049/api';
 
 class AuthApiService {
 	constructor() {
 		this.baseURL = `${API_BASE_URL}/auth`;
+		this.api = null;
+	}
+
+	/**
+	 * Initialize the API plugin reference
+	 * @param {Object} api - The injected API plugin
+	 */
+	setApi(api) {
+		this.api = api;
 	}
 
 	/**
@@ -16,18 +23,18 @@ class AuthApiService {
 	 */
 	async login(FirebaseToken, rememberMe = false) {
 		try {
-			const response = await axios.post(`${this.baseURL}/login`, {
+			const response = await this.api.post(`${this.baseURL}/login`, {
 				FirebaseToken,
 				rememberMe,
 			});
 
 			// Store user data including PhotoUrl in localStorage/sessionStorage
-			if (response.data && response.data.User) {
+			if (response && response.User) {
 				const storage = rememberMe ? localStorage : sessionStorage;
-				storage.setItem('userData', JSON.stringify(response.data.User));
+				storage.setItem('userData', JSON.stringify(response.User));
 			}
 
-			return response.data;
+			return response;
 		} catch (error) {
 			console.error('Failed to login:', error);
 			throw error;
@@ -41,10 +48,10 @@ class AuthApiService {
 	 */
 	async refresh(refreshToken) {
 		try {
-			const response = await axios.post(`${this.baseURL}/refresh`, {
+			const response = await this.api.post(`${this.baseURL}/refresh`, {
 				refreshToken,
 			});
-			return response.data;
+			return response;
 		} catch (error) {
 			console.error('Failed to refresh token:', error);
 			throw error;

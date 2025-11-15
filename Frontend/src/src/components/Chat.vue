@@ -62,7 +62,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, nextTick, onBeforeUnmount } from 'vue';
+import { ref, reactive, inject, onMounted, nextTick, onBeforeUnmount } from 'vue';
 import { eventBus, listenEvent, EVENT_TYPES } from '../rete/eventBus.js';
 import chatApiService from '../service/chatApiService.js';
 import { createDemoNodes } from '../rete/demo.js';
@@ -70,6 +70,10 @@ import { createDemoNodes } from '../rete/demo.js';
 export default {
         name: 'Chat',
         setup() {
+                // Inject API plugin
+                const api = inject('api');
+                chatApiService.setApi(api);
+
                 // Reactive data for chat
                 const chatData = reactive({ messages: [] });
                 const newMessage = ref('');

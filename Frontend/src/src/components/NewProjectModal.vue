@@ -69,6 +69,8 @@ export default {
   setup() {
     const router = useRouter()
     const toast = inject('toast')
+    const api = inject('api')
+    projectApiService.setApi(api)
     const currentStep = ref(1)
     const selectedTemplate = ref(null)
     const projectName = ref('')

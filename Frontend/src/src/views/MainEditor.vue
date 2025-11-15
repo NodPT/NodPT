@@ -28,7 +28,7 @@ import projectApiService from '../service/projectApiService';
 
 const route = useRoute();
 const api = inject('api');
-projectApiService.api = api;
+projectApiService.setApi(api);
 const minimapVisible = ref(false);
 const isLeftPanelVisible = ref(true);
 const isRightPanelVisible = ref(true);

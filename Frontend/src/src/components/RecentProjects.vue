@@ -39,7 +39,8 @@ export default {
     const router = useRouter()
     const recentProjects = ref([])
     const error = ref(false);
-    projectApiService.api = inject('api');
+    const api = inject('api');
+    projectApiService.setApi(api);
 
 
     const getCategoryIcon = (templateName) => {
