@@ -9,7 +9,7 @@ networks:
 services:
   nodpt-signalr:
     build:
-      context: . .
+      context: ..
       dockerfile: SignalR/Dockerfile
     image: nodpt-signalr:latest
     container_name: nodpt-signalr
