@@ -143,10 +143,15 @@ namespace NodPT.API.Controllers
 
                 return Ok(new { status = "queued", messageId = chatMessage.Id });
             }
-            catch (Exception ex)
+            catch (ArgumentNullException ex)
             {
-                _logger.LogError(ex, "Error submitting chat message");
-                return StatusCode(500, new { error = "Failed to submit chat message" });
+                _logger.LogError(ex, "ArgumentNullException submitting chat message");
+                return BadRequest(new { error = "Invalid argument: " + ex.ParamName });
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError(ex, "InvalidOperationException submitting chat message");
+                return StatusCode(500, new { error = "Operation failed: " + ex.Message });
             }
         }
     }
