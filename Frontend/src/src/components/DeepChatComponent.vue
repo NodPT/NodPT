@@ -19,7 +19,6 @@ export default {
 	name: 'DeepChatComponent',
 	setup() {
 		const deepChatRef = ref(null);
-		const api = inject('api');
 		const eventListeners = [];
 		
 		// SignalR connection ID
