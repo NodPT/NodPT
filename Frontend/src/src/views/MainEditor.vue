@@ -82,12 +82,12 @@ const initializeProjectContext = async () => {
                 let initialNodes = [];
                 
                 // Use nodes from the project if available
-                if (projectData && projectData.nodes && projectData.nodes.length > 0) {
+                if (projectData && projectData.Nodes && projectData.Nodes.length > 0) {
                         // Map backend nodes to frontend node format
-                        initialNodes = projectData.nodes.map(node => ({
-                                id: node.id,
-                                type: node.level.toLowerCase(), // Convert level to lowercase type (Director -> director)
-                                name: node.name,
+                        initialNodes = projectData.Nodes.map(node => ({
+                                id: node.Id,
+                                type: node.Level.toLowerCase(), // Convert level to lowercase type (Director -> director)
+                                name: node.Name,
                                 inputs: 0,
                                 outputs: 1
                         }));
