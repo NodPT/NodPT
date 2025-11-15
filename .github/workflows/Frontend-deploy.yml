@@ -31,7 +31,7 @@ jobs:
               git fetch origin main
               git reset --hard origin/main
               echo "Repository now at latest commit:"
-              git log -1 --online
+              git log -1 --oneline
 
          # 3️⃣ Verify Docker and Compose versions
          - name: 3. Docker environment
