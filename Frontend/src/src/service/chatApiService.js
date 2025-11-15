@@ -50,7 +50,7 @@ class ChatApiService {
     }
 
     /**
-     * Get chat messages for a specific node
+     * Get chat messages for a specific node (from in-memory chat service)
      * @param {string} nodeId - Node ID
      * @returns {Promise<Array>} Array of chat messages
      */
@@ -60,6 +60,21 @@ class ChatApiService {
             return response.data;
         } catch (error) {
             console.error('Failed to get messages by node ID:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get persisted chat messages for a specific node from the database
+     * @param {string} nodeId - Node ID
+     * @returns {Promise<Array>} Array of chat messages
+     */
+    async getPersistedMessagesByNodeId(nodeId) {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/chatmessages/node/${nodeId}`);
+            return response.data;
+        } catch (error) {
+            console.error('Failed to get persisted messages by node ID:', error);
             throw error;
         }
     }

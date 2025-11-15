@@ -15,7 +15,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch, inject } from 'vue';
 import { useRoute } from 'vue-router';
 import TopBar from '../components/TopBar.vue';
 import Footer from '../components/Footer.vue';
@@ -24,8 +24,11 @@ import RightPanel from '../components/RightPanel.vue';
 import '../assets/styles/main-editor.css';
 import { triggerEvent, listenEvent, EVENT_TYPES } from '../rete/eventBus';
 import signalRService from '../service/signalRService';
+import projectApiService from '../service/projectApiService';
 
 const route = useRoute();
+const api = inject('api');
+projectApiService.api = api;
 const minimapVisible = ref(false);
 const isLeftPanelVisible = ref(true);
 const isRightPanelVisible = ref(true);
@@ -72,32 +75,96 @@ const initializeProjectContext = async () => {
 
         selectedNode.value = null;
 
-        const initialNodes = [
-                { type: 'director', name: 'Director', inputs: 0, outputs: 1 },
-        ];
+        try {
+                // Load project data from backend
+                const projectData = await projectApiService.getProject(projectId);
+                
+                let initialNodes = [];
+                
+                // Use nodes from the project if available
+                if (projectData && projectData.nodes && projectData.nodes.length > 0) {
+                        // Map backend nodes to frontend node format
+                        initialNodes = projectData.nodes.map(node => ({
+                                id: node.id,
+                                type: node.level.toLowerCase(), // Convert level to lowercase type (Director -> director)
+                                name: node.name,
+                                inputs: 0,
+                                outputs: 1
+                        }));
+                } else {
+                        // Fallback to default Director node if no nodes found
+                        initialNodes = [
+                                { type: 'director', name: 'Director', inputs: 0, outputs: 1 },
+                        ];
+                }
 
-        const createdNodes = await leftPanelRef.value.resetNodes(initialNodes);
+                const createdNodes = await leftPanelRef.value.resetNodes(initialNodes);
 
-        const nodeManager = leftPanelRef.value.getNodeManager ? leftPanelRef.value.getNodeManager() : null;
-        if (nodeManager && nodeManager.editor && typeof nodeManager.editor.getNodes === 'function') {
-                try {
-                        totalNodes.value = nodeManager.editor.getNodes().length;
-                } catch (error) {
+                // Select the first Director node to load its messages
+                if (createdNodes && createdNodes.length > 0) {
+                        const directorNode = createdNodes.find(n => n.type === 'director') || createdNodes[0];
+                        if (directorNode) {
+                                // Trigger node selection to load chat messages
+                                setTimeout(() => {
+                                        triggerEvent(EVENT_TYPES.NODE_SELECTED, {
+                                                id: directorNode.id,
+                                                name: directorNode.name,
+                                                type: directorNode.type
+                                        });
+                                }, 100);
+                        }
+                }
+
+                const nodeManager = leftPanelRef.value.getNodeManager ? leftPanelRef.value.getNodeManager() : null;
+                if (nodeManager && nodeManager.editor && typeof nodeManager.editor.getNodes === 'function') {
+                        try {
+                                totalNodes.value = nodeManager.editor.getNodes().length;
+                        } catch (error) {
+                                totalNodes.value = createdNodes.length;
+                        }
+                } else {
                         totalNodes.value = createdNodes.length;
                 }
-        } else {
-                totalNodes.value = createdNodes.length;
+
+                buildProgress.value = 0;
+
+                currentProjectId.value = projectId;
+
+                triggerEvent(EVENT_TYPES.PROJECT_CONTEXT_CHANGED, {
+                        projectId,
+                        projectName: queryParams.projectName || '',
+                        isNewProject: queryParams.isNewProject === 'true',
+                });
+        } catch (error) {
+                console.error('Error initializing project context:', error);
+                // Fallback to default behavior
+                const initialNodes = [
+                        { type: 'director', name: 'Director', inputs: 0, outputs: 1 },
+                ];
+
+                const createdNodes = await leftPanelRef.value.resetNodes(initialNodes);
+
+                const nodeManager = leftPanelRef.value.getNodeManager ? leftPanelRef.value.getNodeManager() : null;
+                if (nodeManager && nodeManager.editor && typeof nodeManager.editor.getNodes === 'function') {
+                        try {
+                                totalNodes.value = nodeManager.editor.getNodes().length;
+                        } catch (error) {
+                                totalNodes.value = createdNodes.length;
+                        }
+                } else {
+                        totalNodes.value = createdNodes.length;
+                }
+
+                buildProgress.value = 0;
+
+                currentProjectId.value = projectId;
+
+                triggerEvent(EVENT_TYPES.PROJECT_CONTEXT_CHANGED, {
+                        projectId,
+                        projectName: queryParams.projectName || '',
+                        isNewProject: queryParams.isNewProject === 'true',
+                });
         }
-
-        buildProgress.value = 0;
-
-        currentProjectId.value = projectId;
-
-        triggerEvent(EVENT_TYPES.PROJECT_CONTEXT_CHANGED, {
-                projectId,
-                projectName: queryParams.projectName || '',
-                isNewProject: queryParams.isNewProject === 'true',
-        });
 };
 
 const handleEditorReady = async (editorInfo) => {

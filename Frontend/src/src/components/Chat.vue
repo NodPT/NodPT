@@ -147,9 +147,9 @@ export default {
 			try {
 				// Try to load from API first, fallback to local data
                                 if (currentNodeId.value) {
-                                        const apiMessages = await chatApiService.getMessagesByNodeId(currentNodeId.value);
+                                        const apiMessages = await chatApiService.getPersistedMessagesByNodeId(currentNodeId.value);
                                         chatData.messages = apiMessages.map(msg => ({
-                                                id: msg.id,
+                                                id: msg.oid,
                                                 type: msg.sender === 'user' ? 'user' : 'ai',
                                                 content: msg.message,
 						timestamp: msg.timestamp,
@@ -438,8 +438,8 @@ export default {
                 const handleNodeSelection = (nodeData) => {
                         currentNodeId.value = nodeData.id;
                         console.log('Node selected for chat context:', nodeData);
-                        // Optionally reload chat data for this node
-                        // loadChatData(nodeData.id);
+                        // Reload chat data for this node
+                        loadChatData(nodeData.id);
                 };
 
                 const handleProjectContextChange = async () => {
