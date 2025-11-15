@@ -54,14 +54,16 @@ builder.Services.AddSingleton<IRepository, StubRepository>();
 builder.Services.AddSingleton<INotifier, StubNotifier>();
 builder.Services.AddSingleton<IDispatcher, JobDispatcher>();
 builder.Services.AddSingleton<IRedisConsumer, RedisConsumer>();
+builder.Services.AddSingleton<IChatJobConsumer, ChatJobConsumer>();
 
 // Register runners  
 builder.Services.AddSingleton<ManagerRunner>();
 builder.Services.AddSingleton<InspectorRunner>();
 builder.Services.AddSingleton<AgentRunner>();
 
-// Register worker
+// Register workers
 builder.Services.AddHostedService<Worker>();
+builder.Services.AddHostedService<ChatWorker>();
 
 var host = builder.Build();
 

@@ -8,7 +8,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using NodPT.Data.Services;
+using NodPT.API.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using StackExchange.Redis;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args); // 🔹 Create builder
 
@@ -37,6 +39,31 @@ builder.Configuration.AddEnvironmentVariables();
 
 // 🔹 Database initialization
 DatabaseInitializer.Initialize(builder);
+
+// 🔹 Redis
+var redisConnection = builder.Configuration["Redis:ConnectionString"] 
+    ?? Environment.GetEnvironmentVariable("REDIS_CONNECTION") 
+    ?? "localhost:6379";
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
+{
+    try
+    {
+        var logger = provider.GetService<ILogger<Program>>();
+        logger?.LogInformation($"Connecting to Redis at {redisConnection}...");
+        var connection = ConnectionMultiplexer.Connect(redisConnection);
+        logger?.LogInformation("Successfully connected to Redis");
+        return connection;
+    }
+    catch (Exception ex)
+    {
+        var logger = provider.GetService<ILogger<Program>>();
+        logger?.LogError(ex, $"Failed to connect to Redis at {redisConnection}. Please ensure Redis is running and accessible.");
+        throw;
+    }
+});
+
+builder.Services.AddSingleton<IRedisService, RedisService>();
 
 // 🔹 Services
 builder.Services.AddScoped<LogService>();

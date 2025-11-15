@@ -51,7 +51,7 @@
 		<div class="tab-content p-3">
 			<!-- AI Chat Tab -->
 			<div class="tab-pane fade show active" id="chat" role="tabpanel" aria-labelledby="chat-tab">
-				<Chat />
+				<DeepChatComponent />
 			</div>
 
 			<!-- Review Tab -->
@@ -166,6 +166,7 @@
 import { ref, reactive, watch, onMounted, nextTick, onUnmounted } from 'vue';
 import { triggerEvent, EVENT_TYPES } from '../rete/eventBus';
 import Chat from './Chat.vue';
+import DeepChatComponent from './DeepChatComponent.vue';
 import Review from './Review.vue';
 import FileExplorer from './FileExplorer.vue';
 
@@ -173,6 +174,7 @@ export default {
 	name: 'RightPanel',
 	components: {
 		Chat,
+		DeepChatComponent,
 		Review,
 		FileExplorer,
 	},

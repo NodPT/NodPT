@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using NodPT.Data.DTOs;
 using NodPT.Data.Services;
 using Microsoft.AspNetCore.Authorization;
+using NodPT.API.Services;
+using System.Text.Json;
 
 namespace NodPT.API.Controllers
 {
@@ -11,6 +13,14 @@ namespace NodPT.API.Controllers
     public class ChatController : ControllerBase
     {
         private readonly ChatService _chatService = new();
+        private readonly IRedisService _redisService;
+        private readonly ILogger<ChatController> _logger;
+
+        public ChatController(IRedisService redisService, ILogger<ChatController> logger)
+        {
+            _redisService = redisService;
+            _logger = logger;
+        }
 
         [HttpGet]
         public IActionResult GetMessages() => Ok(_chatService.GetMessages());
@@ -101,6 +111,48 @@ namespace NodPT.API.Controllers
             // Generate new response
             var newMessage = _chatService.RegenerateResponse(chatResponse.ChatMessageId, null);
             return Ok(newMessage);
+        }
+
+        [HttpPost("submit")]
+        public async Task<IActionResult> Submit([FromBody] ChatSubmitDto dto)
+        {
+            if (dto == null)
+            {
+                return BadRequest("Chat submit data cannot be null");
+            }
+
+            try
+            {
+                // Save to DB (using in-memory ChatService for now)
+                var chatMessage = new ChatMessageDto
+                {
+                    Id = Guid.NewGuid(),
+                    Sender = "user",
+                    Message = dto.Message,
+                    Timestamp = DateTime.UtcNow,
+                    NodeId = dto.NodeLevel,
+                    MarkedAsSolution = false
+                };
+                _chatService.AddMessage(chatMessage);
+
+                // Push to Redis queue for executor
+                var jobData = JsonSerializer.Serialize(dto);
+                await _redisService.ListRightPushAsync("chat.jobs", jobData);
+
+                _logger.LogInformation($"Chat message queued for processing: UserId={dto.UserId}, ConnectionId={dto.ConnectionId}");
+
+                return Ok(new { status = "queued", messageId = chatMessage.Id });
+            }
+            catch (ArgumentNullException ex)
+            {
+                _logger.LogError(ex, "ArgumentNullException submitting chat message");
+                return BadRequest(new { error = "Invalid argument: " + ex.ParamName });
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError(ex, "InvalidOperationException submitting chat message");
+                return StatusCode(500, new { error = "Operation failed: " + ex.Message });
+            }
         }
     }
 }
