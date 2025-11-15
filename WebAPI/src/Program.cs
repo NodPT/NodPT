@@ -47,7 +47,20 @@ var redisConnection = builder.Configuration["Redis:ConnectionString"]
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
 {
-    return ConnectionMultiplexer.Connect(redisConnection);
+    try
+    {
+        var logger = provider.GetService<ILogger<Program>>();
+        logger?.LogInformation($"Connecting to Redis at {redisConnection}...");
+        var connection = ConnectionMultiplexer.Connect(redisConnection);
+        logger?.LogInformation("Successfully connected to Redis");
+        return connection;
+    }
+    catch (Exception ex)
+    {
+        var logger = provider.GetService<ILogger<Program>>();
+        logger?.LogError(ex, $"Failed to connect to Redis at {redisConnection}. Please ensure Redis is running and accessible.");
+        throw;
+    }
 });
 
 builder.Services.AddSingleton<IRedisService, RedisService>();
