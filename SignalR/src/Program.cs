@@ -1,4 +1,4 @@
-using NodPT.SignalR.Hubs;
+﻿using NodPT.SignalR.Hubs;
 using NodPT.SignalR.Authentication;
 using NodPT.SignalR.Services;
 using Microsoft.AspNetCore.Authentication;
@@ -7,6 +7,41 @@ using Google.Apis.Auth.OAuth2;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// 🔹 Load .env in development
+#if DEBUG
+var dotenvPath = Path.Combine(AppContext.BaseDirectory, ".env");
+if (File.Exists(dotenvPath))
+{
+    Console.WriteLine($"Loading .env from {dotenvPath}");
+    foreach (var line in File.ReadAllLines(dotenvPath))
+    {
+        if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#"))
+            continue;
+        var parts = line.Split('=', 2);
+        if (parts.Length == 2)
+        {
+            var key = parts[0].Trim();
+            var value = parts[1].Trim().Trim('"');
+            Environment.SetEnvironmentVariable(key, value);
+        }
+    }
+}
+#else
+builder.Configuration.AddEnvironmentVariables();
+#endif
+
+// 🔹 Firebase Authentication setup
+string? firebaseProjectId = builder.Configuration["Firebase:ProjectId"]
+ ?? Environment.GetEnvironmentVariable("VITE_FIREBASE_PROJECT_ID")
+ ?? Environment.GetEnvironmentVariable("FIREBASE_PROJECT_ID")
+ ?? Environment.GetEnvironmentVariable("GOOGLE_CLOUD_PROJECT");
+
+if (string.IsNullOrWhiteSpace(firebaseProjectId))
+{
+    Console.WriteLine("ERROR: Firebase project id not configured. Set Firebase:ProjectId or env variable VITE_FIREBASE_PROJECT_ID.");
+    throw new InvalidOperationException("Firebase project id not configured");
+}
 
 // Initialize Firebase Admin SDK
 // Note: For production, you should set GOOGLE_APPLICATION_CREDENTIALS environment variable
@@ -30,7 +65,8 @@ catch (Exception ex)
     var logger = LoggerFactory.Create(config => config.AddConsole()).CreateLogger("Startup");
     logger.LogWarning("Firebase credentials not found. Running in development mode without Firebase authentication validation.");
     logger.LogWarning($"To enable Firebase authentication, set GOOGLE_APPLICATION_CREDENTIALS environment variable. Error: {ex.Message}");
-    
+
+#if DEBUG
     // Create Firebase app without credentials for development
     if (FirebaseApp.DefaultInstance == null)
     {
@@ -43,6 +79,7 @@ catch (Exception ex)
             // Even this can fail, which is fine for development
         }
     }
+#endif
 }
 
 // Add authentication
@@ -57,10 +94,10 @@ try
 {
     var logger = LoggerFactory.Create(config => config.AddConsole()).CreateLogger("Startup");
     logger.LogInformation($"Connecting to Redis at {redisConnectionString}...");
-    
+
     var redis = ConnectionMultiplexer.Connect(redisConnectionString);
     builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
-    
+
     logger.LogInformation("Successfully connected to Redis");
 }
 catch (Exception ex)
@@ -95,9 +132,9 @@ builder.Services.AddCors(options =>
         else
         {
             // In production, restrict to specific origins
-            var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
+            var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
                 ?? Array.Empty<string>();
-            
+
             if (allowedOrigins.Length > 0)
             {
                 policy.WithOrigins(allowedOrigins)
