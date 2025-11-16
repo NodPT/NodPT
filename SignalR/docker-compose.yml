@@ -21,7 +21,7 @@ services:
 
     # 🔹 Expose backend port 
     ports:
-      - "8847:8847"
+      - "8848:8848"
 
     # 🔹 Environment variables specific to ASP.NET Core
     environment:
