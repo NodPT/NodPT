@@ -152,7 +152,24 @@ docker compose run -e DEFAULT_MODEL=my-custom-model nodpt-ai
 
 ## API Usage
 
-The service provides OpenAI-compatible endpoints:
+The service provides OpenAI-compatible endpoints. See the `examples/` directory for complete working examples.
+
+### Quick Examples
+
+**Using curl** (see `examples/api_examples.sh`):
+```bash
+# Run all examples
+./examples/api_examples.sh
+```
+
+**Using Python** (see `examples/usage_example.py`):
+```bash
+# Install OpenAI client
+pip install openai
+
+# Run examples
+python examples/usage_example.py
+```
 
 ### List Available Models
 
