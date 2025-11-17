@@ -99,7 +99,8 @@ async def list_models():
                         for dirpath, _, filenames in os.walk(item_path)
                         for filename in filenames
                     ) / (1024 * 1024)  # Convert to MB
-                except:
+                except (OSError, PermissionError, IOError) as e:
+                    logger.warning(f"Error calculating size for {item}: {e}")
                     size = None
                 
                 models.append(ModelInfo(
@@ -121,16 +122,20 @@ async def generate_text(request: GenerateRequest):
     This is a placeholder implementation. In production, this would:
     1. Load the specified model from the models directory
     2. Use TensorRT-LLM for inference with FP4 quantization
-    3. Return the generated text
+    3. Return the generated text with actual token count
     """
     logger.info(f"Generate request received: {request.prompt[:50]}...")
     
     # Placeholder response
     # In production, this would use TensorRT-LLM for actual inference
+    placeholder_text = f"[Placeholder] Response to: {request.prompt}"
+    # TODO: Replace with actual token count from the model
+    actual_tokens = len(placeholder_text.split())  # Simple word-based approximation
+    
     return GenerateResponse(
-        generated_text=f"[Placeholder] Response to: {request.prompt}",
+        generated_text=placeholder_text,
         model_used=request.model_name or "default",
-        tokens_generated=request.max_tokens,
+        tokens_generated=actual_tokens,
         timestamp=datetime.utcnow().isoformat()
     )
 
