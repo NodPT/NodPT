@@ -8,11 +8,13 @@ services:
     image: nodpt-redis:latest
     container_name: nodpt-redis
     ports:
-      - "6379:6379"
-      - "8001:8001"
+      - "8847:8847"
     volumes:
       - redis-data:/data
     restart: always
+    # Note: vm.overcommit_memory=1 must be set on the host system
+    # Run on host: sudo sysctl vm.overcommit_memory=1
+    # Or add to /etc/sysctl.conf: vm.overcommit_memory = 1
 
 volumes:
   redis-data:
