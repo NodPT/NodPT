@@ -1,6 +1,6 @@
 import * as signalR from '@microsoft/signalr';
 import { triggerEvent, listenEvent, EVENT_TYPES } from '../rete/eventBus';
-import { getFreshIdToken } from '../firebase';
+import { getToken } from './tokenStorage';
 
 class SignalRService {
   constructor() {
@@ -64,11 +64,15 @@ class SignalRService {
   /**
    * Token factory for SignalR authentication
    * Called automatically during negotiate and reconnect
-   * @returns {Promise<string>} Firebase ID token
+   * @returns {string} Firebase ID token from localStorage
    */
-  async tokenFactory() {
+  tokenFactory() {
     try {
-      const token = await getFreshIdToken();
+      const token = getToken('FirebaseToken', true);
+      if (!token) {
+        console.error('Firebase token not found in localStorage');
+        throw new Error('Firebase token not available');
+      }
       return token;
     } catch (error) {
       console.error('Failed to get Firebase token for SignalR:', error);
@@ -151,12 +155,9 @@ class SignalRService {
     }
 
     this.retryCount++;
-    console.log(`Auth error, attempting token refresh (attempt ${this.retryCount}/${this.maxRetries})`);
+    console.log(`Auth error, attempting reconnect (attempt ${this.retryCount}/${this.maxRetries})`);
 
     try {
-      // Force token refresh
-      await getFreshIdToken();
-
       // Retry connection
       if (this.connection) {
         await this.connection.stop();
@@ -168,10 +169,10 @@ class SignalRService {
       // Reset retry count on success
       this.retryCount = 0;
     } catch (retryError) {
-      console.error('Token refresh and reconnect failed:', retryError);
+      console.error('Reconnect failed:', retryError);
 
       if (this.retryCount >= this.maxRetries) {
-        triggerEvent(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, { reason: 'token-refresh-failed' });
+        triggerEvent(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, { reason: 'signalr-reconnect-failed' });
       }
     }
   }

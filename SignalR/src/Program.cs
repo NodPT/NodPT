@@ -119,33 +119,21 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
     {
         // In production, configure specific origins in appsettings.json
-        // For now, allowing all origins for development
-        // TODO: Replace with specific origins for production deployment
-        if (builder.Environment.IsDevelopment())
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+            ?? Array.Empty<string>();
+
+        if (allowedOrigins.Length > 0)
         {
-            policy.AllowAnyOrigin()
+            policy.WithOrigins(allowedOrigins)
                   .AllowAnyHeader()
-                  .AllowAnyMethod();
+                  .AllowAnyMethod()
+                  .AllowCredentials();
         }
         else
         {
-            // In production, restrict to specific origins
-            var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-                ?? Array.Empty<string>();
-
-            if (allowedOrigins.Length > 0)
-            {
-                policy.WithOrigins(allowedOrigins)
-                      .AllowAnyHeader()
-                      .AllowAnyMethod()
-                      .AllowCredentials();
-            }
-            else
-            {
-                throw new InvalidOperationException(
-                    "CORS allowed origins must be configured in production. " +
-                    "Add 'Cors:AllowedOrigins' section to appsettings.json");
-            }
+            throw new InvalidOperationException(
+                "CORS allowed origins must be configured in production. " +
+                "Add 'Cors:AllowedOrigins' section to appsettings.json");
         }
     });
 });
