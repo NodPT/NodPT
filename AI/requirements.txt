@@ -1,0 +1,21 @@
+# TensorRT-LLM dependencies
+tensorrt_llm==0.10.0
+
+# Deep learning frameworks
+torch>=2.1.0
+transformers>=4.38.0
+
+# Model handling
+huggingface-hub
+accelerate
+sentencepiece
+protobuf
+
+# API framework
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+
+# Utilities
+numpy
