@@ -1,0 +1,25 @@
+# Ignore all files in models directory except .gitkeep
+models/*
+!models/.gitkeep
+
+# Ignore all log files
+logs/*
+!logs/.gitkeep
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

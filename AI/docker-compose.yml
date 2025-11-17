@@ -8,5 +8,28 @@ services:
     image: nodpt-ai:latest
     container_name: nodpt-ai
     ports:
-      - "8000:8000"
+      - "8850:8850"
+    volumes:
+      # Mount directory for fine-tuned models
+      - ./models:/models/finetuned
+      # Mount directory for logs
+      - ./logs:/app/logs
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - MODEL_DIR=/models/finetuned
+      - BASE_MODEL_DIR=/models/base
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8850/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
