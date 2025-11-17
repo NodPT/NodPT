@@ -31,8 +31,8 @@ RUN python3 -m pip install --upgrade pip setuptools wheel
 # Using specific version that supports FP4 quantization
 RUN pip install --no-cache-dir \
     tensorrt_llm==0.10.0 \
-    transformers>=4.38.0 \
-    torch>=2.1.0 \
+    transformers>=4.48.0 \
+    torch>=2.6.0 \
     numpy \
     huggingface-hub \
     accelerate \

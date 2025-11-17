@@ -9,6 +9,7 @@ This service provides high-performance LLM inference using NVIDIA TensorRT-LLM w
 - **Custom Models**: Easy integration of fine-tuned models
 - **GPU Acceleration**: Full NVIDIA GPU support
 - **REST API**: FastAPI-based REST API for inference requests
+- **Security**: Uses patched versions of dependencies (torch>=2.6.0, transformers>=4.48.0) to address known vulnerabilities
 
 ## Prerequisites
 

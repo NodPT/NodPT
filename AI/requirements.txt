@@ -1,9 +1,9 @@
 # TensorRT-LLM dependencies
 tensorrt_llm==0.10.0
 
-# Deep learning frameworks
-torch>=2.1.0
-transformers>=4.38.0
+# Deep learning frameworks (updated to secure versions)
+torch>=2.6.0
+transformers>=4.48.0
 
 # Model handling
 huggingface-hub
