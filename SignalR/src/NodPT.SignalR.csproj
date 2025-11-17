@@ -12,4 +12,8 @@
     <PackageReference Include="StackExchange.Redis" Version="2.9.32" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\Data\src\NodPT.Data.csproj" />
+  </ItemGroup>
+
 </Project>

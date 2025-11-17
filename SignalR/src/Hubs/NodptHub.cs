@@ -4,7 +4,7 @@ using System.Security.Claims;
 
 namespace NodPT.SignalR.Hubs;
 
-[Authorize]
+[CustomAuthorized]
 public class NodptHub : Hub
 {
     private const string MasterGroup = "Master";
@@ -19,9 +19,9 @@ public class NodptHub : Hub
     {
         var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var clientType = Context.User?.FindFirst("client_type")?.Value;
-        
+
         _logger.LogInformation($"Client connected: {Context.ConnectionId}, UserId: {userId}, ClientType: {clientType}");
-        
+
         // Automatically add user to their user-specific group for routing
         if (!string.IsNullOrEmpty(userId))
         {
@@ -29,7 +29,7 @@ public class NodptHub : Hub
             await Groups.AddToGroupAsync(Context.ConnectionId, userGroup);
             _logger.LogInformation($"Client {Context.ConnectionId} automatically joined user group: {userGroup}");
         }
-        
+
         await base.OnConnectedAsync();
     }
 
@@ -37,7 +37,7 @@ public class NodptHub : Hub
     {
         var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         _logger.LogInformation($"Client disconnected: {Context.ConnectionId}, UserId: {userId}");
-        
+
         await base.OnDisconnectedAsync(exception);
     }
 

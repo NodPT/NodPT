@@ -1,6 +1,6 @@
 # NodPT.SignalR
 
-A SignalR hub server built with .NET 9 and C# that listens to Redis streams and delivers real-time updates to frontend clients.
+A SignalR hub server built with .NET 8 and C# that listens to Redis streams and delivers real-time updates to frontend clients.
 
 ## Architecture
 
@@ -31,7 +31,7 @@ Communication flow:
 
 ### Prerequisites
 
-- .NET 9.0 SDK or later
+- .NET 8.0 SDK or later
 - Redis server (for stream communication)
 - Firebase project (for authentication)
 
@@ -62,7 +62,7 @@ Configure Redis connection in `appsettings.json`:
 ```json
 {
   "Redis": {
-    "ConnectionString": "redis:6379"
+    "ConnectionString": "nodpt-redis:6379"
   }
 }
 ```

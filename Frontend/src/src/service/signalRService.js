@@ -11,7 +11,7 @@ class SignalRService {
     this.isAuthenticated = false;
     this.retryCount = 0;
     this.maxRetries = 1;
-    
+
     // Setup auth lifecycle listeners
     this.setupAuthLifecycle();
   }
@@ -56,7 +56,7 @@ class SignalRService {
    * @returns {string} Hub URL
    */
   getHubUrl() {
-    const baseUrl = import.meta.env.VITE_SIGNALR_BASE_URL || 'http://localhost:8446';
+    const baseUrl = import.meta.env.VITE_SIGNALR_BASE_URL || 'http://localhost:8848';
     const hubPath = import.meta.env.VITE_SIGNALR_HUB_PATH || '/nodpt_hub';
     return `${baseUrl}${hubPath}`;
   }
@@ -92,7 +92,7 @@ class SignalRService {
 
     try {
       const hubUrl = this.getHubUrl();
-      
+
       // Build the connection with automatic reconnection and auth token
       this.connection = new signalR.HubConnectionBuilder()
         .withUrl(hubUrl, {
@@ -118,7 +118,7 @@ class SignalRService {
     } catch (error) {
       console.error('Error initializing SignalR:', error);
       this.updateConnectionStatus('disconnected');
-      
+
       // Handle 401/403 errors with retry
       if (this.isAuthError(error)) {
         await this.handleAuthError(error);
@@ -156,20 +156,20 @@ class SignalRService {
     try {
       // Force token refresh
       await getFreshIdToken();
-      
+
       // Retry connection
       if (this.connection) {
         await this.connection.stop();
         this.connection = null;
       }
-      
+
       await this.initialize();
-      
+
       // Reset retry count on success
       this.retryCount = 0;
     } catch (retryError) {
       console.error('Token refresh and reconnect failed:', retryError);
-      
+
       if (this.retryCount >= this.maxRetries) {
         triggerEvent(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, { reason: 'token-refresh-failed' });
       }
@@ -184,7 +184,7 @@ class SignalRService {
     this.connection.onclose((error) => {
       console.log('SignalR connection closed', error);
       this.updateConnectionStatus('disconnected');
-      
+
       // Check if closure was due to auth error
       if (error && this.isAuthError(error)) {
         this.handleAuthError(error);
@@ -233,7 +233,7 @@ class SignalRService {
     } catch (error) {
       console.error('Error starting SignalR connection:', error);
       this.updateConnectionStatus('disconnected');
-      
+
       // Handle auth errors
       if (this.isAuthError(error)) {
         await this.handleAuthError(error);
@@ -288,7 +288,7 @@ class SignalRService {
     this.connectionStatus = status;
     // Trigger event for components to update UI
     triggerEvent(EVENT_TYPES.SIGNALR_STATUS_CHANGED, status);
-    
+
     // Notify all listeners
     this.listeners.forEach(listener => listener(status));
   }

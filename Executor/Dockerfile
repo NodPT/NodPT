@@ -24,7 +24,7 @@ WORKDIR /app
 COPY --from=publish /app/publish ./
 
 # Set environment variables with defaults
-ENV REDIS_CONNECTION=localhost:6379
+ENV REDIS_CONNECTION=nodpt-redis:6379
 ENV MAX_MANAGER=0
 ENV MAX_INSPECTOR=0
 ENV MAX_AGENT=0

@@ -111,7 +111,7 @@ catch (Exception ex)
 builder.Services.AddSignalR();
 
 // Add Redis AI listener background service for chat workflow
-builder.Services.AddHostedService<RedisAiListener>();
+builder.Services.AddHostedService<RedisStreamListener>();
 
 // Add CORS configuration
 builder.Services.AddCors(options =>

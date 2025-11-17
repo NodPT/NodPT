@@ -1,31 +1,32 @@
-version: '3.8'
+networks:
+  backend_network:
+    external: true
 
 services:
-  redis:
-    image: redis/redis-stack:latest
-    ports:
-      - "6379:6379"
-      - "8001:8001"  # RedisInsight web UI
-    environment:
-      - REDIS_ARGS=--save 60 1
-    volumes:
-      - redis-data:/data
-
-  backend-executor:
+  nodpt-executor:
     build:
-      context: .
-      dockerfile: Dockerfile
-    image: nodpt-backend-executor:latest
-    container_name: nodpt-backend-executor
-    environment:
-      - REDIS_CONNECTION=redis:6379
-      - MAX_MANAGER=5
-      - MAX_INSPECTOR=10
-      - MAX_AGENT=20
-      - MAX_TOTAL=50
-    depends_on:
-      - redis
-    restart: unless-stopped
+      context: ..
+      dockerfile: Executor/Dockerfile
+    image: nodpt-executor:latest
+    container_name: nodpt-executor
+    pull_policy: always
 
-volumes:
-  redis-data:
+    # 🔹 Load external environment file
+    env_file:
+      - /home/runner_user/envs/backend.env
+
+    # 🔹 Expose backend port 
+    ports:
+      - "8848:8848"
+
+    # 🔹 Environment variables specific to ASP.NET Core
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://0.0.0.0:8848
+      - ASPNETCORE_HTTP_PORTS=8848
+
+    # 🔹 Docker networks for DB, backend & frontend
+    networks:
+      - backend_network
+    # 🔹 Auto restart on failure
+    # restart: always
