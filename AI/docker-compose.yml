@@ -7,6 +7,25 @@ services:
       dockerfile: Dockerfile
     image: nodpt-ai:latest
     container_name: nodpt-ai
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - MODEL_DIR=/models
+      - ENGINE_DIR=/engines
+      - DEFAULT_MODEL=gpt-oss-20b
     ports:
       - "8000:8000"
+    volumes:
+      # Mount directory for custom fine-tuned models
+      - ./models:/models
+      # Mount directory for compiled TensorRT engines (cached for faster startup)
+      - ./engines:/engines
     restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

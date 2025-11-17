@@ -1,0 +1,122 @@
+name: AI Service Build and Deploy (Self-Hosted)
+
+on:
+   push:
+      branches: [main, master]
+      paths:
+         - 'AI/**'
+
+jobs:
+   build-and-deploy:
+      runs-on: self-hosted
+      permissions:
+         contents: read
+
+      steps:
+         # 1️⃣ Checkout repository
+         - name: 1. Checkout repository
+           uses: actions/checkout@v4
+           with:
+              fetch-depth: 0
+              clean: true
+              ref: main
+
+         # 2️⃣ Ensure the repo is updated to latest commit
+         - name: 2. Force update repository
+           run: |
+              git fetch origin main
+              git reset --hard origin/main
+              echo "Repository now at latest commit:"
+              git log -1 --oneline
+
+         # 3️⃣ Verify Docker, Compose, and NVIDIA runtime
+         - name: 3. Verify environment
+           run: |
+              docker version
+              docker compose version
+              echo "Checking NVIDIA GPU availability..."
+              nvidia-smi || echo "WARNING: nvidia-smi not available"
+              docker run --rm --gpus all nvidia/cuda:12.1.0-base-ubuntu22.04 nvidia-smi || echo "WARNING: NVIDIA Docker runtime not available"
+
+         # 4️⃣ Create required directories
+         - name: 4. Create model and engine directories
+           working-directory: AI
+           run: |
+              mkdir -p models engines
+              echo "Model directory:"
+              ls -la models/ || true
+              echo "Engine directory:"
+              ls -la engines/ || true
+
+         # 5️⃣ Clean old Docker images (optional but ensures fresh build)
+         - name: 5. Clean old Docker images
+           run: |
+              echo "Cleaning old Docker images..."
+              docker image prune -a -f || true
+              echo "Done."
+
+         # 6️⃣ Build Docker image (force fresh build)
+         - name: 6. Build Docker image (no cache)
+           working-directory: AI
+           run: |
+              echo "Building Docker image from latest source..."
+              echo "WARNING: This build may take 30-60 minutes on first run"
+              docker compose build \
+                --no-cache \
+                --progress=plain
+              echo "Build completed."
+
+         # 7️⃣ Remove old container
+         - name: 7. Remove old container
+           working-directory: AI
+           run: |
+              docker rm -f nodpt-ai || true
+
+         # 8️⃣ Stop current deployment
+         - name: 8. Stop current deployment
+           working-directory: AI
+           run: |
+              echo "Stopping existing deployment..."
+              docker compose down || true
+              echo "Stopped."
+
+         # 9️⃣ Deploy new version
+         - name: 9. Deploy new version
+           working-directory: AI
+           run: |
+              echo "Starting new deployment..."
+              docker compose up -d
+              echo "Deployment started."
+
+         # 🔟 List active containers
+         - name: 10. Check running containers
+           run: |
+              echo "Active containers:"
+              docker ps | grep nodpt-ai || echo "Container not found"
+
+         # 1️⃣1️⃣ Health check after deployment
+         - name: 11. Health check
+           run: |
+              echo "Waiting for service to start..."
+              sleep 10
+              echo "Performing health check on http://localhost:8000/health"
+              for i in {1..5}; do
+                if curl -fsS http://localhost:8000/health > /dev/null; then
+                  echo "Health check passed"
+                  curl http://localhost:8000/health
+                  exit 0
+                fi
+                echo "Attempt $i/5 failed, retrying..."
+                sleep 5
+              done
+              echo "Health check failed after 5 attempts"
+              docker compose -f AI/docker-compose.yml logs
+              exit 1
+
+         # 1️⃣2️⃣ Show logs on failure
+         - name: 12. Show logs on failure
+           if: failure()
+           working-directory: AI
+           run: |
+              echo "Deployment failed. Showing logs:"
+              docker compose logs --tail=100

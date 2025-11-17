@@ -1,0 +1,32 @@
+# Model files and directories (can be large)
+models/*
+!models/.gitkeep
+
+# Compiled TensorRT engines (generated at runtime)
+engines/*
+!engines/.gitkeep
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+.DS_Store
