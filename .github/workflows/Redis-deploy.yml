@@ -68,7 +68,7 @@ jobs:
            run: |
               echo "Waiting for Redis health check..."
               for i in {1..3}; do
-                if docker exec nodpt-redis redis-cli -p 8847 ping > /dev/null; then
+                if docker exec nodpt-redis redis-cli -p 6379 ping > /dev/null; then
                   echo "Redis is healthy"
                   exit 0
                 fi

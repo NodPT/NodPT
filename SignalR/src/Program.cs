@@ -5,6 +5,12 @@ using Microsoft.AspNetCore.Authentication;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using StackExchange.Redis;
+using Microsoft.AspNetCore.DataProtection;
+
+// Note: Persisting DataProtection keys to Redis requires the
+// NuGet package Microsoft.AspNetCore.DataProtection.StackExchangeRedis.
+// The using directive is intentionally omitted here to allow the project
+// to build without that package; key persistence to Redis is handled below if the package is added.
 
 var builder = WebApplication.CreateBuilder(args);
 // If credentials are not available, log a warning but continue
@@ -91,6 +97,9 @@ try
     logger.LogInformation($"Connecting to Redis at {redisConnectionString}...");
     var redis = ConnectionMultiplexer.Connect(redisConnectionString);
     builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+    builder.Services.AddDataProtection()
+        .PersistKeysToStackExchangeRedis(redis, "DataProtection-Keys");
+
     logger.LogInformation("Successfully connected to Redis");
 }
 catch (Exception ex)

@@ -24,7 +24,8 @@ services:
     # 🔹 Environment variables specific to ASP.NET Core
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:8846
+      - ASPNETCORE_URLS=http://0.0.0.0:8846
+      - ASPNETCORE_HTTP_PORTS=8846
 
     # 🔹 Docker network for DB & backend
     networks:
