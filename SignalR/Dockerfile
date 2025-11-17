@@ -4,12 +4,14 @@ WORKDIR /src
 
 # Copy project file from the new structure and restore dependencies
 COPY SignalR/src/NodPT.SignalR.csproj SignalR/src/
+COPY Data/src/NodPT.Data.csproj Data/src
 
 # Restore dependencies for the API (will also restore the Data project reference)
 RUN dotnet restore SignalR/src/NodPT.SignalR.csproj
 
 # Copy all source files
 COPY  SignalR/src/ SignalR/src/
+COPY  Data/src/ Data/src/
 
 # Build the SignalR project
 RUN dotnet build SignalR/src/NodPT.SignalR.csproj -c Release -o /app/build
