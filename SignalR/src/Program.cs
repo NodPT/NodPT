@@ -85,7 +85,7 @@ builder.Services.AddAuthentication("Firebase")
 builder.Services.AddAuthorization();
 
 // Configure Redis connection
-var redisConnectionString = builder.Configuration.GetValue<string>("Redis:ConnectionString") ?? "localhost:6379";
+var redisConnectionString = builder.Configuration.GetValue<string>("Redis:ConnectionString") ?? "localhost:8447";
 try
 {
     logger.LogInformation($"Connecting to Redis at {redisConnectionString}...");
@@ -100,9 +100,6 @@ catch (Exception ex)
 
 // Add SignalR services
 builder.Services.AddSignalR();
-
-// Add Redis stream listener background service
-builder.Services.AddHostedService<RedisStreamListener>();
 
 // Add Redis AI listener background service for chat workflow
 builder.Services.AddHostedService<RedisAiListener>();

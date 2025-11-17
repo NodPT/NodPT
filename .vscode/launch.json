@@ -1,0 +1,62 @@
+{
+    // Debug configurations for NodPT projects: SignalR, WebAPI and Executor
+    // Use the C# extension (ms-dotnettools.csharp) to pick these up.
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": ".NET Core Launch (WebAPI) - NodPT.API",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/WebAPI/src/bin/Debug/net8.0/NodPT.API.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/WebAPI/src",
+            "stopAtEntry": false,
+            "console": "integratedTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "DOTNET_ENVIRONMENT": "Development"
+            },
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/WebAPI/src/Views"
+            }
+        },
+        {
+            "name": ".NET Core Launch (SignalR) - NodPT.SignalR",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/SignalR/src/bin/Debug/net8.0/NodPT.SignalR.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/SignalR/src",
+            "stopAtEntry": false,
+            "console": "integratedTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "DOTNET_ENVIRONMENT": "Development"
+            },
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+            }
+        },
+        {
+            "name": ".NET Core Launch (Executor) - BackendExecutor",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Executor/src/bin/Debug/net8.0/BackendExecutor.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Executor/src",
+            "stopAtEntry": false,
+            "console": "integratedTerminal",
+            "env": {
+                "DOTNET_ENVIRONMENT": "Development"
+            }
+        }
+    ]
+}

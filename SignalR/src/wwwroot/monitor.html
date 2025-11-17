@@ -1,233 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NodPT SignalR Monitor</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-
-        .status {
-            padding: 20px 30px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-        }
-
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-            animation: pulse 2s infinite;
-        }
-
-        .status-indicator.connected {
-            background: #28a745;
-        }
-
-        .status-indicator.disconnected {
-            background: #dc3545;
-            animation: none;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .controls {
-            padding: 20px 30px;
-            background: #ffffff;
-            border-bottom: 2px solid #e9ecef;
-        }
-
-        .control-group {
-            margin-bottom: 15px;
-        }
-
-        .control-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: #495057;
-        }
-
-        .control-group input {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #e9ecef;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-
-        .control-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .messages {
-            padding: 30px;
-            max-height: 500px;
-            overflow-y: auto;
-        }
-
-        .message {
-            background: #f8f9fa;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        .message-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 0.9em;
-            color: #6c757d;
-        }
-
-        .message-user {
-            font-weight: 600;
-            color: #495057;
-        }
-
-        .message-time {
-            font-size: 0.85em;
-        }
-
-        .message-content {
-            color: #212529;
-            line-height: 1.5;
-        }
-
-        .message-meta {
-            margin-top: 8px;
-            font-size: 0.85em;
-            color: #6c757d;
-        }
-
-        .message-group {
-            display: inline-block;
-            background: #667eea;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 0.8em;
-            margin-right: 5px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #adb5bd;
-        }
-
-        .empty-state-icon {
-            font-size: 4em;
-            margin-bottom: 20px;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            padding: 20px 30px;
-            background: #f8f9fa;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-
-        .stat-label {
-            font-size: 0.85em;
-            color: #6c757d;
-            margin-bottom: 5px;
-        }
-
-        .stat-value {
-            font-size: 1.8em;
-            font-weight: 700;
-            color: #667eea;
-        }
-    </style>
+    <link rel="stylesheet" href="./style.css">
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -254,14 +34,15 @@
         <div class="controls">
             <div class="control-group">
                 <label for="serverUrl">Server URL:</label>
-                <input type="text" id="serverUrl" value="http://localhost:5288/nodpt_hub" placeholder="http://localhost:5288/nodpt_hub">
+                <input type="text" id="serverUrl" value="/nodpt_hub" placeholder="/nodpt_hub">
             </div>
             <div class="control-group">
                 <label for="accessToken">Access Token (Optional for Master):</label>
                 <input type="text" id="accessToken" placeholder="Leave empty for executor mode">
             </div>
             <button class="btn" id="connectBtn" onclick="connect()">Connect as Master</button>
-            <button class="btn" id="disconnectBtn" onclick="disconnect()" style="display: none; background: #dc3545;">Disconnect</button>
+            <button class="btn" id="disconnectBtn" onclick="disconnect()"
+                style="display: none; background: #dc3545;">Disconnect</button>
         </div>
 
         <div class="messages" id="messagesContainer">
@@ -273,7 +54,7 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/9.0.0/signalr.min.js"></script>
+    <script src="./signalr.min.js"></script>
     <script>
         // Check if SignalR loaded
         if (typeof signalR === 'undefined') {
@@ -313,7 +94,7 @@
             document.getElementById('totalMessages').textContent = messageCount;
 
             const container = document.getElementById('messagesContainer');
-            
+
             // Remove empty state if it exists
             const emptyState = container.querySelector('.empty-state');
             if (emptyState) {
@@ -322,7 +103,7 @@
 
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message';
-            
+
             const timestamp = new Date(data.Timestamp || data.timestamp || Date.now());
             const timeString = timestamp.toLocaleTimeString();
 
@@ -374,7 +155,7 @@
             try {
                 // Build connection URL
                 let connectionUrl = serverUrl;
-                
+
                 // For executor mode (no token), add clientType parameter
                 if (!accessToken) {
                     connectionUrl += connectionUrl.includes('?') ? '&' : '?';
@@ -463,4 +244,5 @@
         });
     </script>
 </body>
+
 </html>
