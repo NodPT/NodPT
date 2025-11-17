@@ -85,7 +85,7 @@ builder.Services.AddAuthentication("Firebase")
 builder.Services.AddAuthorization();
 
 // Configure Redis connection
-var redisConnectionString = builder.Configuration.GetValue<string>("Redis:ConnectionString") ?? "localhost:8447";
+var redisConnectionString = builder.Configuration.GetValue<string>("Redis:ConnectionString") ?? "localhost:8847";
 try
 {
     logger.LogInformation($"Connecting to Redis at {redisConnectionString}...");
