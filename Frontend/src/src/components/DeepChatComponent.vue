@@ -201,32 +201,26 @@ export default {
 			for (let i = 0; i < words.length; i++) {
 				currentText += (i > 0 ? ' ' : '') + words[i];
 
-				// Update the message (this might need to be adjusted based on deep-chat API)
-				// For now, we'll just update by removing and re-adding
+				// Update the message efficiently
 				if (deepChatRef.value) {
-					// Remove the previous message
-					// Note: deep-chat might not have a direct API to update messages
-					// So we'll simulate streaming by showing partial text
-					
-					// This is a simplified approach - you might need to adjust based on
-					// the actual deep-chat component API
 					try {
-						// Clear and re-add with updated text
-						deepChatRef.value.clearMessages?.();
-						
-						// Re-add all previous messages except the last one
-						initialMessages.value.forEach(msg => {
-							if (msg._id !== chatId) {
-								deepChatRef.value.addMessage(msg);
+						// If deep-chat provides an updateMessage method, use it
+						if (typeof deepChatRef.value.updateMessage === 'function') {
+							deepChatRef.value.updateMessage(chatId, { text: currentText });
+						} else {
+							// Otherwise, batch updates every 5 words to reduce flicker
+							if (i % 5 === 0 || i === words.length - 1) {
+								// Remove and re-add only the last message
+								// Remove last message
+								deepChatRef.value.removeMessage?.(chatId);
+								// Add updated message
+								deepChatRef.value.addMessage({
+									role: 'ai',
+									text: currentText,
+									_id: chatId
+								});
 							}
-						});
-						
-						// Add updated message
-						deepChatRef.value.addMessage({
-							role: 'ai',
-							text: currentText,
-							_id: chatId
-						});
+						}
 					} catch (error) {
 						// If update fails, just continue
 						console.warn('Error updating streaming message:', error);
