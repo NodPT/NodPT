@@ -113,6 +113,9 @@ builder.Services.AddSignalR();
 // Add Redis AI listener background service for chat workflow
 builder.Services.AddHostedService<RedisStreamListener>();
 
+// Add Redis AI response listener for chat responses
+builder.Services.AddHostedService<RedisAIResponseListener>();
+
 // Add CORS configuration
 builder.Services.AddCors(options =>
 {
