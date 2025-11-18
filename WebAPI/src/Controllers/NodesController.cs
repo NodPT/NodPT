@@ -23,6 +23,13 @@ namespace NodPT.API.Controllers
             return node == null ? NotFound() : Ok(node);
         }
 
+        [HttpGet("project/{projectId}")]
+        public IActionResult GetNodesByProject(int projectId)
+        {
+            var nodes = _nodeService.GetNodesByProject(projectId);
+            return Ok(nodes);
+        }
+
         [HttpPost]
         public IActionResult CreateNode([FromBody] NodeDto node)
         {

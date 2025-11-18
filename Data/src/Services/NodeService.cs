@@ -75,6 +75,17 @@ namespace NodPT.Data.Services
             return node == null ? null : MapToDto(node);
         }
 
+        public List<NodeDto> GetNodesByProject(int projectId)
+        {
+            using var session = new Session();
+            var project = session.GetObjectByKey<Project>(projectId);
+            if (project == null) return new List<NodeDto>();
+            
+            var nodes = new XPCollection<Node>(session, 
+                new DevExpress.Data.Filtering.BinaryOperator("Project", project));
+            return nodes.Select(n => MapToDto(n)).ToList();
+        }
+
         public void AddNode(NodeDto nodeDto)
         {
             using var session = new Session();
