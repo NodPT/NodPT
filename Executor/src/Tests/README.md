@@ -10,10 +10,10 @@ A simple test utility to verify the LlmChatService works correctly with a real o
 
 ```bash
 # Test with default endpoint (http://localhost:8355/v1/chat/completions)
-dotnet run --project TestLlmClient.cs
+dotnet run --project TestLlmClient.csproj
 
 # Test with custom endpoint
-dotnet run --project TestLlmClient.cs http://custom-llm:8000/v1/chat/completions
+dotnet run --project TestLlmClient.csproj http://custom-llm:8000/v1/chat/completions
 ```
 
 ### Requirements
