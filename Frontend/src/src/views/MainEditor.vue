@@ -196,6 +196,21 @@ const handleSignalRStatusChange = (status) => {
 	connectionStatus.value = status;
 };
 
+const handleSignalRToggle = async () => {
+	try {
+		if (connectionStatus.value === 'connected' || connectionStatus.value === 'connecting') {
+			// Stop the connection
+			await signalRService.stop();
+		} else {
+			// Start the connection
+			await signalRService.initialize();
+		}
+		connectionStatus.value = signalRService.getConnectionStatus();
+	} catch (error) {
+		console.error('Error toggling SignalR connection:', error);
+	}
+};
+
 const handleNodeSelected = (nodeData) => {
 	selectedNode.value = nodeData;
 };
@@ -234,14 +249,30 @@ onMounted(async () => {
 	cleanupFns.push(listenEvent(EVENT_TYPES.TOGGLE_MINIMAP, toggleMinimap));
 	cleanupFns.push(listenEvent(EVENT_TYPES.TOGGLE_RIGHT_PANEL, toggleRightPanel));
 	cleanupFns.push(listenEvent(EVENT_TYPES.SIGNALR_STATUS_CHANGED, handleSignalRStatusChange));
+	cleanupFns.push(listenEvent(EVENT_TYPES.SIGNALR_TOGGLE_CONNECTION, handleSignalRToggle));
 	cleanupFns.push(listenEvent(EVENT_TYPES.NODE_SELECTED, handleNodeSelected));
 	cleanupFns.push(listenEvent(EVENT_TYPES.DELETE_NODE, handleDeleteNode));
 	window.addEventListener('keydown', handleKeydown);
 
-	// SignalR connection is now managed by auth lifecycle
-	// It will automatically start when auth:signed-in event is triggered
-	// and stop when auth:signed-out or auth:requires-relogin is triggered
-	connectionStatus.value = signalRService.getConnectionStatus();
+	// Start SignalR connection when entering the editor
+	try {
+		await signalRService.initialize();
+		connectionStatus.value = signalRService.getConnectionStatus();
+	} catch (error) {
+		console.error('Failed to initialize SignalR:', error);
+	}
+
+	// Add beforeunload confirmation to prevent accidental page refresh
+	const handleBeforeUnload = (event) => {
+		// Stop SignalR connection gracefully
+		signalRService.stop().catch(err => console.error('Error stopping SignalR:', err));
+		
+		// Show confirmation dialog
+		event.preventDefault();
+		event.returnValue = ''; // Chrome requires returnValue to be set
+	};
+	window.addEventListener('beforeunload', handleBeforeUnload);
+	cleanupFns.push(() => window.removeEventListener('beforeunload', handleBeforeUnload));
 
         // Update project info on initial mount
         updateProjectInfo();

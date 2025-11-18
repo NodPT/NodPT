@@ -16,7 +16,8 @@
 
 			<!-- SignalR Connection Status -->
 			<div class="d-flex align-items-center ms-2">
-				<span class="badge" :class="connectionStatusClass" :title="connectionStatusTitle">
+				<span class="badge" :class="connectionStatusClass" :title="connectionStatusTitle" 
+					@click="handleSignalRClick" :style="isQAMode ? 'cursor: pointer;' : ''">
 					<i class="bi" :class="connectionStatusIcon"></i>
 				</span>
 			</div>
@@ -65,7 +66,14 @@ export default {
 	data() {
 		return {
 			cleanupFns: [],
+			isQAMode: false,
 		};
+	},
+	mounted() {
+		// Check if running in QA environment
+		if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ENV === 'QA') {
+			this.isQAMode = true;
+		}
 	},
 	computed: {
 		connectionStatusClass() {
@@ -93,7 +101,8 @@ export default {
 				'reconnecting': 'SignalR: Reconnecting...',
 				'disconnected': 'SignalR: Disconnected'
 			};
-			return titleMap[this.connectionStatus] || 'SignalR: Disconnected';
+			const baseTitle = titleMap[this.connectionStatus] || 'SignalR: Disconnected';
+			return this.isQAMode ? `${baseTitle} (Click to toggle)` : baseTitle;
 		},
 	},
 	methods: {
@@ -102,6 +111,12 @@ export default {
 		},
 		handleToggleMinimap() {
 			triggerEvent(EVENT_TYPES.TOGGLE_MINIMAP);
+		},
+		handleSignalRClick() {
+			// Only allow manual toggle in QA mode
+			if (this.isQAMode) {
+				triggerEvent(EVENT_TYPES.SIGNALR_TOGGLE_CONNECTION);
+			}
 		},
 	},
 	beforeUnmount() {

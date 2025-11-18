@@ -20,17 +20,11 @@ class SignalRService {
    * Setup authentication lifecycle listeners
    */
   setupAuthLifecycle() {
-    // Start hub when user signs in
+    // Track authentication state but don't auto-start SignalR
+    // Connection will be started explicitly when navigating to /editor
     this.authListenerCleanups.push(
-      listenEvent(EVENT_TYPES.AUTH_SIGNED_IN, async () => {
+      listenEvent(EVENT_TYPES.AUTH_SIGNED_IN, () => {
         this.isAuthenticated = true;
-        if (!this.connection || this.connectionStatus === 'disconnected') {
-          try {
-            await this.initialize();
-          } catch (error) {
-            console.error('Failed to start SignalR after sign-in:', error);
-          }
-        }
       })
     );
 
@@ -84,14 +78,22 @@ class SignalRService {
    * Initialize SignalR connection
    */
   async initialize() {
+    // Stop existing connection before starting a new one
     if (this.connection) {
-      console.warn('SignalR connection already initialized');
+      console.log('Stopping existing SignalR connection before initializing new one');
+      await this.stop();
+    }
+
+    // Check if user has a valid token (supports page refresh)
+    const token = getToken('FirebaseToken', true);
+    if (!token && !this.isAuthenticated) {
+      console.warn('Cannot initialize SignalR: user not authenticated');
       return;
     }
 
-    if (!this.isAuthenticated) {
-      console.warn('Cannot initialize SignalR: user not authenticated');
-      return;
+    // Mark as authenticated if token exists
+    if (token) {
+      this.isAuthenticated = true;
     }
 
     try {
