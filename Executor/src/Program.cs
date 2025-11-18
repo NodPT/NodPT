@@ -5,6 +5,7 @@ using BackendExecutor.Data;
 using BackendExecutor.Dispatch;
 using BackendExecutor.Notify;
 using BackendExecutor.Runners;
+using BackendExecutor.Services;
 using StackExchange.Redis;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -18,6 +19,7 @@ builder.Services.Configure<ExecutorOptions>(options =>
     options.MaxInspector = int.TryParse(Environment.GetEnvironmentVariable("MAX_INSPECTOR"), out var maxInspector) ? maxInspector : 0;
     options.MaxAgent = int.TryParse(Environment.GetEnvironmentVariable("MAX_AGENT"), out var maxAgent) ? maxAgent : 0;
     options.MaxTotal = int.TryParse(Environment.GetEnvironmentVariable("MAX_TOTAL"), out var maxTotal) ? maxTotal : 0;
+    options.LlmEndpoint = Environment.GetEnvironmentVariable("LLM_ENDPOINT") ?? "http://localhost:8355/v1/chat/completions";
 });
 
 // Register ExecutorOptions as singleton
@@ -32,6 +34,7 @@ builder.Services.AddSingleton<ExecutorOptions>(provider =>
     options.MaxInspector = int.TryParse(Environment.GetEnvironmentVariable("MAX_INSPECTOR"), out var maxInspector) ? maxInspector : options.MaxInspector;
     options.MaxAgent = int.TryParse(Environment.GetEnvironmentVariable("MAX_AGENT"), out var maxAgent) ? maxAgent : options.MaxAgent;
     options.MaxTotal = int.TryParse(Environment.GetEnvironmentVariable("MAX_TOTAL"), out var maxTotal) ? maxTotal : options.MaxTotal;
+    options.LlmEndpoint = Environment.GetEnvironmentVariable("LLM_ENDPOINT") ?? options.LlmEndpoint;
     
     return options;
 });
@@ -48,6 +51,9 @@ builder.Services.AddSingleton<IDatabase>(provider =>
     var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
     return multiplexer.GetDatabase();
 });
+
+// Register HttpClient for LLM service
+builder.Services.AddHttpClient<ILlmChatService, LlmChatService>();
 
 // Register services
 builder.Services.AddSingleton<IRepository, StubRepository>();
@@ -73,6 +79,7 @@ var executorOptions = host.Services.GetRequiredService<ExecutorOptions>();
 
 logger.LogInformation("BackendExecutor starting with configuration:");
 logger.LogInformation("  Redis Connection: {RedisConnection}", executorOptions.RedisConnection);
+logger.LogInformation("  LLM Endpoint: {LlmEndpoint}", executorOptions.LlmEndpoint);
 logger.LogInformation("  Max Manager: {MaxManager}", executorOptions.MaxManager == 0 ? "unlimited" : executorOptions.MaxManager);
 logger.LogInformation("  Max Inspector: {MaxInspector}", executorOptions.MaxInspector == 0 ? "unlimited" : executorOptions.MaxInspector);
 logger.LogInformation("  Max Agent: {MaxAgent}", executorOptions.MaxAgent == 0 ? "unlimited" : executorOptions.MaxAgent);

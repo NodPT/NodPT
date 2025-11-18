@@ -22,20 +22,91 @@ Configuration can be set via environment variables or `appsettings.json`:
 | `MAX_INSPECTOR` | `0` | Max concurrent inspector jobs (0 = unlimited) |
 | `MAX_AGENT` | `0` | Max concurrent agent jobs (0 = unlimited) |
 | `MAX_TOTAL` | `0` | Max total concurrent jobs (0 = unlimited) |
+| `LLM_ENDPOINT` | `http://localhost:8355/v1/chat/completions` | LLM API endpoint for chat completions |
 
 ## Project Structure
 
 ```
 BackendExecutor/
 ├── Config/           # Configuration classes
-├── Consumers/        # Redis Streams consumers
+├── Consumers/        # Redis Streams and chat job consumers
 ├── Data/            # Data structures and repository interfaces
 ├── Dispatch/        # Job dispatcher with concurrency control
 ├── Notify/          # SignalR notification interfaces
 ├── Runners/         # Job runners for each role
+├── Services/        # LLM chat service for AI interactions
 ├── Program.cs       # Main application entry point
-├── Worker.cs        # Background service worker
+├── Worker.cs        # Background service worker for jobs
+├── ChatWorker.cs    # Background service worker for chat
 └── Dockerfile       # Container configuration
+```
+
+## LLM Chat Service
+
+The executor includes an `LlmChatService` for sending chat messages to an LLM endpoint (e.g., TensorRT-LLM).
+
+### Usage
+
+The service provides two overloaded methods:
+
+#### Send String Message
+
+```csharp
+// Inject the service
+private readonly ILlmChatService _llmChatService;
+
+// Send a simple string message
+var response = await _llmChatService.SendChatMessageAsync(
+    message: "Hello, AI!",
+    model: "trt-llm-manager",
+    maxTokens: 64,
+    cancellationToken: cancellationToken
+);
+```
+
+#### Send Object Message
+
+```csharp
+// Send an object (will be serialized to JSON string)
+var messageObject = new
+{
+    prompt = "Explain this code",
+    context = "C# async programming",
+    language = "csharp"
+};
+
+var response = await _llmChatService.SendChatMessageAsync(
+    messageObject: messageObject,
+    model: "trt-llm-inspector",
+    maxTokens: 128,
+    cancellationToken: cancellationToken
+);
+```
+
+### LLM API Format
+
+The service sends HTTP POST requests to the configured LLM endpoint with this format:
+
+```json
+{
+  "model": "model-name",
+  "messages": [{"role": "user", "content": "message-content"}],
+  "max_tokens": 64
+}
+```
+
+And expects responses in OpenAI-compatible format:
+
+```json
+{
+  "choices": [
+    {
+      "message": {
+        "content": "AI response text"
+      }
+    }
+  ]
+}
 ```
 
 ## Running the Application

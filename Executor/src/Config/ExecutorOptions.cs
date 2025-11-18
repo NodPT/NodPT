@@ -31,4 +31,9 @@ public class ExecutorOptions
     /// Maximum total concurrent jobs (0 = unlimited)
     /// </summary>
     public int MaxTotal { get; set; } = 0;
+
+    /// <summary>
+    /// LLM endpoint URL for chat completions
+    /// </summary>
+    public string LlmEndpoint { get; set; } = "http://localhost:8355/v1/chat/completions";
 }
