@@ -86,16 +86,11 @@ class SignalRService {
 
     // Check if user has a valid token (supports page refresh)
     const token = getToken('FirebaseToken', true);
-    if (!token && !this.isAuthenticated) {
+    this.isAuthenticated = !!token;
+    if (!this.isAuthenticated) {
       console.warn('Cannot initialize SignalR: user not authenticated');
       return;
     }
-
-    // Mark as authenticated if token exists
-    if (token) {
-      this.isAuthenticated = true;
-    }
-
     try {
       const hubUrl = this.getHubUrl();
 
