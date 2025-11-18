@@ -71,7 +71,7 @@ export default {
 	},
 	mounted() {
 		// Check if running in QA environment
-		if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ENV === 'QA') {
+		if (import.meta.env && import.meta.env.VITE_ENV === 'QA') {
 			this.isQAMode = true;
 		}
 	},
