@@ -58,8 +58,8 @@ class ChatMessageApiService {
 				MarkedAsSolution: false
 			};
 
-			// Use the chat controller's send endpoint
-			const response = await this.api.post(`${API_BASE_URL}/chat/send`, firstMessage);
+			// Use the chatmessages endpoint for creating the first chat message
+			const response = await this.api.post(this.baseURL, firstMessage);
 			
 			// Clear cache for this node to force refresh
 			this.clearMessagesCache(nodeId);
