@@ -1,3 +1,4 @@
+using BackendExecutor.Services;
 using StackExchange.Redis;
 using System.Text.Json;
 
@@ -13,15 +14,18 @@ public class ChatJobConsumer : IChatJobConsumer
     private readonly ILogger<ChatJobConsumer> _logger;
     private readonly IDatabase _database;
     private readonly IConnectionMultiplexer _redis;
+    private readonly ILlmChatService _llmChatService;
 
     public ChatJobConsumer(
         ILogger<ChatJobConsumer> logger,
         IDatabase database,
-        IConnectionMultiplexer redis)
+        IConnectionMultiplexer redis,
+        ILlmChatService llmChatService)
     {
         _logger = logger;
         _database = database;
         _redis = redis;
+        _llmChatService = llmChatService;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
@@ -75,9 +79,8 @@ public class ChatJobConsumer : IChatJobConsumer
             var modelName = ExtractModelName(chatJob.NodeLevel);
             _logger.LogInformation($"ChatJobConsumer: Using model: {modelName}");
 
-            // TODO: Send request to TensorRT-LLM container
-            // For now, simulate AI processing
-            var aiResponse = await SimulateAiProcessing(chatJob, modelName, cancellationToken);
+            // Send request to LLM endpoint
+            var aiResponse = await SendToLlm(chatJob, modelName, cancellationToken);
 
             // Publish response to Redis channel AI.RESPONSE
             var responseDto = new
@@ -125,23 +128,25 @@ public class ChatJobConsumer : IChatJobConsumer
         };
     }
 
-    private async Task<string> SimulateAiProcessing(ChatJobDto chatJob, string modelName, CancellationToken cancellationToken)
+    private async Task<string> SendToLlm(ChatJobDto chatJob, string modelName, CancellationToken cancellationToken)
     {
-        // Simulate AI processing delay
-        await Task.Delay(2000, cancellationToken);
-
-        // Generate a mock AI response
-        // TODO: Replace this with actual TensorRT-LLM call
-        var responses = new[]
+        try
         {
-            $"[{modelName}] I've analyzed your request: '{chatJob.Message}'. Here's my response based on the context of project {chatJob.ProjectId}.",
-            $"[{modelName}] Thank you for your message. I understand you're working on {chatJob.ProjectId}. Let me help you with that.",
-            $"[{modelName}] Based on your input, I recommend the following approach for your workflow in project {chatJob.ProjectId}.",
-            $"[{modelName}] I've processed your request. Here's a comprehensive solution tailored to your needs."
-        };
+            // Use the LlmChatService to send the message
+            var response = await _llmChatService.SendChatMessageAsync(
+                chatJob.Message ?? string.Empty,
+                modelName,
+                maxTokens: 64,
+                cancellationToken);
 
-        var random = new Random();
-        return responses[random.Next(responses.Length)];
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling LLM endpoint for model {ModelName}", modelName);
+            // Return an error message instead of throwing to keep the system running
+            return $"Error: Unable to process message with model {modelName}. {ex.Message}";
+        }
     }
 }
 
