@@ -163,12 +163,13 @@
 </template>
 
 <script>
-import { ref, reactive, watch, onMounted, nextTick, onUnmounted } from 'vue';
-import { triggerEvent, EVENT_TYPES } from '../rete/eventBus';
+import { ref, reactive, watch, onMounted, nextTick, onUnmounted, inject } from 'vue';
+import { triggerEvent, listenEvent, EVENT_TYPES } from '../rete/eventBus';
 import Chat from './Chat.vue';
 import DeepChatComponent from './DeepChatComponent.vue';
 import Review from './Review.vue';
 import FileExplorer from './FileExplorer.vue';
+import nodeApiService from '../service/nodeApiService';
 
 export default {
 	name: 'RightPanel',
@@ -185,9 +186,21 @@ export default {
 		},
 	},
 	setup(props) {
+		// Inject api
+		const api = inject('api');
+		nodeApiService.setApi(api);
+		
 		// Reactive data for each tab (excluding chat which is now a separate component)
 		const logsData = ref([]);
-		const propertiesData = reactive({});
+		const propertiesData = reactive({
+			nodeId: '',
+			name: 'No node selected',
+			type: 'none',
+			description: 'Select a node to view its properties',
+			status: 'idle',
+			properties: {},
+			performance: null
+		});
 
 		// UI state
 		const autoScroll = ref(true);
@@ -262,6 +275,61 @@ export default {
 			}
 		};
 
+		// Load node data from API
+		const loadNodeData = async (nodeId) => {
+			if (!nodeId) {
+				// Reset to default
+				Object.assign(propertiesData, {
+					nodeId: '',
+					name: 'No node selected',
+					type: 'none',
+					description: 'Select a node to view its properties',
+					status: 'idle',
+					properties: {},
+					performance: null
+				});
+				return;
+			}
+
+			try {
+				// Fetch node data from API (with localStorage caching)
+				const nodeData = await nodeApiService.getNode(nodeId);
+
+				if (nodeData) {
+					// Update properties with node data
+					Object.assign(propertiesData, {
+						nodeId: nodeData.Id,
+						name: nodeData.Name || 'Unnamed Node',
+						type: nodeData.NodeType || 'Default',
+						description: `Node Level: ${nodeData.Level}`,
+						status: nodeData.Status || 'idle',
+						properties: nodeData.Properties || {},
+						performance: null // Can be extended later
+					});
+
+					// Trigger event to notify DeepChatComponent about node selection
+					triggerEvent(EVENT_TYPES.NODE_SELECTED, {
+						id: nodeData.Id,
+						name: nodeData.Name,
+						level: nodeData.Level,
+						nodeData: nodeData
+					});
+				}
+			} catch (error) {
+				console.error('Error loading node data:', error);
+				// Set default data on error
+				Object.assign(propertiesData, {
+					nodeId: nodeId,
+					name: 'Error loading node',
+					type: 'unknown',
+					description: 'Failed to load node data',
+					status: 'error',
+					properties: {},
+					performance: null
+				});
+			}
+		};
+
 		// Initialize tooltips
 
 
@@ -307,6 +375,15 @@ export default {
 		//   console.log('Loading data for node:', nodeKey, newNode)
 		//   loadTabData(nodeKey)
 		// }, { immediate: true })
+
+		// Watch for selectedNode changes to load node data from API
+		watch(() => props.selectedNode, (newNode) => {
+			if (newNode && newNode.id) {
+				loadNodeData(newNode.id);
+			} else {
+				loadNodeData(null);
+			}
+		}, { immediate: true });
 
 		// handleClose triggers the same event Footer uses to toggle the panel
 		const handleClose = () => {
