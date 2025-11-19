@@ -10,11 +10,17 @@ namespace NodPT.API.Controllers
     [Route("api/[controller]")]
     public class ChatMessagesController : ControllerBase
     {
+        private readonly UnitOfWork session;
+
+        public ChatMessagesController(UnitOfWork _unitOfWork)
+        {
+            this.session = _unitOfWork;
+        }
+
         [HttpGet]
         [CustomAuthorized("Admin")]
         public IActionResult GetAllChatMessages()
         {
-            using var session = new Session();
             var messages = new XPCollection<ChatMessage>(session);
             
             // Project to DTOs to avoid serialization issues
@@ -40,7 +46,6 @@ namespace NodPT.API.Controllers
         
         public IActionResult GetChatMessagesByUser(string firebaseUid)
         {
-            using var session = new Session();
             var user = session.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("FirebaseUid", firebaseUid));
             
             if (user == null) return NotFound("User not found");
@@ -68,7 +73,6 @@ namespace NodPT.API.Controllers
         
         public IActionResult GetChatMessagesByNode(string nodeId)
         {
-            using var session = new Session();
             var node = session.FindObject<Node>(new DevExpress.Data.Filtering.BinaryOperator("Id", nodeId));
             
             if (node == null) return NotFound("Node not found");

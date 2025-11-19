@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 
 using NodPT.Data.DTOs;
 using NodPT.Data.Services;
+using DevExpress.Xpo;
 
 namespace NodPT.API.Controllers
 {
@@ -11,7 +12,14 @@ namespace NodPT.API.Controllers
     [Route("api/[controller]")]
     public class NodesController : ControllerBase
     {
-        private readonly NodeService _nodeService = new();
+        private readonly UnitOfWork unitOfWork;
+        private readonly NodeService _nodeService;
+
+        public NodesController(UnitOfWork _unitOfWork)
+        {
+            this.unitOfWork = _unitOfWork;
+            this._nodeService = new NodeService(unitOfWork);
+        }
 
         [HttpGet]
         public IActionResult GetNodes() => Ok(_nodeService.GetAllNodes());

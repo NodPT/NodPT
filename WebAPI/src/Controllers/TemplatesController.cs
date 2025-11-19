@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 
 using NodPT.Data.DTOs;
 using NodPT.Data.Services;
+using DevExpress.Xpo;
 
 namespace NodPT.API.Controllers
 {
@@ -11,7 +12,14 @@ namespace NodPT.API.Controllers
     [Route("api/[controller]")]
     public class TemplatesController : ControllerBase
     {
-        private readonly TemplateService _templateService = new();
+        private readonly UnitOfWork unitOfWork;
+        private readonly TemplateService _templateService;
+
+        public TemplatesController(UnitOfWork _unitOfWork)
+        {
+            this.unitOfWork = _unitOfWork;
+            this._templateService = new TemplateService(unitOfWork);
+        }
 
         [HttpGet]
         public IActionResult GetTemplates() => Ok(_templateService.GetAllTemplates());

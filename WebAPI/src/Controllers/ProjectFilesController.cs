@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 
 using NodPT.Data.DTOs;
 using NodPT.Data.Services;
+using DevExpress.Xpo;
 
 namespace NodPT.API.Controllers
 {
@@ -11,7 +12,14 @@ namespace NodPT.API.Controllers
     [Route("api/[controller]")]
     public class ProjectFilesController : ControllerBase
     {
-        private readonly ProjectFileService _fileService = new();
+        private readonly UnitOfWork unitOfWork;
+        private readonly ProjectFileService _fileService;
+
+        public ProjectFilesController(UnitOfWork _unitOfWork)
+        {
+            this.unitOfWork = _unitOfWork;
+            this._fileService = new ProjectFileService(unitOfWork);
+        }
 
         [HttpGet]
         public IActionResult GetFiles() => Ok(_fileService.GetAllFiles());

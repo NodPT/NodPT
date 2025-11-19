@@ -6,6 +6,13 @@ namespace NodPT.Data.Services
 {
     public class NodeService
     {
+        private readonly UnitOfWork session;
+
+        public NodeService(UnitOfWork unitOfWork)
+        {
+            this.session = unitOfWork;
+        }
+
         private NodeDto MapToDto(Node node)
         {
             var dto = new NodeDto
@@ -63,21 +70,18 @@ namespace NodPT.Data.Services
 
         public List<NodeDto> GetAllNodes()
         {
-            using var session = new Session();
             var nodes = new XPCollection<Node>(session);
             return nodes.Select(n => MapToDto(n)).ToList();
         }
 
         public NodeDto? GetNode(string id)
         {
-            using var session = new Session();
             var node = session.Query<Node>().FirstOrDefault(n => n.Id == id);
             return node == null ? null : MapToDto(node);
         }
 
         public List<NodeDto> GetNodesByProject(int projectId)
         {
-            using var session = new Session();
             var project = session.GetObjectByKey<Project>(projectId);
             if (project == null) return new List<NodeDto>();
             
@@ -88,7 +92,6 @@ namespace NodPT.Data.Services
 
         public void AddNode(NodeDto nodeDto)
         {
-            using var session = new Session();
             session.BeginTransaction();
 
             try
@@ -135,7 +138,6 @@ namespace NodPT.Data.Services
 
         public void UpdateNode(NodeDto nodeDto)
         {
-            using var session = new Session();
             session.BeginTransaction();
 
             try
@@ -180,7 +182,6 @@ namespace NodPT.Data.Services
 
         public void DeleteNode(string id)
         {
-            using var session = new Session();
             session.BeginTransaction();
 
             try
