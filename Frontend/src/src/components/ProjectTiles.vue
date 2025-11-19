@@ -20,7 +20,6 @@
 
 <script>
 import { ref, inject } from 'vue'
-import { Modal } from 'bootstrap'
 import { triggerEvent, EVENT_TYPES } from '../rete/eventBus'
 
 export default {

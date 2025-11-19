@@ -11,22 +11,22 @@ import { NODE_TYPES } from './SimpleNode.js';
 export async function createDemoNodes(editorManager) {
 	try {
 
-                // Create hierarchy: 1 Director -> 5 Managers -> 11 Inspectors -> 26 Agents
-                // Animated sequence: Director first, then wait 1s for managers, 2s for inspectors, 3s for agents
+		// Create hierarchy: 1 Director -> 5 Managers -> 11 Inspectors -> 26 Agents
+		// Animated sequence: Director first, then wait 1s for managers, 2s for inspectors, 3s for agents
 
-                // Phase 1: Director (0s)
-                const directorNode = await editorManager.addNode(NODE_TYPES.DIRECTOR, 'Director'); // 0 inputs, 2 outputs
-                editorManager.arrangeNodes();
+		// Phase 1: Director (0s)
+		const directorNode = await editorManager.addNode(NODE_TYPES.DIRECTOR, 'Director'); // 0 inputs, 2 outputs
+		editorManager.arrangeNodes();
 
 		// Phase 2: Managers (after 1s)
 		setTimeout(async () => {
 			// Create all 5 managers
-                        const mgr1 = await directorNode.addChild(NODE_TYPES.MANAGER, 'Employee');
-                        const mgr2 = await directorNode.addChild(NODE_TYPES.MANAGER, 'Salary');
-                        const mgr3 = await directorNode.addChild(NODE_TYPES.MANAGER, 'Assessment');
-                        const mgr4 = await directorNode.addChild(NODE_TYPES.MANAGER, 'Promotion');
-                        const mgr5 = await directorNode.addChild(NODE_TYPES.MANAGER, 'SIR');
-			
+			const mgr1 = await directorNode.addChild(NODE_TYPES.MANAGER, 'Employee');
+			const mgr2 = await directorNode.addChild(NODE_TYPES.MANAGER, 'Salary');
+			const mgr3 = await directorNode.addChild(NODE_TYPES.MANAGER, 'Assessment');
+			const mgr4 = await directorNode.addChild(NODE_TYPES.MANAGER, 'Promotion');
+			const mgr5 = await directorNode.addChild(NODE_TYPES.MANAGER, 'SIR');
+
 			editorManager.arrangeNodes();
 
 			// Phase 3: Inspectors (after 2 more seconds, 3s total)
@@ -99,12 +99,12 @@ export async function createDemoNodes(editorManager) {
 					// Start status change animations after all nodes are created
 					setTimeout(() => {
 						// Demonstrate status changes
-                                                directorNode.setStatus('idle');
+						directorNode.setStatus('idle');
 
 						// Show different states over time
-                                                setTimeout(() => directorNode.setStatus('thinking'), 2000);
-                                                setTimeout(() => directorNode.setStatus('working'), 4000);
-                                                setTimeout(() => directorNode.setStatus('completed'), 6000);
+						setTimeout(() => directorNode.setStatus('thinking'), 2000);
+						setTimeout(() => directorNode.setStatus('working'), 4000);
+						setTimeout(() => directorNode.setStatus('completed'), 6000);
 
 						// Show agent status changes
 						setTimeout(() => agent1Node.setStatus('thinking'), 2500);

@@ -3,7 +3,6 @@ import * as Rete from 'rete';
 import { ClassicPreset } from 'rete';
 import { triggerEvent, listenEvent, EVENT_TYPES } from './eventBus.js';
 import { SimpleNode, NODE_TYPES } from './SimpleNode.js';
-import { createDemoNodes } from './demo.js';
 // Import Rete.js and required plugins
 import { VuePlugin, Presets } from 'rete-vue-plugin';
 import { AreaExtensions } from 'rete-area-plugin';
@@ -24,8 +23,8 @@ export class EditorManager {
 		this.editor = null;
 		this.area = null;
 		this.historyPlugin = null;
-                this.minimapPlugin = null;
-                this.director = null;
+		this.minimapPlugin = null;
+		this.director = null;
 		this.groups = [];
 		this.nodes = [];
 	}
@@ -221,7 +220,6 @@ export class EditorManager {
 			listenEvent(EVENT_TYPES.SEARCH_FOCUS_NODE, this.handleFocusNode.bind(this));
 			listenEvent(EVENT_TYPES.TOGGLE_MINIMAP, this.toggleMinimap.bind(this));
 			listenEvent(EVENT_TYPES.NODE_ACTION, this.handleNodeAction.bind(this));
-			listenEvent('CALL_DEMO_FUNCTION', this.handleDemoFunctionCall.bind(this));
 
 			// Inject translatePosition method to area object
 			// Usage: area.translatePosition(nodeId, { x, y }, duration)
@@ -256,10 +254,10 @@ export class EditorManager {
 		}
 	}
 
-        /**
-         * Arrange nodes with animation based on the hierarchy: Director > Managers > Inspectors > Agents
-	 * Each level follows specific positioning rules
-	 */
+	/**
+	 * Arrange nodes with animation based on the hierarchy: Director > Managers > Inspectors > Agents
+ * Each level follows specific positioning rules
+ */
 	async arrangeNodes() {
 		if (!this.nodes.length) return;
 
@@ -273,9 +271,9 @@ export class EditorManager {
 			const parentHeight = nodeInfo.node.height || 100;
 
 			// Different arrangement based on node type
-                        if (nodeInfo.nodeType === NODE_TYPES.DIRECTOR) {
-                                // For Director nodes: arrange managers horizontally
-                                await this.arrangeDirectorChildren(nodeInfo, 30, 60, parentWidth, parentHeight);
+			if (nodeInfo.nodeType === NODE_TYPES.DIRECTOR) {
+				// For Director nodes: arrange managers horizontally
+				await this.arrangeDirectorChildren(nodeInfo, 30, 60, parentWidth, parentHeight);
 				break;
 			}
 		}
@@ -284,19 +282,19 @@ export class EditorManager {
 		this.area.update();
 	}
 
-        /**
-         * Arrange Director node's children (Managers) in a horizontal line
-         */
-        async arrangeDirectorChildren(directorNode, parentX, parentY, parentWidth, parentHeight) {
+	/**
+	 * Arrange Director node's children (Managers) in a horizontal line
+	 */
+	async arrangeDirectorChildren(directorNode, parentX, parentY, parentWidth, parentHeight) {
 		let col1 = [];
 		let col2 = [];
 
-                // Director nodes: position managers horizontally with spacing
-                // Based on the screenshot, position them to the left and right sides of the director
+		// Director nodes: position managers horizontally with spacing
+		// Based on the screenshot, position them to the left and right sides of the director
 		const managerSpacing = 80; // Space between managers
 
 		// Sort managers by name to ensure consistent placement
-                const sortedManagers = directorNode.children;
+		const sortedManagers = directorNode.children;
 
 		// Determine position based on name/type
 		let managerX = parentWidth + 50,
@@ -446,16 +444,16 @@ export class EditorManager {
 	/**
 	 * Add a new node to the editor (this is the main method to use)
 	 * @param {string} nodeType - Type of the node
-         * @param {string} name - Name of the node (default: 'Director')
+		 * @param {string} name - Name of the node (default: 'Director')
 	 * @param {number} inputsCount - Number of inputs (default: 0)
 	 * @param {number} outputsCount - Number of outputs (default: 0)
 	 * @returns {Object} The created and added node
 	 */
-        async addNode(nodeType, name = 'Director', inputsCount = 0, outputsCount = 0) {
-                if (!this.editor) {
-                        console.warn('Editor instance not initialized');
-                        return null;
-                }
+	async addNode(nodeType, name = 'Director', inputsCount = 0, outputsCount = 0) {
+		if (!this.editor) {
+			console.warn('Editor instance not initialized');
+			return null;
+		}
 
 		try {
 			// Create the node object directly
@@ -470,66 +468,66 @@ export class EditorManager {
 			// update node position in the editor
 			await this.area.translate(childNode.node.id, { x: 10, y: 10 });
 
-                        if (nodeType === 'director') {
-                                this.director = childNode;
+			if (nodeType === 'director') {
+				this.director = childNode;
 			}
 
 			this.nodes.push(childNode);
 
-                        return childNode;
-                } catch (error) {
-                        console.error('Failed to add node:', error);
-                        return null;
-                }
-        }
+			return childNode;
+		} catch (error) {
+			console.error('Failed to add node:', error);
+			return null;
+		}
+	}
 
-        /**
-         * Remove all existing nodes and optionally create a new set of nodes
-         * @param {Array} initialNodes - Array of node configs to create after reset
-         * @returns {Promise<Array>} Array of created nodes
-         */
-        async resetNodes(initialNodes = []) {
-                if (!this.editor) {
-                        console.warn('Editor instance not initialized');
-                        return [];
-                }
+	/**
+	 * Remove all existing nodes and optionally create a new set of nodes
+	 * @param {Array} initialNodes - Array of node configs to create after reset
+	 * @returns {Promise<Array>} Array of created nodes
+	 */
+	async resetNodes(initialNodes = []) {
+		if (!this.editor) {
+			console.warn('Editor instance not initialized');
+			return [];
+		}
 
-                const existingNodes = Array.from(this.editor.getNodes ? this.editor.getNodes() : []);
+		const existingNodes = Array.from(this.editor.getNodes ? this.editor.getNodes() : []);
 
-                for (const node of existingNodes) {
-                        try {
-                                await this.editor.removeNode(node.id);
-                        } catch (error) {
-                                console.warn('Failed to remove node during reset:', error);
-                        }
-                }
+		for (const node of existingNodes) {
+			try {
+				await this.editor.removeNode(node.id);
+			} catch (error) {
+				console.warn('Failed to remove node during reset:', error);
+			}
+		}
 
-                this.nodes = [];
-                this.director = null;
-                this.groups = [];
+		this.nodes = [];
+		this.director = null;
+		this.groups = [];
 
-                if (this.area) {
-                        this.area.update();
-                }
+		if (this.area) {
+			this.area.update();
+		}
 
-                const createdNodes = [];
+		const createdNodes = [];
 
-                for (const nodeConfig of initialNodes) {
-                        const { type, name, inputs = 0, outputs = 0 } = nodeConfig || {};
+		for (const nodeConfig of initialNodes) {
+			const { type, name, inputs = 0, outputs = 0 } = nodeConfig || {};
 
-                        if (!type || !name) {
-                                continue;
-                        }
+			if (!type || !name) {
+				continue;
+			}
 
-                        const createdNode = await this.addNode(type, name, inputs, outputs);
+			const createdNode = await this.addNode(type, name, inputs, outputs);
 
-                        if (createdNode) {
-                                createdNodes.push(createdNode);
-                        }
-                }
+			if (createdNode) {
+				createdNodes.push(createdNode);
+			}
+		}
 
-                return createdNodes;
-        }
+		return createdNodes;
+	}
 
 	/**
 	 * Delete a node using the node manager
@@ -1092,7 +1090,7 @@ export class EditorManager {
 		try {
 			// Find the minimap element in the DOM
 			const minimapElement = this.area.container.querySelector('.minimap');
-			
+
 			if (minimapElement) {
 				// Toggle visibility by changing display style
 				if (minimapElement.style.display === 'none') {
@@ -1118,16 +1116,16 @@ export class EditorManager {
 			return;
 		}
 
-                try {
-                        switch (action) {
-                                case 'add':
-                                        // Add a new node with 1 input and 1 output as specified in the issue
-                                        await this.addNode('director', 'New Node', 1, 1);
-                                        break;
-                                case 'delete':
-                                        // Trigger DELETE_NODE event for confirmation dialog
-                                        triggerEvent(EVENT_TYPES.DELETE_NODE);
-                                        break;
+		try {
+			switch (action) {
+				case 'add':
+					// Add a new node with 1 input and 1 output as specified in the issue
+					await this.addNode('director', 'New Node', 1, 1);
+					break;
+				case 'delete':
+					// Trigger DELETE_NODE event for confirmation dialog
+					triggerEvent(EVENT_TYPES.DELETE_NODE);
+					break;
 				case 'lock':
 					// TODO: Lock selected nodes - requires node selection tracking implementation
 					console.warn('Lock node action not yet implemented - requires selection tracking');
@@ -1154,21 +1152,5 @@ export class EditorManager {
 		this.minimapPlugin = null;
 	}
 
-	/**
-	 * Handle demo function call event from chat when solution is marked
-	 * @param {Object} payload - Event payload with action type
-	 */
-	async handleDemoFunctionCall(payload) {
-		try {
-			const { action } = payload;
 
-			if (action === 'createDemoNodes') {
-				console.log('Creating demo nodes from chat solution...');
-				await createDemoNodes(this);
-				console.log('Demo nodes created successfully');
-			}
-		} catch (error) {
-			console.error('Failed to handle demo function call:', error);
-		}
-	}
 }

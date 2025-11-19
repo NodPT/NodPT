@@ -31,13 +31,6 @@ Get started by checking out our [Issues](https://github.com/rongxike/NodPT.Front
 - **AI-Powered Tools**: Integrated AI assistance for workflow optimization
 
 ## New Features
-
-### Progressive Web App (PWA)
-- ✅ Add to Home Screen on mobile and desktop
-- ✅ Offline support with service worker caching
-- ✅ Automatic cache updates when new versions are available
-- ✅ App-like experience with standalone display mode
-
 ### SignalR Integration
 - ✅ Real-time communication with the server
 - ✅ Live connection status indicator in the bottom bar
@@ -45,64 +38,15 @@ Get started by checking out our [Issues](https://github.com/rongxike/NodPT.Front
 - ✅ Event-based architecture for easy integration
 - ✅ Support for node updates and editor commands from server
 
-## Getting Started
-
-### Installation
-
-```bash
-npm install
-```
-
-### Development
-
-```bash
-npm run dev
-```
-
-### Build
-
-```bash
-npm run build
-```
-
-### Preview Production Build
-
-```bash
-npm run preview
-```
-
-## Documentation
-
-- [PWA and SignalR Features](./docs/PWA_AND_SIGNALR.md) - Detailed documentation for PWA and SignalR features
 
 ## Configuration
 
-### PWA Configuration
-- Edit `public/manifest.json` to customize app name, icons, and display settings
-- Update `public/service-worker.js` to configure caching strategy
-
 ### SignalR Configuration
-- Update hub URL in `src/views/MainEditor.vue`
-- Implement corresponding SignalR hub on your backend server
-- See [documentation](./docs/PWA_AND_SIGNALR.md) for detailed setup instructions
+
 
 ## Project Structure
 
-```
-src/
-├── components/       # Vue components
-│   ├── TopBar.vue
-│   ├── Footer.vue    # Includes SignalR connection status
-│   ├── LeftPanel.vue
-│   └── RightPanel.vue
-├── views/            # Page components
-│   └── MainEditor.vue # Main editor with SignalR integration
-├── service/          # Service layer
-│   └── signalRService.js # SignalR service
-├── rete/             # Rete.js configuration
-│   └── eventBus.js   # Event bus with SignalR events
-└── main.js           # Service worker registration
-```
+
 
 ## Browser Support
 

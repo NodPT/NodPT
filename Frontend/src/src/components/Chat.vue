@@ -65,48 +65,47 @@
 import { ref, reactive, inject, onMounted, nextTick, onBeforeUnmount } from 'vue';
 import { eventBus, listenEvent, EVENT_TYPES } from '../rete/eventBus.js';
 import chatApiService from '../service/chatApiService.js';
-import { createDemoNodes } from '../rete/demo.js';
 
 export default {
-        name: 'Chat',
-        setup() {
-                // Inject API plugin
-                const api = inject('api');
-                chatApiService.setApi(api);
+	name: 'Chat',
+	setup() {
+		// Inject API plugin
+		const api = inject('api');
+		chatApiService.setApi(api);
 
-                // Reactive data for chat
-                const chatData = reactive({ messages: [] });
-                const newMessage = ref('');
-                const isLoading = ref(false);
+		// Reactive data for chat
+		const chatData = reactive({ messages: [] });
+		const newMessage = ref('');
+		const isLoading = ref(false);
 
-                // Refs for DOM elements
-                const chatMessages = ref(null);
+		// Refs for DOM elements
+		const chatMessages = ref(null);
 
-                const eventListeners = [];
+		const eventListeners = [];
 
-                const createDefaultAiMessage = () => ({
-                        id: Date.now(),
-                        type: 'ai',
-                        content: 'How can I help you today?',
-                        timestamp: new Date().toISOString(),
-                        markedAsSolution: false,
-                        liked: false,
-                        disliked: false,
-                });
+		const createDefaultAiMessage = () => ({
+			id: Date.now(),
+			type: 'ai',
+			content: 'How can I help you today?',
+			timestamp: new Date().toISOString(),
+			markedAsSolution: false,
+			liked: false,
+			disliked: false,
+		});
 
-                const resetChatMessages = async () => {
-                        chatData.messages = [createDefaultAiMessage()];
-                        newMessage.value = '';
-                        isLoading.value = false;
+		const resetChatMessages = async () => {
+			chatData.messages = [createDefaultAiMessage()];
+			newMessage.value = '';
+			isLoading.value = false;
 
-                        await nextTick();
-                        scrollToBottom();
-                };
+			await nextTick();
+			scrollToBottom();
+		};
 
-                // Data cache to avoid repeated fetches
-                const dataCache = reactive({
-                        chat: {},
-                });
+		// Data cache to avoid repeated fetches
+		const dataCache = reactive({
+			chat: {},
+		});
 
 		// Current node context (for API calls)
 		const currentNodeId = ref(null);
@@ -132,61 +131,61 @@ export default {
 				return data[nodeKey] || data.default || {};
 			} catch (error) {
 				console.error(`Error fetching ${type} data:`, error);
-                                return getDefaultData(type);
-                        }
-                };
+				return getDefaultData(type);
+			}
+		};
 
-                // Fallback default data
-                const getDefaultData = (type) => {
-                        if (type === 'chat') {
-                                return { messages: [createDefaultAiMessage()] };
-                        }
-                        return {};
-                };
+		// Fallback default data
+		const getDefaultData = (type) => {
+			if (type === 'chat') {
+				return { messages: [createDefaultAiMessage()] };
+			}
+			return {};
+		};
 
-                // Load chat data
+		// Load chat data
 		const loadChatData = async (nodeKey) => {
 			const currentKey = nodeKey || 'default';
 
 			try {
 				// Try to load from API first, fallback to local data
-                                if (currentNodeId.value) {
-                                        const apiMessages = await chatApiService.getPersistedMessagesByNodeId(currentNodeId.value);
-                                        chatData.messages = apiMessages.map(msg => ({
-                                                id: msg.oid,
-                                                type: msg.sender === 'user' ? 'user' : 'ai',
-                                                content: msg.message,
+				if (currentNodeId.value) {
+					const apiMessages = await chatApiService.getPersistedMessagesByNodeId(currentNodeId.value);
+					chatData.messages = apiMessages.map(msg => ({
+						id: msg.oid,
+						type: msg.sender === 'user' ? 'user' : 'ai',
+						content: msg.message,
 						timestamp: msg.timestamp,
 						markedAsSolution: msg.markedAsSolution,
 						liked: msg.liked || false,
 						disliked: msg.disliked || false
 					}));
-                                } else {
-                                        // Fallback to local data
-                                        const chatResult = await fetchData('chat', currentKey);
-                                        Object.assign(chatData, chatResult);
-                                }
+				} else {
+					// Fallback to local data
+					const chatResult = await fetchData('chat', currentKey);
+					Object.assign(chatData, chatResult);
+				}
 
-                                if (!chatData.messages || chatData.messages.length === 0) {
-                                        await resetChatMessages();
-                                } else {
-                                        // Auto-scroll chat
-                                        await nextTick();
-                                        scrollToBottom();
-                                }
-                        } catch (error) {
-                                console.error('Error loading chat data:', error);
-                                // Load fallback data
-                                const chatResult = await fetchData('chat', currentKey);
-                                Object.assign(chatData, chatResult);
-                                if (!chatData.messages || chatData.messages.length === 0) {
-                                        await resetChatMessages();
-                                } else {
-                                        await nextTick();
-                                        scrollToBottom();
-                                }
-                        }
-                };
+				if (!chatData.messages || chatData.messages.length === 0) {
+					await resetChatMessages();
+				} else {
+					// Auto-scroll chat
+					await nextTick();
+					scrollToBottom();
+				}
+			} catch (error) {
+				console.error('Error loading chat data:', error);
+				// Load fallback data
+				const chatResult = await fetchData('chat', currentKey);
+				Object.assign(chatData, chatResult);
+				if (!chatData.messages || chatData.messages.length === 0) {
+					await resetChatMessages();
+				} else {
+					await nextTick();
+					scrollToBottom();
+				}
+			}
+		};
 
 		// Utility functions
 		const formatTime = (timestamp) => {
@@ -439,37 +438,37 @@ export default {
 		};
 
 		// Listen for node selection changes
-                const handleNodeSelection = (nodeData) => {
-                        currentNodeId.value = nodeData.id;
-                        console.log('Node selected for chat context:', nodeData);
-                        // Reload chat data for this node
-                        loadChatData(nodeData.id);
-                };
+		const handleNodeSelection = (nodeData) => {
+			currentNodeId.value = nodeData.id;
+			console.log('Node selected for chat context:', nodeData);
+			// Reload chat data for this node
+			loadChatData(nodeData.id);
+		};
 
-                const handleProjectContextChange = async () => {
-                        await resetChatMessages();
-                };
+		const handleProjectContextChange = async () => {
+			await resetChatMessages();
+		};
 
-                // Load initial data on mount
-                onMounted(() => {
-                        loadChatData('default');
+		// Load initial data on mount
+		onMounted(() => {
+			loadChatData('default');
 
-                        // Listen for node selection events
-                        eventListeners.push(listenEvent(EVENT_TYPES.NODE_SELECTED, handleNodeSelection));
-                        eventListeners.push(listenEvent(EVENT_TYPES.PROJECT_CONTEXT_CHANGED, handleProjectContextChange));
-                });
+			// Listen for node selection events
+			eventListeners.push(listenEvent(EVENT_TYPES.NODE_SELECTED, handleNodeSelection));
+			eventListeners.push(listenEvent(EVENT_TYPES.PROJECT_CONTEXT_CHANGED, handleProjectContextChange));
+		});
 
-                onBeforeUnmount(() => {
-                        eventListeners.forEach((unsubscribe) => {
-                                if (typeof unsubscribe === 'function') {
-                                        unsubscribe();
-                                }
-                        });
-                });
+		onBeforeUnmount(() => {
+			eventListeners.forEach((unsubscribe) => {
+				if (typeof unsubscribe === 'function') {
+					unsubscribe();
+				}
+			});
+		});
 
-                return {
-                        // Data
-                        chatData,
+		return {
+			// Data
+			chatData,
 			newMessage,
 			isLoading,
 

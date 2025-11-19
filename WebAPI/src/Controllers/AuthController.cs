@@ -354,30 +354,31 @@ namespace NodPT.API.Controllers
                               (errorMessage != null ? $" - Error: {errorMessage}" : ""));
 
             // Database logging in background task to avoid transaction conflicts
-            _ = Task.Run(async () =>
+            try
             {
-                try
-                {
-                    user!.Session!.BeginTransaction();
-                    user.AccessLogs.Add(new UserAccessLog(user.Session)
-                    {
-                        User = user,
-                        Action = action,
-                        IpAddress = ip,
-                        UserAgent = Request.Headers.UserAgent.ToString(),
-                        Timestamp = DateTime.UtcNow,
-                        Success = success,
-                        ErrorMessage = errorMessage
-                    });
+                var freshUser = this.session!.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("Oid", user.Oid));
+                if (freshUser == null)
+                    return;
 
-                    user.Save();
-                    await user.Session.CommitTransactionAsync();
-                }
-                catch (Exception ex)
+                this.session.BeginTransaction();
+                freshUser.AccessLogs.Add(new UserAccessLog(this.session)
                 {
-                    Console.WriteLine($"Failed to log user access to database: {ex.Message}");
-                }
-            });
+                    User = freshUser,
+                    Action = action,
+                    IpAddress = ip,
+                    UserAgent = Request.Headers.UserAgent.ToString(),
+                    Timestamp = DateTime.UtcNow,
+                    Success = success,
+                    ErrorMessage = errorMessage
+                });
+
+                this.session.Save(freshUser);
+                await this.session.CommitTransactionAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to log user access to database: {ex.Message}");
+            }
         }
 
         /// <summary>

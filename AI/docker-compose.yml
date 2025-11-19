@@ -1,12 +1,28 @@
 version: "3.9"
 
 services:
-  nodpt-ai:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: nodpt-ai:latest
-    container_name: nodpt-ai
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+
+    # Enable NVIDIA GPU
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [ gpu ]
+
+    # OR for older Docker versions:
+    gpus: all
+
+    volumes:
+      - ollama_data:/root/.ollama
+
     ports:
-      - "8000:8000"
-    restart: always
+      - "11434:11434"
+
+volumes:
+  ollama_data:
+
+
