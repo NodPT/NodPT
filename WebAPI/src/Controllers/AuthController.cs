@@ -96,7 +96,7 @@ namespace NodPT.API.Controllers
                         session.RollbackTransaction();
                     }
 
-                    LogUserAccess(user, "login", false, validationError.Message);
+                    await LogUserAccessAsync(user, "login", false, validationError.Message);
                     return Unauthorized(validationError);
                 }
 
@@ -112,7 +112,7 @@ namespace NodPT.API.Controllers
                 session.CommitTransaction();
 
                 // Log successful login
-                LogUserAccess(user, "login", true);
+                await LogUserAccessAsync(user, "login", true);
 
                 return Ok(new AuthResponseDto
                 {
@@ -152,7 +152,7 @@ namespace NodPT.API.Controllers
         /// Refresh authentication token
         /// </summary>
         [HttpPost("refresh")]
-        public IActionResult RefreshToken([FromBody] RefreshTokenRequestDto request)
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDto request)
         {
             if (request == null || string.IsNullOrEmpty(request.RefreshToken))
             {
@@ -186,7 +186,7 @@ namespace NodPT.API.Controllers
                 if (validationError != null)
                 {
                     session.RollbackTransaction();
-                    LogUserAccess(user, "refresh_token", false, validationError.Message);
+                    await LogUserAccessAsync(user, "refresh_token", false, validationError.Message);
                     return Unauthorized(validationError);
                 }
 
@@ -201,7 +201,7 @@ namespace NodPT.API.Controllers
                 session.CommitTransaction();
 
                 // Log successful token refresh
-                LogUserAccess(user, "refresh_token", true);
+                await LogUserAccessAsync(user, "refresh_token", true);
 
                 return Ok(new AuthResponseDto
                 {
@@ -339,7 +339,7 @@ namespace NodPT.API.Controllers
         /// <summary>
         /// Log user access activity
         /// </summary>
-        private void LogUserAccess(User? user, string action, bool success, string? errorMessage = null)
+        private async Task LogUserAccessAsync(User? user, string action, bool success, string? errorMessage = null)
         {
 
             if (user == null)

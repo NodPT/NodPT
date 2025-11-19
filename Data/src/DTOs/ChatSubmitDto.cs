@@ -7,5 +7,6 @@ namespace NodPT.Data.DTOs
         public string? Message { get; set; }
         public string? ProjectId { get; set; }
         public string? NodeLevel { get; set; }
+        public string? Model { get; set; }
     }
 }

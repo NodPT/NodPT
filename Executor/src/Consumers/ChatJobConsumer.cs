@@ -75,8 +75,11 @@ public class ChatJobConsumer : IChatJobConsumer
                 return;
             }
 
-            // Extract model name from NodeLevel
-            var modelName = ExtractModelName(chatJob.NodeLevel);
+            // Use model from Redis data if available, otherwise extract from NodeLevel
+            var modelName = !string.IsNullOrEmpty(chatJob.Model) 
+                ? chatJob.Model 
+                : ExtractModelName(chatJob.NodeLevel);
+            
             _logger.LogInformation($"ChatJobConsumer: Using model: {modelName}");
 
             // Send request to LLM endpoint
@@ -157,4 +160,5 @@ public class ChatJobDto
     public string? Message { get; set; }
     public string? ProjectId { get; set; }
     public string? NodeLevel { get; set; }
+    public string? Model { get; set; }
 }
