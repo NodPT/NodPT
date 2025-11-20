@@ -468,7 +468,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import '../assets/styles/landing-page-light.css';
+import '../assets/styles/landing-page-dark.css';
 
 const router = useRouter();
 const isScrolled = ref(false);
