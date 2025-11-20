@@ -17,18 +17,6 @@
                     placeholder="Enter your display name" required />
                 </div>
 
-                <div class="mb-4">
-                  <label class="form-label text-white">Bio (Optional)</label>
-                  <textarea v-model="bio" class="form-control profile-input" rows="3"
-                    placeholder="Tell us about yourself..."></textarea>
-                </div>
-
-                <div class="mb-4">
-                  <label class="form-label text-white">Company (Optional)</label>
-                  <input v-model="company" type="text" class="form-control profile-input"
-                    placeholder="Your company name" />
-                </div>
-
                 <div class="d-grid gap-3">
                   <button class="btn btn-primary btn-lg profile-btn" type="submit">
                     <i class="fas fa-check me-2"></i>Complete Profile
@@ -54,14 +42,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, inject } from 'vue';
 import { useRouter } from 'vue-router';
 import { auth } from '../firebase';
+import userApiService from '../service/userApiService';
 
 const router = useRouter();
+const api = inject('api');
 const DisplayName = ref('');
-const bio = ref('');
-const company = ref('');
 
 onMounted(() => {
   // Pre-fill with user's existing display name if available
@@ -72,14 +60,24 @@ onMounted(() => {
 
 async function onSubmit() {
   try {
-    // TODO: Save profile data to backend when implemented
-    console.log('Profile data:', {
-      DisplayName: DisplayName.value,
-      bio: bio.value,
-      company: company.value
+    const user = auth.currentUser;
+    if (!user) {
+      alert('You must be logged in to update your profile.');
+      return;
+    }
+
+    // Initialize API service
+    userApiService.setApi(api);
+
+    // Get Firebase UID
+    const firebaseUid = user.uid;
+
+    // Update profile via API
+    await userApiService.updateProfile(firebaseUid, {
+      DisplayName: DisplayName.value
     });
 
-    // For now, just route to the project page
+    // Route to the project page on success
     router.push({ name: 'Project' });
   } catch (error) {
     console.error('Error saving profile:', error);
