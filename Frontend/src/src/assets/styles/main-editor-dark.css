@@ -1,0 +1,72 @@
+/* Dark theme for Main Editor and components */
+
+[data-theme="dark"] .main-editor {
+  background-color: #0f0f23;
+  color: #e8eaf6;
+}
+
+[data-theme="dark"] .main-editor-content {
+  background-color: #0f0f23;
+}
+
+[data-theme="dark"] .main-editor-left-panel {
+  background-color: #1a1a2e;
+  border-right: 1px solid rgba(102, 126, 234, 0.2);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .main-editor-right-panel {
+  background-color: #1a1a2e;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .main-editor-right-panel .nav-tabs {
+  border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+[data-theme="dark"] .main-editor-right-panel .nav-link {
+  color: rgba(232, 234, 246, 0.7);
+  border-color: transparent;
+}
+
+[data-theme="dark"] .main-editor-right-panel .nav-link:hover {
+  color: #e8eaf6;
+  border-color: rgba(102, 126, 234, 0.2);
+}
+
+[data-theme="dark"] .main-editor-right-panel .nav-link.active {
+  color: #667eea;
+  background-color: rgba(102, 126, 234, 0.1);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+[data-theme="dark"] .main-editor-right-panel .tab-content {
+  background-color: #1a1a2e;
+  color: #e8eaf6;
+}
+
+/* Custom scrollbar for dark theme */
+[data-theme="dark"] .left-panel .rete-container::-webkit-scrollbar-track,
+[data-theme="dark"] .left-panel .rete-canvas::-webkit-scrollbar-track,
+[data-theme="dark"] .main-editor-right-panel .tab-content::-webkit-scrollbar-track {
+  background: rgba(102, 126, 234, 0.05);
+}
+
+[data-theme="dark"] .left-panel .rete-container::-webkit-scrollbar-thumb,
+[data-theme="dark"] .left-panel .rete-canvas::-webkit-scrollbar-thumb,
+[data-theme="dark"] .main-editor-right-panel .tab-content::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.3);
+}
+
+[data-theme="dark"] .left-panel .rete-container::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] .left-panel .rete-canvas::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] .main-editor-right-panel .tab-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.5);
+}
+
+[data-theme="dark"] .left-panel .rete-container,
+[data-theme="dark"] .left-panel .rete-canvas,
+[data-theme="dark"] .main-editor-right-panel .tab-content {
+  scrollbar-color: rgba(102, 126, 234, 0.3) rgba(102, 126, 234, 0.05);
+}

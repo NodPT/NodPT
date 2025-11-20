@@ -1,0 +1,103 @@
+/* Dark theme for Chat component */
+
+[data-theme="dark"] .chat-container {
+  background-color: #1a1a2e;
+  color: #e8eaf6;
+}
+
+[data-theme="dark"] .chat-messages {
+  background-color: rgba(15, 15, 35, 0.5);
+}
+
+[data-theme="dark"] .chat-input {
+  background-color: #1a1a2e;
+  border-top: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+/* AI message - left aligned with purple gradient */
+[data-theme="dark"] .ai-message .message-content {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* User message - right aligned with teal gradient */
+[data-theme="dark"] .user-message .message-content {
+  background: linear-gradient(135deg, #4fc3f7, #66bb6a);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(79, 195, 247, 0.3);
+}
+
+[data-theme="dark"] .message-time {
+  color: rgba(232, 234, 246, 0.6);
+}
+
+/* Button styles in dark theme */
+[data-theme="dark"] .message-actions .btn,
+[data-theme="dark"] .message-controls .btn {
+  background-color: rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.3);
+  color: #e8eaf6;
+}
+
+[data-theme="dark"] .message-actions .btn:hover,
+[data-theme="dark"] .message-controls .btn:hover {
+  background-color: rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.4);
+}
+
+[data-theme="dark"] .message-actions .btn.btn-success,
+[data-theme="dark"] .message-controls .btn.btn-success {
+  background-color: rgba(25, 135, 84, 0.5);
+  border-color: rgba(25, 135, 84, 0.7);
+}
+
+[data-theme="dark"] .message-actions .btn.btn-danger {
+  background-color: rgba(220, 53, 69, 0.5);
+  border-color: rgba(220, 53, 69, 0.7);
+}
+
+[data-theme="dark"] .chat-input .form-control {
+  background-color: rgba(15, 15, 35, 0.5);
+  border-color: rgba(102, 126, 234, 0.3);
+  color: #e8eaf6;
+}
+
+[data-theme="dark"] .chat-input .form-control:focus {
+  background-color: rgba(15, 15, 35, 0.7);
+  border-color: rgba(102, 126, 234, 0.5);
+  color: #e8eaf6;
+  box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+}
+
+[data-theme="dark"] .chat-input .form-control::placeholder {
+  color: rgba(232, 234, 246, 0.5);
+}
+
+[data-theme="dark"] .chat-input .btn-primary {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border: none;
+}
+
+[data-theme="dark"] .chat-input .btn-primary:hover {
+  background: linear-gradient(135deg, #7c8ef7, #8a5bb8);
+}
+
+[data-theme="dark"] .chat-input .btn-success {
+  background-color: rgba(25, 135, 84, 0.7);
+  border-color: rgba(25, 135, 84, 0.9);
+}
+
+[data-theme="dark"] .chat-input .btn-success:hover {
+  background-color: rgba(25, 135, 84, 0.9);
+}
+
+[data-theme="dark"] .badge.bg-success {
+  background-color: rgba(25, 135, 84, 0.7) !important;
+}
+
+/* Spinner in dark theme */
+[data-theme="dark"] .spinner-border {
+  border-color: rgba(232, 234, 246, 0.3);
+  border-right-color: #e8eaf6;
+}

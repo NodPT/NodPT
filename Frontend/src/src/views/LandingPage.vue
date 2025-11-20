@@ -10,13 +10,6 @@
             <span class="text-white-50 small">Intelligence, Multiplied.</span>
           </div>
           <nav class="d-flex flex-wrap align-items-center gap-3">
-            <button 
-              @click="toggleTheme" 
-              class="btn btn-secondary btn-sm px-3"
-              :title="isDarkTheme ? 'Switch to Light Theme' : 'Switch to Dark Theme'"
-            >
-              <i :class="isDarkTheme ? 'bi bi-sun-fill' : 'bi bi-moon-fill'"></i>
-            </button>
             <a href="https://github.com/NodPT" target="_blank" rel="noopener noreferrer"
               class="btn btn-info btn-sm px-3">
               <i class="bi bi-github"></i>
@@ -25,6 +18,14 @@
               <i class="bi bi-heart-fill me-2"></i>Support
             </a>
             <router-link to="/login" class="btn btn-success btn-sm px-3">Login</router-link>
+            <button 
+              @click="toggleTheme" 
+              class="btn btn-secondary rounded-circle"
+              style="width: 38px; height: 38px; padding: 0; display: flex; align-items: center; justify-content: center;"
+              :title="isDarkTheme ? 'Switch to Light Theme' : 'Switch to Dark Theme'"
+            >
+              <i :class="isDarkTheme ? 'bi bi-sun-fill' : 'bi bi-moon-fill'"></i>
+            </button>
           </nav>
         </div>
       </div>
@@ -474,6 +475,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useTheme } from '../composables/useTheme';
 
 const router = useRouter();
 const isScrolled = ref(false);
@@ -482,13 +484,7 @@ const videoContainer = ref(null);
 const videoIframe = ref(null);
 
 // Theme management
-const isDarkTheme = ref(true);
-
-// Toggle theme
-const toggleTheme = () => {
-  isDarkTheme.value = !isDarkTheme.value;
-  localStorage.setItem('landingPageTheme', isDarkTheme.value ? 'dark' : 'light');
-};
+const { isDarkTheme, toggleTheme, loadTheme } = useTheme();
 
 const useCases = ref([
   {
@@ -582,8 +578,7 @@ const createParticles = () => {
 
 onMounted(() => {
   // Load saved theme preference or default to dark
-  const savedTheme = localStorage.getItem('landingPageTheme');
-  isDarkTheme.value = savedTheme ? savedTheme === 'dark' : true;
+  loadTheme();
 
   window.addEventListener('scroll', handleScroll);
   createParticles();

@@ -1,5 +1,5 @@
 <template>
-	<div class="app-container main-editor">
+	<div class="app-container main-editor" :data-theme="isDarkTheme ? 'dark' : 'light'">
 		<TopBar />
 
 		<div class="main-content main-editor-content position-relative">
@@ -22,12 +22,17 @@ import Footer from '../components/Footer.vue';
 import LeftPanel from '../components/LeftPanel.vue';
 import RightPanel from '../components/RightPanel.vue';
 import '../assets/styles/main-editor.css';
+import '../assets/styles/main-editor-dark.css';
+import '../assets/styles/components-dark.css';
+import '../assets/styles/chat-dark.css';
 import { triggerEvent, listenEvent, EVENT_TYPES } from '../rete/eventBus';
 import signalRService from '../service/signalRService';
 import projectApiService from '../service/projectApiService';
+import { useTheme } from '../composables/useTheme';
 
 const route = useRoute();
 const api = inject('api');
+const { isDarkTheme, loadTheme } = useTheme();
 projectApiService.setApi(api);
 const minimapVisible = ref(false);
 const isLeftPanelVisible = ref(true);
@@ -245,6 +250,9 @@ watch(
 );
 
 onMounted(async () => {
+	// Load theme
+	loadTheme();
+
 	cleanupFns.push(listenEvent(EVENT_TYPES.EDITOR_READY, handleEditorReady));
 	cleanupFns.push(listenEvent(EVENT_TYPES.TOGGLE_MINIMAP, toggleMinimap));
 	cleanupFns.push(listenEvent(EVENT_TYPES.TOGGLE_RIGHT_PANEL, toggleRightPanel));

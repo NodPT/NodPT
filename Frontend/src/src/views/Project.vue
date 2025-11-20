@@ -1,5 +1,5 @@
 <template>
-  <div class="project-page">
+  <div class="project-page" :data-theme="isDarkTheme ? 'dark' : 'light'">
 
     <TopBar :show_menu="false" />
 
@@ -37,6 +37,7 @@ import RecentProjects from '../components/RecentProjects.vue'
 import ProjectTiles from '../components/ProjectTiles.vue'
 import { listenEvent, EVENT_TYPES } from '../rete/eventBus'
 import { useRouter } from 'vue-router'
+import { useTheme } from '../composables/useTheme'
 
 export default {
   name: 'Project',
@@ -47,6 +48,7 @@ export default {
   },
   setup() {
     const router = useRouter()
+    const { isDarkTheme, loadTheme } = useTheme()
 
     const handleProjectAction = (action) => {
       console.log('Project action received:', action)
@@ -85,6 +87,9 @@ export default {
     }
 
     onMounted(() => {
+      // Load theme
+      loadTheme()
+
       // Listen for project actions from TopBar
       const unsubscribeProjectAction = listenEvent(EVENT_TYPES.PROJECT_ACTION, handleProjectAction)
 
@@ -95,8 +100,13 @@ export default {
     })
 
     return {
-      handleProjectAction
+      handleProjectAction,
+      isDarkTheme
     }
   }
 }
 </script>
+
+<style>
+@import '../assets/styles/components-dark.css';
+</style>
