@@ -109,6 +109,33 @@ namespace NodPT.API.Controllers
             }
         }
 
+        [HttpPatch("{id}/name")]
+        public IActionResult UpdateProjectName(int id, [FromBody] UpdateProjectNameDto request)
+        {
+            try
+            {
+                if (request == null || string.IsNullOrWhiteSpace(request.Name))
+                {
+                    return BadRequest(new { error = "Project name is required." });
+                }
+
+                string? firebaseUid = UserService.GetFirebaseUIDFromContent(User);
+                if (string.IsNullOrEmpty(firebaseUid))
+                {
+                    return Unauthorized(new { error = "Invalid user token." });
+                }
+
+                var projectService = new ProjectService(unitOfWork);
+                var updatedProject = projectService.UpdateProjectName(id, request.Name, firebaseUid);
+                return updatedProject == null ? NotFound() : Ok(updatedProject);
+            }
+            catch (Exception ex)
+            {
+                LogService.LogError(ex.Message, ex.StackTrace, User?.Identity?.Name, "ProjectsController", "UpdateProjectName");
+                return StatusCode(500, new { error = "An error occurred while updating the project name." });
+            }
+        }
+
         [HttpDelete("{id}")]
         public IActionResult DeleteProject(int id)
         {

@@ -54,6 +54,8 @@ export default {
 
 		const put = (url, data = {}, config = {}) => fetch(url, { method: 'PUT', data, ...config });
 
+		const patch = (url, data = {}, config = {}) => fetch(url, { method: 'PATCH', data, ...config });
+
 		const del = (url, config = {}) => fetch(url, { method: 'DELETE', ...config });
 
 		const exposed = {
@@ -62,6 +64,7 @@ export default {
 			get,
 			post,
 			put,
+			patch,
 			delete: del,
 		};
 

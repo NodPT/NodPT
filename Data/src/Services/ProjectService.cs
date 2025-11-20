@@ -280,6 +280,56 @@ namespace NodPT.Data.Services
             }
         }
 
+        public ProjectDto? UpdateProjectName(int id, string name, string firebaseUid)
+        {
+            if (session == null)
+            {
+                throw new ArgumentNullException(nameof(session), "Session cannot be null");
+            }
+
+            var user = UserService.GetUser(firebaseUid, session);
+            if (user == null)
+            {
+                throw new ArgumentException("Invalid Firebase UID", nameof(firebaseUid));
+            }
+
+            session.BeginTransaction();
+
+            try
+            {
+                var project = session.Query<Project>()
+                    .FirstOrDefault(p => p.Oid == id && p.User != null && p.User.Oid == user.Oid);
+
+                if (project == null) return null;
+
+                project.Name = name;
+                project.UpdatedAt = DateTime.UtcNow;
+
+                session.Save(project);
+                session.CommitTransaction();
+
+                return new ProjectDto
+                {
+                    Id = project.Oid,
+                    Name = project.Name,
+                    Description = project.Description,
+                    IsActive = project.IsActive,
+                    CreatedAt = project.CreatedAt,
+                    UpdatedAt = project.UpdatedAt,
+                    UserId = project.User?.Oid,
+                    TemplateId = project.Template?.Oid,
+                    UserEmail = project.User?.Email,
+                    TemplateName = project.Template?.Name,
+                    Nodes = GetProjectNodes(project)
+                };
+            }
+            catch
+            {
+                session.RollbackTransaction();
+                throw;
+            }
+        }
+
         public bool DeleteProject(int id, string firebaseUid)
         {
 
