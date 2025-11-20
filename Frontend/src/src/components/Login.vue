@@ -1,5 +1,5 @@
 ﻿<template>
-  <div class="container-fluid min-vh-100 d-flex align-items-center p-0">
+  <div class="container-fluid min-vh-100 d-flex align-items-center p-0" :data-theme="isDarkTheme ? 'dark' : 'light'">
     <div class="row gx-0 w-100">
       <!-- Left visual column (hidden on small screens) -->
       <div class="col-md-6 d-none d-md-flex bg-light align-items-center justify-content-center">
@@ -100,18 +100,22 @@
 </template>
 
 <script setup>
-import { ref, inject } from 'vue';
+import { ref, inject, onMounted } from 'vue';
 import { loginWithGoogle, loginWithFacebook, loginWithMicrosoft, notifySignIn } from '../service/authService';
 import authApiService from '../service/authApiService';
 import { useRouter } from 'vue-router';
 import { auth } from '../firebase';
 import { storeToken } from '../service/tokenStorage';
+import { useTheme } from '../composables/useTheme';
 
 // Inject API plugin
 const api = inject('api');
 authApiService.setApi(api);
 
 const router = useRouter();
+
+// Theme
+const { isDarkTheme, loadTheme } = useTheme();
 
 // Reactive state
 const rememberMe = ref(false);
@@ -199,4 +203,13 @@ async function onMicrosoft() {
 async function onFacebook() {
   await handleSocialLogin(loginWithFacebook, 'Facebook');
 }
+
+// Load theme on mount
+onMounted(() => {
+  loadTheme();
+});
 </script>
+
+<style>
+@import '../assets/styles/components-dark.css';
+</style>
