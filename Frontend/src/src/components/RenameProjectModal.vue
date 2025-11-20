@@ -75,13 +75,6 @@ export default {
         if (currentProjectId.value) {
           const updatedProject = await projectApiService.updateProjectName(currentProjectId.value, newProjectName.value.trim());
           
-          if (!updatedProject) {
-            console.error('Project rename failed');
-            toast.alert('Failed to rename project. Please try again.')
-            isRenaming.value = false
-            return
-          }
-
           // Close the modal
           const modalElement = document.getElementById('renameProjectModal')
           const modal = Modal.getInstance(modalElement)
