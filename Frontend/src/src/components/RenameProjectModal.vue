@@ -89,16 +89,16 @@ export default {
           toast.success(`Project renamed to "${newProjectName.value.trim()}"`)
         }
 
+      } catch (error) {
+        console.error('Error renaming project:', error)
+        toast.alert('Failed to rename project. Please try again.')
+        isRenaming.value = false
+      } finally {
         // Reset modal for next time
         setTimeout(() => {
           resetModal()
           isRenaming.value = false
         }, 500)
-
-      } catch (error) {
-        console.error('Error renaming project:', error)
-        toast.alert('Failed to rename project. Please try again.')
-        isRenaming.value = false
       }
     }
 
