@@ -17,21 +17,15 @@
                     placeholder="Enter your display name" required />
                 </div>
 
-                <div class="mb-4">
-                  <label class="form-label text-white">Bio (Optional)</label>
-                  <textarea v-model="bio" class="form-control profile-input" rows="3"
-                    placeholder="Tell us about yourself..."></textarea>
-                </div>
-
-                <div class="mb-4">
-                  <label class="form-label text-white">Company (Optional)</label>
-                  <input v-model="company" type="text" class="form-control profile-input"
-                    placeholder="Your company name" />
-                </div>
-
                 <div class="d-grid gap-3">
-                  <button class="btn btn-primary btn-lg profile-btn" type="submit">
-                    <i class="fas fa-check me-2"></i>Complete Profile
+                  <button class="btn btn-primary btn-lg profile-btn" type="submit" :disabled="isSaving">
+                    <span v-if="!isSaving">
+                      <i class="fas fa-check me-2"></i>Complete Profile
+                    </span>
+                    <span v-else>
+                      <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Saving...
+                    </span>
                   </button>
 
                   <button class="btn btn-outline-light btn-lg" type="button" @click="onSkip">
@@ -54,36 +48,53 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, inject } from 'vue';
 import { useRouter } from 'vue-router';
 import { auth } from '../firebase';
+import userApiService from '../service/userApiService';
+
+// Inject API plugin
+const api = inject('api');
+userApiService.setApi(api);
 
 const router = useRouter();
 const DisplayName = ref('');
-const bio = ref('');
-const company = ref('');
+const isSaving = ref(false);
 
 onMounted(() => {
   // Pre-fill with user's existing display name if available
-  if (auth.currentUser?.DisplayName) {
-    DisplayName.value = auth.currentUser.DisplayName;
+  if (auth.currentUser?.displayName) {
+    DisplayName.value = auth.currentUser.displayName;
   }
 });
 
 async function onSubmit() {
+  if (!DisplayName.value.trim()) {
+    alert('Please enter a display name');
+    return;
+  }
+
+  isSaving.value = true;
   try {
-    // TODO: Save profile data to backend when implemented
-    console.log('Profile data:', {
-      DisplayName: DisplayName.value,
-      bio: bio.value,
-      company: company.value
+    const firebaseUid = auth.currentUser?.uid;
+    if (!firebaseUid) {
+      throw new Error('User not authenticated');
+    }
+
+    // Call the WebAPI to update the user profile
+    await userApiService.updateProfile(firebaseUid, {
+      DisplayName: DisplayName.value
     });
 
-    // For now, just route to the project page
+    console.log('Profile updated successfully');
+    
+    // Navigate to the project page
     router.push({ name: 'Project' });
   } catch (error) {
     console.error('Error saving profile:', error);
     alert('Error saving profile. Please try again.');
+  } finally {
+    isSaving.value = false;
   }
 }
 
