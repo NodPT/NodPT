@@ -4,6 +4,8 @@ using NodPT.Data.Services;
 using Microsoft.AspNetCore.Authorization;
 using NodPT.API.Services;
 using System.Text.Json;
+using NodPT.Data.Models;
+using DevExpress.Xpo;
 
 namespace NodPT.API.Controllers
 {
@@ -123,6 +125,33 @@ namespace NodPT.API.Controllers
 
             try
             {
+                // Determine model name from node or template
+                string? modelName = null;
+                if (!string.IsNullOrEmpty(dto.NodeLevel))
+                {
+                    using var session = new Session();
+                    var node = session.FindObject<Node>(new DevExpress.Data.Filtering.BinaryOperator("Id", dto.NodeLevel));
+                    
+                    if (node != null)
+                    {
+                        // First check if node has a direct AIModel
+                        if (node.AIModel != null && !string.IsNullOrEmpty(node.AIModel.ModelIdentifier))
+                        {
+                            modelName = node.AIModel.ModelIdentifier;
+                            _logger.LogInformation($"Using model from node's AIModel: {modelName}");
+                        }
+                        // Otherwise, check for matching AIModel from template
+                        else if (node.MatchingAIModel != null && !string.IsNullOrEmpty(node.MatchingAIModel.ModelIdentifier))
+                        {
+                            modelName = node.MatchingAIModel.ModelIdentifier;
+                            _logger.LogInformation($"Using model from template's matching AIModel: {modelName}");
+                        }
+                    }
+                }
+
+                // Set the model in the DTO
+                dto.Model = modelName;
+
                 // Save to DB (using in-memory ChatService for now)
                 var chatMessage = new ChatMessageDto
                 {
@@ -139,7 +168,7 @@ namespace NodPT.API.Controllers
                 var jobData = JsonSerializer.Serialize(dto);
                 await _redisService.ListRightPushAsync("chat.jobs", jobData);
 
-                _logger.LogInformation($"Chat message queued for processing: UserId={dto.UserId}, ConnectionId={dto.ConnectionId}");
+                _logger.LogInformation($"Chat message queued for processing: UserId={dto.UserId}, ConnectionId={dto.ConnectionId}, Model={modelName}");
 
                 return Ok(new { status = "queued", messageId = chatMessage.Id });
             }

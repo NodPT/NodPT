@@ -61,7 +61,7 @@ public class LlmChatService : ILlmChatService
             {
                 model = model,
                 messages = new[] { new { role = "user", content = message } },
-                max_tokens = maxTokens
+                stream = false
             };
 
             var json = JsonSerializer.Serialize(requestBody);
@@ -73,15 +73,15 @@ public class LlmChatService : ILlmChatService
             response.EnsureSuccessStatusCode();
 
             var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
-            var responseObject = JsonSerializer.Deserialize<LlmResponse>(responseJson);
+            var responseObject = JsonSerializer.Deserialize<OllamaResponse>(responseJson);
 
-            if (responseObject?.Choices == null || responseObject.Choices.Length == 0)
+            if (responseObject?.Message == null)
             {
-                _logger.LogWarning("LLM response has no choices");
+                _logger.LogWarning("LLM response has no message");
                 return string.Empty;
             }
 
-            var result = responseObject.Choices[0].Message?.Content ?? string.Empty;
+            var result = responseObject.Message.Content ?? string.Empty;
             _logger.LogInformation("Received LLM response with {Length} characters", result.Length);
 
             return result;
@@ -116,19 +116,15 @@ public class LlmChatService : ILlmChatService
         return await SendChatMessageAsync(message, model, maxTokens, cancellationToken);
     }
 
-    // Response DTOs matching LLM API format
-    private class LlmResponse
+    // Response DTOs matching Ollama API format
+    private class OllamaResponse
     {
-        public Choice[]? Choices { get; set; }
+        public OllamaMessage? Message { get; set; }
     }
 
-    private class Choice
+    private class OllamaMessage
     {
-        public Message? Message { get; set; }
-    }
-
-    private class Message
-    {
+        public string? Role { get; set; }
         public string? Content { get; set; }
     }
 }

@@ -96,8 +96,7 @@ namespace NodPT.API.Controllers
                         session.RollbackTransaction();
                     }
 
-                    // Log successful login
-                await LogUserAccess(user, "login", false, validationError.Message);
+                    await LogUserAccessAsync(user, "login", false, validationError.Message);
                     return Unauthorized(validationError);
                 }
 
@@ -113,7 +112,7 @@ namespace NodPT.API.Controllers
                 session.CommitTransaction();
 
                 // Log successful login
-                await LogUserAccess(user, "login", true);
+                await LogUserAccessAsync(user, "login", true);
 
                 return Ok(new AuthResponseDto
                 {
@@ -187,7 +186,7 @@ namespace NodPT.API.Controllers
                 if (validationError != null)
                 {
                     session.RollbackTransaction();
-                    await LogUserAccess(user, "refresh_token", false, validationError.Message);
+                    await LogUserAccessAsync(user, "refresh_token", false, validationError.Message);
                     return Unauthorized(validationError);
                 }
 
@@ -202,7 +201,7 @@ namespace NodPT.API.Controllers
                 session.CommitTransaction();
 
                 // Log successful token refresh
-                await LogUserAccess(user, "refresh_token", true);
+                await LogUserAccessAsync(user, "refresh_token", true);
 
                 return Ok(new AuthResponseDto
                 {
@@ -340,7 +339,7 @@ namespace NodPT.API.Controllers
         /// <summary>
         /// Log user access activity
         /// </summary>
-        private async Task LogUserAccess(User? user, string action, bool success, string? errorMessage = null)
+        private async Task LogUserAccessAsync(User? user, string action, bool success, string? errorMessage = null)
         {
 
             if (user == null)

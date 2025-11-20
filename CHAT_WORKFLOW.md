@@ -56,7 +56,8 @@ Frontend (ReceiveAIResponse)
   "ConnectionId": "signalr-connection-id",
   "Message": "User's chat message",
   "ProjectId": "project-guid",
-  "NodeLevel": "manager"
+  "NodeLevel": "node-id",
+  "Model": "llama2"
 }
 ```
 
@@ -69,9 +70,12 @@ Frontend (ReceiveAIResponse)
 ```
 
 **Process**:
-1. Saves message to database via `ChatService`
-2. Pushes job to Redis list `chat.jobs`
-3. Returns immediately with "queued" status
+1. Retrieves the model name from the node's configuration:
+   - First checks if the node has a direct AIModel assigned
+   - Otherwise, uses the matching AIModel from the project's template (based on MessageType and Level)
+2. Saves message to database via `ChatService`
+3. Pushes job to Redis list `chat.jobs` with the model name included
+4. Returns immediately with "queued" status
 
 ### 3. SignalR Service
 
@@ -97,17 +101,38 @@ Frontend (ReceiveAIResponse)
 
 **Files**:
 - `Executor/src/Consumers/ChatJobConsumer.cs` - Chat job processor
+- `Executor/src/Services/LlmChatService.cs` - Ollama API client
 - `Executor/src/ChatWorker.cs` - Background worker for chat jobs
 
 **Background Worker**: Runs continuously to process chat jobs
 
 **Process**:
 1. Pops messages from Redis list `chat.jobs` (FIFO)
-2. Extracts model name from `NodeLevel`
-3. Processes message with AI (currently simulated, ready for TensorRT-LLM)
+2. Uses model name from the Redis data (provided by WebAPI from node/template configuration)
+3. Sends request to Ollama API with `stream: false` parameter
 4. Publishes response to Redis channel `AI.RESPONSE`
 
-**Model Mapping**:
+**Ollama API Integration**:
+- Endpoint: Configured in `appsettings.json` as `Executor:LlmEndpoint`
+- Request format:
+  ```json
+  {
+    "model": "model-name",
+    "messages": [{"role": "user", "content": "message"}],
+    "stream": false
+  }
+  ```
+- Response format:
+  ```json
+  {
+    "message": {
+      "role": "assistant",
+      "content": "AI response"
+    }
+  }
+  ```
+
+**Fallback Model Mapping** (if Model field is not in Redis data):
 - `manager` → `trt-llm-manager`
 - `inspector` → `trt-llm-inspector`
 - `agent` → `trt-llm-agent`
@@ -203,30 +228,36 @@ redis-cli PUBSUB CHANNELS
 
 ## Next Steps
 
+### Model Configuration
+
+To use different AI models:
+
+1. **Create AIModel records** in the Template:
+   - Set `ModelIdentifier` to the Ollama model name (e.g., "llama2", "mistral", "codellama")
+   - Set `MessageType` and `Level` to match your workflow nodes
+
+2. **Assign AIModel to Nodes**:
+   - Either assign directly to a node via `Node.AIModel`
+   - Or let nodes use the matching model from the template based on their `MessageType` and `Level`
+
+3. **Configure Ollama endpoint**:
+   - Update `Executor:LlmEndpoint` in `appsettings.json`
+   - Default: `http://localhost:11434/api/chat` (Ollama's default endpoint)
+
 ### TensorRT-LLM Integration
 
-Replace the simulation in `ChatJobConsumer.cs` with actual TensorRT-LLM calls:
+The system now uses Ollama API format with `stream: false`. To integrate with TensorRT-LLM:
 
-```csharp
-private async Task<string> CallTensorRtLlm(ChatJobDto chatJob, string modelName, CancellationToken cancellationToken)
-{
-    // TODO: Implement actual TensorRT-LLM HTTP call
-    var client = new HttpClient();
-    var request = new
-    {
-        model = modelName,
-        prompt = chatJob.Message,
-        user_id = chatJob.UserId,
-        project_id = chatJob.ProjectId
-    };
-    
-    var response = await client.PostAsJsonAsync("http://tensorrt-llm:8000/generate", request, cancellationToken);
-    response.EnsureSuccessStatusCode();
-    
-    var result = await response.Content.ReadFromJsonAsync<TensorRtLlmResponse>(cancellationToken);
-    return result.GeneratedText;
-}
-```
+1. Configure TensorRT-LLM to expose an Ollama-compatible API endpoint
+2. Update `Executor:LlmEndpoint` in `appsettings.json` to point to TensorRT-LLM
+3. Ensure TensorRT-LLM accepts the same request format:
+   ```json
+   {
+     "model": "model-name",
+     "messages": [{"role": "user", "content": "message"}],
+     "stream": false
+   }
+   ```
 
 ### Enhancements
 
