@@ -93,7 +93,7 @@ class ProjectApiService {
 	 */
 	async updateProjectName(id, name) {
 		try {
-			const response = await this.api.patch(`${this.baseURL}/${id}/name`, { Name: name });
+			const response = await this.api.put(`${this.baseURL}/${id}/name`, { Name: name });
 			return response;
 		} catch (error) {
 			console.error('Failed to update project name:', error);
