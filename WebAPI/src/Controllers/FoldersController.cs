@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 
 using NodPT.Data.DTOs;
 using NodPT.Data.Services;
+using DevExpress.Xpo;
 
 namespace NodPT.API.Controllers
 {
@@ -11,7 +12,14 @@ namespace NodPT.API.Controllers
     [Route("api/[controller]")]
     public class FoldersController : ControllerBase
     {
-        private readonly FolderService _folderService = new();
+        private readonly UnitOfWork unitOfWork;
+        private readonly FolderService _folderService;
+
+        public FoldersController(UnitOfWork _unitOfWork)
+        {
+            this.unitOfWork = _unitOfWork;
+            this._folderService = new FolderService(unitOfWork);
+        }
 
         [CustomAuthorized("Admin")]
         [HttpGet]

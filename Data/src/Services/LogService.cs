@@ -6,9 +6,15 @@ namespace NodPT.Data.Services
 {
     public class LogService
     {
+        private readonly UnitOfWork session;
+
+        public LogService(UnitOfWork unitOfWork)
+        {
+            this.session = unitOfWork;
+        }
+
         public List<LogDto> GetAllLogs()
         {
-            using var session = new Session();
             var logs = new XPCollection<Log>(session);
 
             return logs.Select(l => new LogDto

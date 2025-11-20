@@ -6,9 +6,15 @@ namespace NodPT.Data.Services
 {
     public class ProjectFileService
     {
+        private readonly UnitOfWork session;
+
+        public ProjectFileService(UnitOfWork unitOfWork)
+        {
+            this.session = unitOfWork;
+        }
+
         public List<ProjectFileDto> GetAllFiles()
         {
-            using var session = new Session();
             var files = new XPCollection<ProjectFile>(session);
             
             return files.Select(f => new ProjectFileDto
@@ -29,7 +35,6 @@ namespace NodPT.Data.Services
 
         public ProjectFileDto? GetFile(int id)
         {
-            using var session = new Session();
             var file = session.GetObjectByKey<ProjectFile>(id);
             
             if (file == null) return null;
@@ -52,7 +57,6 @@ namespace NodPT.Data.Services
 
         public List<ProjectFileDto> GetFilesByFolder(int folderId)
         {
-            using var session = new Session();
             var folder = session.GetObjectByKey<Folder>(folderId);
             
             if (folder == null) return new List<ProjectFileDto>();
@@ -75,8 +79,6 @@ namespace NodPT.Data.Services
 
         public ProjectFileDto CreateFile(ProjectFileDto fileDto)
         {
-            using var session = new Session();
-            
             var folder = fileDto.FolderId.HasValue 
                 ? session.GetObjectByKey<Folder>(fileDto.FolderId.Value) 
                 : null;
@@ -107,7 +109,6 @@ namespace NodPT.Data.Services
 
         public ProjectFileDto? UpdateFile(int id, ProjectFileDto fileDto)
         {
-            using var session = new Session();
             var file = session.GetObjectByKey<ProjectFile>(id);
             
             if (file == null) return null;
@@ -137,7 +138,6 @@ namespace NodPT.Data.Services
 
         public bool DeleteFile(int id)
         {
-            using var session = new Session();
             var file = session.GetObjectByKey<ProjectFile>(id);
             
             if (file == null) return false;

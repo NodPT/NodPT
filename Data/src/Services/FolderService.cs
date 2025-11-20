@@ -6,9 +6,15 @@ namespace NodPT.Data.Services
 {
     public class FolderService
     {
+        private readonly UnitOfWork session;
+
+        public FolderService(UnitOfWork unitOfWork)
+        {
+            this.session = unitOfWork;
+        }
+
         public List<FolderDto> GetAllFolders()
         {
-            using var session = new Session();
             var folders = new XPCollection<Folder>(session);
             
             return folders.Select(f => new FolderDto
@@ -27,7 +33,6 @@ namespace NodPT.Data.Services
 
         public FolderDto? GetFolder(int id)
         {
-            using var session = new Session();
             var folder = session.GetObjectByKey<Folder>(id);
             
             if (folder == null) return null;
@@ -48,7 +53,6 @@ namespace NodPT.Data.Services
 
         public List<FolderDto> GetFoldersByProject(int projectId)
         {
-            using var session = new Session();
             var project = session.GetObjectByKey<Project>(projectId);
             
             if (project == null) return new List<FolderDto>();
@@ -69,8 +73,6 @@ namespace NodPT.Data.Services
 
         public FolderDto CreateFolder(FolderDto folderDto)
         {
-            using var session = new Session();
-            
             var project = folderDto.ProjectId.HasValue 
                 ? session.GetObjectByKey<Project>(folderDto.ProjectId.Value) 
                 : null;
@@ -102,7 +104,6 @@ namespace NodPT.Data.Services
 
         public FolderDto? UpdateFolder(int id, FolderDto folderDto)
         {
-            using var session = new Session();
             var folder = session.GetObjectByKey<Folder>(id);
             
             if (folder == null) return null;
@@ -133,7 +134,6 @@ namespace NodPT.Data.Services
 
         public bool DeleteFolder(int id)
         {
-            using var session = new Session();
             var folder = session.GetObjectByKey<Folder>(id);
             
             if (folder == null) return false;

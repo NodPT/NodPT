@@ -6,9 +6,15 @@ namespace NodPT.Data.Services
 {
     public class TemplateService
     {
+        private readonly UnitOfWork session;
+
+        public TemplateService(UnitOfWork unitOfWork)
+        {
+            this.session = unitOfWork;
+        }
+
         public List<TemplateDto> GetAllTemplates()
         {
-            using var session = new Session();
             var templates = new XPCollection<Template>(session);
 
             return templates.Select(t => new TemplateDto
@@ -26,7 +32,6 @@ namespace NodPT.Data.Services
 
         public TemplateDto? GetTemplate(int id)
         {
-            using var session = new Session();
             var template = session.GetObjectByKey<Template>(id);
 
             if (template == null) return null;
@@ -46,7 +51,6 @@ namespace NodPT.Data.Services
 
         public TemplateDto CreateTemplate(TemplateDto templateDto)
         {
-            using var session = new Session();
             session.BeginTransaction();
 
             try
@@ -80,7 +84,6 @@ namespace NodPT.Data.Services
 
         public TemplateDto? UpdateTemplate(int id, TemplateDto templateDto)
         {
-            using var session = new Session();
             session.BeginTransaction();
 
             try
@@ -113,7 +116,6 @@ namespace NodPT.Data.Services
 
         public bool DeleteTemplate(int id)
         {
-            using var session = new Session();
             session.BeginTransaction();
 
             try
