@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 
 // Shared theme state across all components
 const isDarkTheme = ref(true);
