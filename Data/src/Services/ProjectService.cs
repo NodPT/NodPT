@@ -119,7 +119,7 @@ namespace NodPT.Data.Services
 
         public List<ProjectDto> GetProjectsByUser(string firebaseUid)
         {
-            var user = User.GetUser(firebaseUid, this.session);// session.Query<User>().FirstOrDefault(x=>x.FirebaseUid == userId);
+            var user = UserService.GetUser(firebaseUid, this.session);// session.Query<User>().FirstOrDefault(x=>x.FirebaseUid == userId);
 
             if (user == null) return new List<ProjectDto>();
 
@@ -148,7 +148,7 @@ namespace NodPT.Data.Services
                     throw new ArgumentNullException(nameof(session), "Session cannot be null");
                 }
 
-                var user = User.GetUser(firebaseUid, session);
+                var user = UserService.GetUser(firebaseUid, session);
                 if (user == null)
                 {
                     throw new ArgumentException("Invalid Firebase UID", nameof(firebaseUid));
@@ -288,7 +288,7 @@ namespace NodPT.Data.Services
                 throw new ArgumentNullException(nameof(session), "Session cannot be null");
             }
 
-            var user = User.GetUser(firebaseUid, session);
+            var user = UserService.GetUser(firebaseUid, session);
             if (user == null)
             {
                 throw new ArgumentException("Invalid Firebase UID", nameof(firebaseUid));
