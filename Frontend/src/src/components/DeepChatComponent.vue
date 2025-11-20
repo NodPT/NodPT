@@ -43,10 +43,12 @@ export default {
 		const chatStyle = {
 			width: '100%',
 			height: '600px',
-			borderRadius: '8px'
+			borderRadius: '8px',
+			backgroundColor: '#1a1a2e',
+			color: '#e8eaf6'
 		};
 
-		// Message styles
+		// Message styles for dark theme
 		const messageStyles = {
 			default: {
 				shared: {
@@ -59,14 +61,14 @@ export default {
 				},
 				user: {
 					bubble: {
-						backgroundColor: '#007bff',
+						backgroundColor: '#4fc3f7',
 						color: 'white'
 					}
 				},
 				ai: {
 					bubble: {
-						backgroundColor: '#f1f1f1',
-						color: 'black'
+						backgroundColor: '#667eea',
+						color: 'white'
 					}
 				}
 			}

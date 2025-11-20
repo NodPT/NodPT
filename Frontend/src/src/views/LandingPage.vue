@@ -53,7 +53,7 @@
               <button class="btn btn-sm px-4 btn-info" @click="scrollToUseCases">
                 Explore Use Cases
               </button>
-              <button class="btn btn-sm px-4 py-3 position-relative overflow-hidden"
+              <button class="btn btn-outline-light btn-sm px-4 py-3 position-relative overflow-hidden"
                 @click="scrollToVideo">
                 <span class="position-relative z-1">
                   <i class="bi bi-play-circle-fill me-2"></i>
@@ -122,7 +122,7 @@
         <div class="row align-items-center gy-5">
           <div class="col-lg-6">
             <div class="card bg-transparent border-0">
-              <div class="card-body px-0">
+              <div class="card-body p-4">
                 <h2 class="display-6 fw-bold mb-4">Not one AI, but a <span class="gradient-text">multitasking
                     intelligence</span></h2>
                 <p class="text-white-50 mb-4">
