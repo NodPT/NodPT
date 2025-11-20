@@ -175,6 +175,7 @@ namespace NodPT.API.Controllers
         /// <param name="firebaseUid"></param>
         /// <param name="request"></param>
         /// <returns></returns>
+        [HttpPut("{firebaseUid}")]
         public IActionResult UpdateUser(string firebaseUid, [FromBody] UpdateUserRequest request)
         {
 
