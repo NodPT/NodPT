@@ -1,5 +1,5 @@
 ﻿<template>
-  <div class="landing-page">
+  <div class="landing-page" :data-theme="isDarkTheme ? 'dark' : 'light'">
     <header :class="['landing-header sticky-top py-2', { scrolled: isScrolled }]">
       <div class="container">
         <div class="d-flex flex-column flex-lg-row align-items-center justify-content-between gap-3">
@@ -10,7 +10,13 @@
             <span class="text-white-50 small">Intelligence, Multiplied.</span>
           </div>
           <nav class="d-flex flex-wrap align-items-center gap-3">
-          
+            <button 
+              @click="toggleTheme" 
+              class="btn btn-secondary btn-sm px-3"
+              :title="isDarkTheme ? 'Switch to Light Theme' : 'Switch to Dark Theme'"
+            >
+              <i :class="isDarkTheme ? 'bi bi-sun-fill' : 'bi bi-moon-fill'"></i>
+            </button>
             <a href="https://github.com/NodPT" target="_blank" rel="noopener noreferrer"
               class="btn btn-info btn-sm px-3">
               <i class="bi bi-github"></i>
@@ -468,13 +474,21 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import '../assets/styles/landing-page-dark.css';
 
 const router = useRouter();
 const isScrolled = ref(false);
 const particlesContainer = ref(null);
 const videoContainer = ref(null);
 const videoIframe = ref(null);
+
+// Theme management
+const isDarkTheme = ref(true);
+
+// Toggle theme
+const toggleTheme = () => {
+  isDarkTheme.value = !isDarkTheme.value;
+  localStorage.setItem('landingPageTheme', isDarkTheme.value ? 'dark' : 'light');
+};
 
 const useCases = ref([
   {
@@ -567,6 +581,10 @@ const createParticles = () => {
 };
 
 onMounted(() => {
+  // Load saved theme preference or default to dark
+  const savedTheme = localStorage.getItem('landingPageTheme');
+  isDarkTheme.value = savedTheme ? savedTheme === 'dark' : true;
+
   window.addEventListener('scroll', handleScroll);
   createParticles();
 
@@ -595,3 +613,13 @@ onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
 });
 </script>
+
+<style>
+/* Import dark theme by default */
+@import '../assets/styles/landing-page-dark.css';
+</style>
+
+<style>
+/* Import light theme overrides */
+@import '../assets/styles/landing-page-light-scoped.css';
+</style>
