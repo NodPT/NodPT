@@ -84,6 +84,22 @@ class ProjectApiService {
 			throw err
 		}
 	}
+
+	/**
+	 * Update project name
+	 * @param {number} id - Project ID
+	 * @param {string} name - New project name
+	 * @returns {Promise<Object>} Updated project data
+	 */
+	async updateProjectName(id, name) {
+		try {
+			const response = await this.api.patch(`${this.baseURL}/${id}/name`, { Name: name });
+			return response;
+		} catch (error) {
+			console.error('Failed to update project name:', error);
+			throw error;
+		}
+	}
 }
 
 export default new ProjectApiService();

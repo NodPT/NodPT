@@ -23,9 +23,15 @@
           </div>
         </div>
         <div class="modal-footer border-secondary">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @click="resetModal">Cancel</button>
-          <button type="button" class="btn btn-primary" @click="renameProject" :disabled="!newProjectName.trim()">
-            <i class="bi bi-pencil-square me-1"></i>Rename Project
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @click="resetModal" :disabled="isRenaming">Cancel</button>
+          <button type="button" class="btn btn-primary" @click="renameProject" :disabled="!newProjectName.trim() || isRenaming">
+            <span v-if="isRenaming">
+              <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              Renaming...
+            </span>
+            <span v-else>
+              <i class="bi bi-pencil-square me-1"></i>Rename Project
+            </span>
           </button>
         </div>
       </div>
@@ -38,45 +44,69 @@ import { ref, nextTick, inject } from 'vue'
 import { useRoute } from 'vue-router'
 import { Modal } from 'bootstrap'
 import { triggerEvent, EVENT_TYPES } from '../rete/eventBus'
+import projectApiService from '../service/projectApiService'
 
 export default {
   name: 'RenameProjectModal',
   setup() {
     const toast = inject('toast')
+    const api = inject('api')
+    projectApiService.setApi(api)
     const route = useRoute()
     const newProjectName = ref('')
     const projectNameInput = ref(null)
     const currentProjectName = ref('')
+    const currentProjectId = ref(null)
+    const isRenaming = ref(false)
 
     const resetModal = () => {
       newProjectName.value = ''
     }
 
-    const renameProject = () => {
-      if (!newProjectName.value.trim()) {
+    const renameProject = async () => {
+      if (!newProjectName.value.trim() || isRenaming.value) {
         return
       }
 
-      // Close the modal
-      const modalElement = document.getElementById('renameProjectModal')
-      const modal = Modal.getInstance(modalElement)
-      if (modal) {
-        modal.hide()
+      try {
+        isRenaming.value = true
+
+        // Call API to rename project
+        if (currentProjectId.value) {
+          const updatedProject = await projectApiService.updateProjectName(currentProjectId.value, newProjectName.value.trim());
+          
+          if (!updatedProject) {
+            console.error('Project rename failed');
+            toast.alert('Failed to rename project. Please try again.')
+            isRenaming.value = false
+            return
+          }
+
+          // Close the modal
+          const modalElement = document.getElementById('renameProjectModal')
+          const modal = Modal.getInstance(modalElement)
+          if (modal) {
+            modal.hide()
+          }
+
+          // Update the project name in the TopBar
+          triggerEvent(EVENT_TYPES.PROJECT_NAME_UPDATE, newProjectName.value.trim())
+
+          // Show success message
+          toast.success(`Project renamed to "${newProjectName.value.trim()}"`)
+        }
+
+        // Reset modal for next time
+        setTimeout(() => {
+          resetModal()
+          isRenaming.value = false
+        }, 500)
+
+      } catch (error) {
+        console.error('Error renaming project:', error)
+        toast.alert('Failed to rename project. Please try again.')
+        isRenaming.value = false
       }
-
-      // TODO: Call API to rename project
-      console.log('Renaming project from:', currentProjectName.value, 'to:', newProjectName.value.trim())
-
-      // Update the project name in the TopBar
-      triggerEvent(EVENT_TYPES.PROJECT_NAME_UPDATE, newProjectName.value.trim())
-
-      // Show success message
-      toast.info(`Project renamed to "${newProjectName.value.trim()}"`)
-
-      // Reset modal for next time
-      setTimeout(() => {
-        resetModal()
-      }, 500)
     }
 
     // Listen for modal show event to get current project name
@@ -84,8 +114,9 @@ export default {
       const modalElement = document.getElementById('renameProjectModal')
       if (modalElement) {
         modalElement.addEventListener('show.bs.modal', () => {
-          // Get current project name from route or default
+          // Get current project name and ID from route or default
           currentProjectName.value = route.query.projectName || 'Untitled Project'
+          currentProjectId.value = route.query.projectId ? parseInt(route.query.projectId) : null
           newProjectName.value = currentProjectName.value
 
           // Focus on input after modal is shown
@@ -109,7 +140,8 @@ export default {
       projectNameInput,
       currentProjectName,
       resetModal,
-      renameProject
+      renameProject,
+      isRenaming
     }
   }
 }
