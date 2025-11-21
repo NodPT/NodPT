@@ -14,6 +14,17 @@
   border-top: 1px solid rgba(102, 126, 234, 0.2);
 }
 
+/* DeepChat component dark theme */
+[data-theme="dark"] deep-chat {
+  background-color: #1a1a2e !important;
+  color: #e8eaf6 !important;
+  border-radius: 8px;
+}
+
+[data-theme="dark"] .deepchat-container {
+  background-color: #1a1a2e;
+}
+
 /* AI message - left aligned with purple gradient */
 [data-theme="dark"] .ai-message .message-content {
   background: linear-gradient(135deg, #667eea, #764ba2);
