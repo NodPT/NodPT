@@ -6,7 +6,7 @@ namespace NodPT.Data.Services
 {
     public class ProjectService
     {
-        private NodPTDbContext context;
+        private readonly NodPTDbContext context;
 
         public ProjectService(NodPTDbContext dbContext)
         {
