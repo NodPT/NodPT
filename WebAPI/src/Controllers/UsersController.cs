@@ -28,7 +28,7 @@ namespace NodPT.API.Controllers
             // Project to DTOs to avoid serialization issues
             var userDtos = users.Select(u => new
             {
-                u.Id,
+                Oid = u.Id,
                 u.FirebaseUid,
                 u.Email,
                 u.DisplayName,
@@ -53,7 +53,7 @@ namespace NodPT.API.Controllers
 
             var userDto = new
             {
-                user.Id,
+                Oid = user.Id,
                 user.FirebaseUid,
                 user.Email,
                 user.DisplayName,
