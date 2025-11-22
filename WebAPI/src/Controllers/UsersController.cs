@@ -178,7 +178,13 @@ namespace NodPT.API.Controllers
         public IActionResult UpdateMyProfile([FromBody] UpdateUserRequest request)
         {
             // Get user from token
-            var user = UserService.GetUser(User, session);
+            var firebaseUid = User.Claims.FirstOrDefault(c => c.Type == "firebaseUid" || c.Type == "user_id")?.Value;
+            if (string.IsNullOrEmpty(firebaseUid))
+            {
+                return Unauthorized(new { message = "User not found or invalid" });
+            }
+
+            var user = session.FindObject<User>(new BinaryOperator("FirebaseUid", firebaseUid));
             if (user == null)
             {
                 return Unauthorized(new { message = "User not found or invalid" });
