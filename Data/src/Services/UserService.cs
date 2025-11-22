@@ -7,6 +7,22 @@ using NodPT.Data.Services;
 
 public class UserService
 {
+    /// <summary>
+    /// Get user from ClaimsPrincipal (Context.User) if active, approved, and not banned
+    /// This is the PREFERRED method to use in controllers
+    /// </summary>
+    /// <param name="user">ClaimsPrincipal from Context.User in controller</param>
+    /// <param name="context">Database context</param>
+    /// <returns>User object if valid, null otherwise</returns>
+    public static User? GetUser(ClaimsPrincipal user, NodPTDbContext context)
+    {
+        string? firebaseUid = GetFirebaseUIDFromContent(user);
+        if (string.IsNullOrEmpty(firebaseUid))
+            return null;
+        
+        return GetUser(firebaseUid, context);
+    }
+
     // verify if user is active, approved, and not banned
     public static bool IsUserValid(string firebaseUId, NodPTDbContext context)
     {

@@ -61,6 +61,55 @@ Setup Vue Router if needed for additional pages.
 
 ## useful components can be used during coding
 ■ api-plugin already has all functions of crud by using axios and bearer token. Use this plugin by calling const api=inject('api'). The available functions are get, put, delete, post. Pass the parameters as same with axios function. Important: don't use axios directly in the component.
+■ **CRITICAL: Don't send firebaseUid to WebAPI.** The backend extracts the user from the JWT token automatically. Never include firebaseUid in API requests.
+
+## 🔐 Authentication Pattern
+
+**CRITICAL: Never send firebaseUid to the backend API**
+
+The WebAPI automatically extracts the user identity from the JWT token (Bearer token). The frontend should NEVER send firebaseUid as a parameter.
+
+```javascript
+// ❌ WRONG: Don't send firebaseUid to API
+const firebaseUid = auth.currentUser?.uid;
+await api.post('/api/projects', {
+  Name: 'My Project',
+  FirebaseUid: firebaseUid  // DON'T DO THIS
+});
+
+// ✅ CORRECT: API gets user from token automatically
+await api.post('/api/projects', {
+  Name: 'My Project'
+  // No firebaseUid needed - backend gets it from JWT token
+});
+
+// ❌ WRONG: Don't include firebaseUid in URL
+await api.get(`/api/projects/user/${firebaseUid}`);
+
+// ✅ CORRECT: Use endpoints that get user from token
+await api.get('/api/projects/me');
+// or
+await api.get('/api/projects');  // Backend filters by authenticated user
+```
+
+**Service Pattern:**
+```javascript
+class UserApiService {
+  setApi(api) {
+    this.api = api;
+  }
+  
+  // ❌ WRONG: Don't accept or send firebaseUid
+  async updateProfile(firebaseUid, profileData) {
+    await this.api.put(`/api/users/${firebaseUid}`, profileData);
+  }
+  
+  // ✅ CORRECT: No firebaseUid needed
+  async updateProfile(profileData) {
+    await this.api.put('/api/users/me', profileData);
+  }
+}
+```
 
 📝 Keep It Simple
 Each Vue component should be self-contained.
