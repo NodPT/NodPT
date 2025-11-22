@@ -76,13 +76,14 @@ async function onSubmit() {
 
   isSaving.value = true;
   try {
-    const firebaseUid = auth.currentUser?.uid;
-    if (!firebaseUid) {
+    // Check if user is authenticated
+    if (!auth.currentUser) {
       throw new Error('User not authenticated');
     }
 
     // Call the WebAPI to update the user profile
-    await userApiService.updateProfile(firebaseUid, {
+    // No need to send firebaseUid - backend gets it from JWT token
+    await userApiService.updateProfile({
       DisplayName: DisplayName.value
     });
 

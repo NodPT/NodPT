@@ -1,9 +1,49 @@
 📄 Overview
-This project builds a visual AI-assisted workflow editor backend using web api .net9
+This project builds a visual AI-assisted workflow editor backend using web api .net8
 The goal is to create a clean, modular web api.
-Data models will be simple, focusing on nodes and other data. Using XPO ORM database for persistence.
+Data models will be simple, focusing on nodes and other data. Using Entity Framework Core ORM database for persistence.
 
 Keep the code clean, modular, and easy to understand. Use mock data for initial development. don't overthink the logic, keep it simple.
+
+## 🔐 CRITICAL: User Authentication Pattern
+
+**ALWAYS use UserService.GetUser to get the current user from Context.User**
+
+```csharp
+// ✅ CORRECT: Get user from Context.User (ClaimsPrincipal)
+var user = UserService.GetUser(User, dbContext);
+if (user == null)
+{
+    return Unauthorized(new { error = "User not found or invalid" });
+}
+
+// Use user.Id for database operations
+var userProjects = await dbContext.Projects
+    .Where(p => p.UserId == user.Id)
+    .ToListAsync();
+
+// ❌ INCORRECT: Never require firebaseUid from clients
+[HttpGet("user/{firebaseUid}")]  // DON'T DO THIS
+public IActionResult GetUserData(string firebaseUid) { ... }
+
+// ✅ CORRECT: Get user from token
+[HttpGet("me")]
+public IActionResult GetMyData()
+{
+    var user = UserService.GetUser(User, dbContext);
+    if (user == null)
+        return Unauthorized();
+    // ... use user.Id
+}
+```
+
+**Key Rules:**
+1. **Never require firebaseUid from clients** - Always extract it from the authenticated user's claims (Context.User)
+2. **Always validate the user** - Use `UserService.GetUser(User, context)` which returns null if user is not active, approved, or is banned
+3. **Return 401 Unauthorized** if user is null
+4. **Security first** - The firebaseUid in the JWT token is the source of truth, not client-provided values
+
+Most controllers need to get User from UserService.GetUser to update data of that user accordingly to the controller's related data models.
 
 ## 🧱 Backend Setup Guide (ASP.NET Core Web API)
 
@@ -209,33 +249,75 @@ public class Log : XPObject
 
 **Controllers Pattern with Dependency Injection**
 
-Controllers should use dependency injection for UnitOfWork and LogService, and wrap all methods with try-catch blocks:
+Controllers should use dependency injection for DbContext and wrap all methods with try-catch blocks. 
+**CRITICAL: Always use UserService.GetUser(User, dbContext) to get the authenticated user.**
 
 ```csharp
 [ApiController]
 [Route("api/[controller]")]
+[CustomAuthorized]  // Ensure authentication is required
 public class ProjectsController : ControllerBase
 {
-    private readonly UnitOfWork unitOfWork;
-    private readonly LogService _logService;
+    private readonly NodPTDbContext dbContext;
 
-    public ProjectsController(UnitOfWork _unitOfWork, LogService logService)
+    public ProjectsController(NodPTDbContext _dbContext)
     {
-        this.unitOfWork = _unitOfWork;
-        this._logService = logService;
+        this.dbContext = _dbContext;
     }
 
     [HttpGet]
-    public IActionResult GetProjects()
+    public async Task<IActionResult> GetMyProjects()
     {
         try
         {
-            // Your logic here
-            return Ok(result);
+            // ✅ Get user from Context.User (ClaimsPrincipal)
+            var user = UserService.GetUser(User, dbContext);
+            if (user == null)
+            {
+                return Unauthorized(new { error = "User not found or invalid" });
+            }
+            
+            // Query user's projects using user.Id
+            var projects = await dbContext.Projects
+                .Where(p => p.UserId == user.Id)
+                .ToListAsync();
+            
+            return Ok(projects);
         }
         catch (Exception ex)
         {
-            _logService.LogError(ex.Message, ex.StackTrace, User?.Identity?.Name, "ProjectsController", "GetProjects");
+            LogService.LogError(ex.Message, ex.StackTrace, User?.Identity?.Name, "ProjectsController", "GetMyProjects");
+            return StatusCode(500, new { error = "An error occurred." });
+        }
+    }
+    
+    [HttpPost]
+    public async Task<IActionResult> CreateProject([FromBody] ProjectDto dto)
+    {
+        try
+        {
+            // ✅ Get user from token, not from client
+            var user = UserService.GetUser(User, dbContext);
+            if (user == null)
+            {
+                return Unauthorized(new { error = "User not found or invalid" });
+            }
+            
+            var project = new Project
+            {
+                Name = dto.Name,
+                UserId = user.Id,  // ✅ Use user from token
+                CreatedAt = DateTime.UtcNow
+            };
+            
+            dbContext.Projects.Add(project);
+            await dbContext.SaveChangesAsync();
+            
+            return Ok(project);
+        }
+        catch (Exception ex)
+        {
+            LogService.LogError(ex.Message, ex.StackTrace, User?.Identity?.Name, "ProjectsController", "CreateProject");
             return StatusCode(500, new { error = "An error occurred." });
         }
     }

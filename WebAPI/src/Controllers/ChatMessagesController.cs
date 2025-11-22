@@ -42,13 +42,12 @@ namespace NodPT.API.Controllers
             return Ok(messageDtos);
         }
 
-        [HttpGet("user/{firebaseUid}")]
-        
-        public IActionResult GetChatMessagesByUser(string firebaseUid)
+        [HttpGet("me")]
+        public IActionResult GetMyChatMessages()
         {
-            var user = session.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("FirebaseUid", firebaseUid));
-            
-            if (user == null) return NotFound("User not found");
+            // Get user from token using XPO session
+            var user = UserService.GetUser(User, session);
+            if (user == null) return Unauthorized(new { error = "User not found or invalid" });
             
             var messages = new XPCollection<ChatMessage>(session, 
                 new DevExpress.Data.Filtering.BinaryOperator("User", user));

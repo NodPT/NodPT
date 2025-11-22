@@ -7,7 +7,23 @@ using NodPT.Data.Services;
 
 public class UserService
 {
-    // verify if user is active, approved, and not banned
+    /// <summary>
+    /// Get user from ClaimsPrincipal (Context.User) if active, approved, and not banned
+    /// This is the PREFERRED method to use in controllers with EF Core
+    /// </summary>
+    /// <param name="user">ClaimsPrincipal from Context.User in controller</param>
+    /// <param name="context">Database context</param>
+    /// <returns>User object if valid, null otherwise</returns>
+    public static User? GetUser(ClaimsPrincipal user, NodPTDbContext context)
+    {
+        string? firebaseUid = GetFirebaseUIDFromContent(user);
+        if (string.IsNullOrEmpty(firebaseUid))
+            return null;
+        
+        return GetUser(firebaseUid, context);
+    }
+
+    // verify if user is active, approved, and not banned (EF Core version)
     public static bool IsUserValid(string firebaseUId, NodPTDbContext context)
     {
         try
@@ -24,7 +40,7 @@ public class UserService
     }
 
     /// <summary>
-    /// get user by firebaseUId if active, approved, and not banned
+    /// get user by firebaseUId if active, approved, and not banned (EF Core version)
     /// </summary>
     /// <param name="firebaseUId"></param>
     /// <param name="context"></param>
