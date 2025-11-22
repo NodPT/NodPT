@@ -53,7 +53,7 @@ namespace NodPT.API.Controllers
             }
         }
 
-        [HttpGet]
+        [HttpGet("me")]
         public IActionResult GetMyProjects()
         {
             try
