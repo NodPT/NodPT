@@ -170,62 +170,55 @@ namespace NodPT.API.Controllers
         }
 
         /// <summary>
-        /// allowed user to update user
+        /// allowed user to update their own profile
         /// </summary>
-        /// <param name="firebaseUid"></param>
         /// <param name="request"></param>
         /// <returns></returns>
-        [HttpPut("{firebaseUid}")]
-        public IActionResult UpdateUser(string firebaseUid, [FromBody] UpdateUserRequest request)
+        [HttpPut("me")]
+        public IActionResult UpdateMyProfile([FromBody] UpdateUserRequest request)
         {
-
-            if (UserService.IsValidFirebaseUid(firebaseUid, User) == false)
+            // Get user from token
+            var user = UserService.GetUser(User, session);
+            if (user == null)
             {
-                return Unauthorized(new { message = "Invalid user identifier" });
+                return Unauthorized(new { message = "User not found or invalid" });
             }
 
             session.BeginTransaction();
 
-            var user = session.FindObject<User>(new BinaryOperator("FirebaseUid", firebaseUid));
+            try
+            {
+                // Update allowed fields
+                if (!string.IsNullOrEmpty(request.DisplayName))
+                    user.DisplayName = request.DisplayName;
 
-            if (user == null)
+                if (!string.IsNullOrEmpty(request.PhotoUrl))
+                    user.PhotoUrl = request.PhotoUrl;
+
+                // Only admins can change email
+                if (!string.IsNullOrEmpty(request.Email))
+                {
+                    if (user.IsAdmin)
+                    {
+                        user.Email = request.Email;
+                    }
+                    else
+                    {
+                        session.RollbackTransaction();
+                        return StatusCode(403, new { message = "Only administrators can change email addresses." });
+                    }
+                }
+
+                session.Save(user);
+                session.CommitTransaction();
+
+                return Ok(new { message = "User updated successfully", user });
+            }
+            catch (Exception ex)
             {
                 session.RollbackTransaction();
-                return NotFound();
+                throw;
             }
-
-            // Get current user's FirebaseUid to check if they're admin or updating their own profile
-            var currentUserFirebaseUid = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                                       ?? User.FindFirst("user_id")?.Value;
-
-            var currentUser = session.FindObject<User>(new BinaryOperator("FirebaseUid", currentUserFirebaseUid));
-            bool isAdmin = currentUser?.IsAdmin ?? false;
-
-            // Update allowed fields
-            if (!string.IsNullOrEmpty(request.DisplayName))
-                user.DisplayName = request.DisplayName;
-
-            if (!string.IsNullOrEmpty(request.PhotoUrl))
-                user.PhotoUrl = request.PhotoUrl;
-
-            // Only admins can change email
-            if (!string.IsNullOrEmpty(request.Email))
-            {
-                if (isAdmin)
-                {
-                    user.Email = request.Email;
-                }
-                else
-                {
-                    session.RollbackTransaction();
-                    return StatusCode(403, new { message = "Only administrators can change email addresses." });
-                }
-            }
-
-            session.Save(user);
-            session.CommitTransaction();
-
-            return Ok(new { message = "User updated successfully", user });
         }
     }
 

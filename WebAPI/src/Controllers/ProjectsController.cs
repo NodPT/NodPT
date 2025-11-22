@@ -53,18 +53,25 @@ namespace NodPT.API.Controllers
             }
         }
 
-        [HttpGet("user/{firebaseUid}")]
-        public IActionResult GetProjectsByUser(string firebaseUid)
+        [HttpGet]
+        public IActionResult GetMyProjects()
         {
             try
             {
+                // Get user from token
+                var user = UserService.GetUser(User, dbContext);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not found or invalid" });
+                }
+
                 var projectService = new ProjectService(dbContext);
-                var projects = projectService.GetProjectsByUser(firebaseUid);
+                var projects = projectService.GetProjectsByUser(user.FirebaseUid);
                 return Ok(projects);
             }
             catch (Exception ex)
             {
-                LogService.LogError(ex.Message, ex.StackTrace, User?.Identity?.Name, "ProjectsController", "GetProjectsByUser");
+                LogService.LogError(ex.Message, ex.StackTrace, User?.Identity?.Name, "ProjectsController", "GetMyProjects");
                 return StatusCode(500, new { error = "An error occurred while retrieving user projects." });
             }
         }
@@ -75,13 +82,16 @@ namespace NodPT.API.Controllers
             try
             {
                 if (project == null) return BadRequest();
-                string? firebaseUid = UserService.GetFirebaseUIDFromContent(User);
-                if (string.IsNullOrEmpty(firebaseUid))
+                
+                // Get user from token
+                var user = UserService.GetUser(User, dbContext);
+                if (user == null)
                 {
-                    return Unauthorized(new { error = "Invalid user token." });
+                    return Unauthorized(new { error = "User not found or invalid" });
                 }
+
                 var projectService = new ProjectService(dbContext);
-                var createdProject = projectService.CreateProject(project, firebaseUid);
+                var createdProject = projectService.CreateProject(project, user.FirebaseUid);
                 return CreatedAtAction(nameof(GetProject), new { id = createdProject.Id }, createdProject);
             }
             catch (Exception ex)
@@ -119,14 +129,15 @@ namespace NodPT.API.Controllers
                     return BadRequest(new { error = "Project name is required." });
                 }
 
-                string? firebaseUid = UserService.GetFirebaseUIDFromContent(User);
-                if (string.IsNullOrEmpty(firebaseUid))
+                // Get user from token
+                var user = UserService.GetUser(User, dbContext);
+                if (user == null)
                 {
-                    return Unauthorized(new { error = "Invalid user token." });
+                    return Unauthorized(new { error = "User not found or invalid" });
                 }
 
                 var projectService = new ProjectService(dbContext);
-                var updatedProject = projectService.UpdateProjectName(id, request.Name, firebaseUid);
+                var updatedProject = projectService.UpdateProjectName(id, request.Name, user.FirebaseUid);
                 return updatedProject == null ? NotFound() : Ok(updatedProject);
             }
             catch (Exception ex)
@@ -142,13 +153,16 @@ namespace NodPT.API.Controllers
             try
             {
                 if (id <= 0) return BadRequest();
-                string? firebaseUid = UserService.GetFirebaseUIDFromContent(User);
-                if (string.IsNullOrEmpty(firebaseUid))
+                
+                // Get user from token
+                var user = UserService.GetUser(User, dbContext);
+                if (user == null)
                 {
-                    return Unauthorized(new { error = "Invalid user token." });
+                    return Unauthorized(new { error = "User not found or invalid" });
                 }
+
                 var projectService = new ProjectService(dbContext);
-                var deleted = projectService.DeleteProject(id, firebaseUid);
+                var deleted = projectService.DeleteProject(id, user.FirebaseUid);
                 return deleted ? NoContent() : NotFound();
             }
             catch (Exception ex)

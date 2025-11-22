@@ -75,12 +75,17 @@ class ProjectApiService {
 		}
 	}
 
-	async getProjectsByUser(userId) {
+	/**
+	 * Get projects for the authenticated user
+	 * The backend automatically gets the user from the JWT token
+	 * @returns {Promise<Array>} Array of user's projects
+	 */
+	async getMyProjects() {
 		try {
-			const data = await this.api.get(`/projects/user/${userId}`)
+			const data = await this.api.get('/projects/me')
 			return data
 		} catch (err) {
-			console.error('Failed to get projects by user:', err)
+			console.error('Failed to get my projects:', err)
 			throw err
 		}
 	}
