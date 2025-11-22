@@ -1,10 +1,16 @@
 using Microsoft.EntityFrameworkCore;
+using NodPT.Data;
 using NodPT.Data.Models;
 using System.Runtime.CompilerServices;
 
 public static class DatabaseHelper
 {
     static string connectionString = string.Empty;
+
+    public static void SetConnectionString(string connStr)
+    {
+        connectionString = connStr;
+    }
 
     public static NodPTDbContext CreateDbContext()
     {
@@ -426,9 +432,5 @@ public static class DatabaseHelper
             transaction.Rollback();
             throw;
         }
-    }
-    public static void SetConnectionString(string _connectionString)
-    {
-        connectionString = _connectionString;
     }
 }

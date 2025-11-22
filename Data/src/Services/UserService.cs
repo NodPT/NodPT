@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using NodPT.Data;
 using NodPT.Data.Models;
 using NodPT.Data.Services;
 
