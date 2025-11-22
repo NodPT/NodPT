@@ -1,114 +1,46 @@
-using DevExpress.Xpo;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace NodPT.Data.Models
 {
-    public class AIModel : XPObject
+    public class AIModel
     {
-        private string? _name;
-        private string? _modelIdentifier;
-        private MessageTypeEnum _messageType;
-        private LevelEnum _level;
-        private string? _description;
-        private bool _isActive = true;
-        private DateTime _createdAt = DateTime.UtcNow;
-        private DateTime _updatedAt = DateTime.UtcNow;
-        private Template? _template;
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
-        public AIModel(Session session) : base(session) { }
-        public AIModel() : base(Session.DefaultSession) { }
+        [MaxLength(255)]
+        public string? Name { get; set; }
 
-        /// <summary>
-        /// Name of the AI model configuration
-        /// </summary>
-        [Size(255)]
-        public string? Name
-        {
-            get => _name;
-            set => SetPropertyValue(nameof(Name), ref _name, value);
-        }
+        [MaxLength(255)]
+        public string? ModelIdentifier { get; set; }
 
-        /// <summary>
-        /// Model identifier (e.g., "gpt-4", "claude-3-opus", etc.)
-        /// </summary>
-        [Size(255)]
-        public string? ModelIdentifier
-        {
-            get => _modelIdentifier;
-            set => SetPropertyValue(nameof(ModelIdentifier), ref _modelIdentifier, value);
-        }
+        public MessageTypeEnum MessageType { get; set; }
 
-        /// <summary>
-        /// Type of the AI model: Discussion or Decision
-        /// </summary>
-        public MessageTypeEnum MessageType
-        {
-            get => _messageType;
-            set => SetPropertyValue(nameof(MessageType), ref _messageType, value);
-        }
+        public LevelEnum Level { get; set; }
 
-        /// <summary>
-        /// Level of the AI model: Brain, Manager, Inspector, or Worker
-        /// </summary>
-        public LevelEnum Level
-        {
-            get => _level;
-            set => SetPropertyValue(nameof(Level), ref _level, value);
-        }
+        public string? Description { get; set; }
 
-        /// <summary>
-        /// Description of the AI model configuration
-        /// </summary>
-        [Size(SizeAttribute.Unlimited)]
-        public string? Description
-        {
-            get => _description;
-            set => SetPropertyValue(nameof(Description), ref _description, value);
-        }
+        public bool IsActive { get; set; } = true;
 
-        /// <summary>
-        /// Whether the AI model is active and available for use
-        /// </summary>
-        public bool IsActive
-        {
-            get => _isActive;
-            set => SetPropertyValue(nameof(IsActive), ref _isActive, value);
-        }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        /// <summary>
-        /// When the AI model was created
-        /// </summary>
-        public DateTime CreatedAt
-        {
-            get => _createdAt;
-            set => SetPropertyValue(nameof(CreatedAt), ref _createdAt, value);
-        }
-
-        /// <summary>
-        /// When the AI model was last updated
-        /// </summary>
-        public DateTime UpdatedAt
-        {
-            get => _updatedAt;
-            set => SetPropertyValue(nameof(UpdatedAt), ref _updatedAt, value);
-        }
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         /// <summary>
         /// Many-to-one relationship: AIModel belongs to a Template
         /// </summary>
-        [Association("Template-AIModels")]
+        public int? TemplateId { get; set; }
+
+        [ForeignKey(nameof(TemplateId))]
         [JsonIgnore]
-        public Template? Template
-        {
-            get => _template;
-            set => SetPropertyValue(nameof(Template), ref _template, value);
-        }
+        public virtual Template? Template { get; set; }
 
         /// <summary>
         /// One-to-many relationship: AIModel can have many Nodes
         /// </summary>
-        [Association("AIModel-Nodes")]
         [JsonIgnore]
-        public XPCollection<Node> Nodes => GetCollection<Node>(nameof(Nodes));
+        public virtual ICollection<Node> Nodes { get; set; } = new List<Node>();
     }
 }

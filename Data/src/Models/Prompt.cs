@@ -1,75 +1,32 @@
-using DevExpress.Xpo;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace NodPT.Data.Models
 {
-    public class Prompt : XPObject
+    public class Prompt
     {
-        private string? _content;
-        private MessageTypeEnum _messageType;
-        private LevelEnum _level;
-        private DateTime _createdAt = DateTime.UtcNow;
-        private DateTime _updatedAt = DateTime.UtcNow;
-        private Template? _template;
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
-        public Prompt(Session session) : base(session) { }
-        public Prompt() : base(Session.DefaultSession) { }
+        public string? Content { get; set; }
 
-        /// <summary>
-        /// The content that will be injected into the chat message to allow AI to follow instructions
-        /// </summary>
-        [Size(SizeAttribute.Unlimited)]
-        public string? Content
-        {
-            get => _content;
-            set => SetPropertyValue(nameof(Content), ref _content, value);
-        }
+        public MessageTypeEnum MessageType { get; set; }
 
-        /// <summary>
-        /// Type of the prompt: Discussion or Decision
-        /// </summary>
-        public MessageTypeEnum MessageType
-        {
-            get => _messageType;
-            set => SetPropertyValue(nameof(MessageType), ref _messageType, value);
-        }
+        public LevelEnum Level { get; set; }
 
-        /// <summary>
-        /// Level of the prompt: Brain, Manager, Inspector, or Worker
-        /// </summary>
-        public LevelEnum Level
-        {
-            get => _level;
-            set => SetPropertyValue(nameof(Level), ref _level, value);
-        }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        /// <summary>
-        /// When the prompt was created
-        /// </summary>
-        public DateTime CreatedAt
-        {
-            get => _createdAt;
-            set => SetPropertyValue(nameof(CreatedAt), ref _createdAt, value);
-        }
-
-        /// <summary>
-        /// When the prompt was last updated
-        /// </summary>
-        public DateTime UpdatedAt
-        {
-            get => _updatedAt;
-            set => SetPropertyValue(nameof(UpdatedAt), ref _updatedAt, value);
-        }
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         /// <summary>
         /// Many-to-one relationship: Prompt belongs to a Template
         /// </summary>
-        [Association("Template-Prompts")]
+        public int? TemplateId { get; set; }
+
+        [ForeignKey(nameof(TemplateId))]
         [JsonIgnore]
-        public Template? Template
-        {
-            get => _template;
-            set => SetPropertyValue(nameof(Template), ref _template, value);
-        }
+        public virtual Template? Template { get; set; }
     }
 }

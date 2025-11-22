@@ -1,80 +1,36 @@
-using DevExpress.Xpo;
-using System.ComponentModel;
-using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace NodPT.Data.Models
 {
-    public class Log : XPObject
+    public class Log
     {
-        private string? _errorMessage;
-        private string? _stackTrace;
-        private string? _username;
-        private DateTime _timestamp = DateTime.UtcNow;
-        private string? _controller;
-        private string? _action;
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
-        public Log(Session session) : base(session) { }
-        public Log() : base(Session.DefaultSession) { }
+        public string? ErrorMessage { get; set; }
 
-        /// <summary>
-        /// Error message
-        /// </summary>
-        [Size(SizeAttribute.Unlimited)]
-        public string? ErrorMessage
-        {
-            get => _errorMessage;
-            set => SetPropertyValue(nameof(ErrorMessage), ref _errorMessage, value);
-        }
+        public string? StackTrace { get; set; }
 
-        /// <summary>
-        /// Stack trace of the error
-        /// </summary>
-        [Size(SizeAttribute.Unlimited)]
-        public string? StackTrace
-        {
-            get => _stackTrace;
-            set => SetPropertyValue(nameof(StackTrace), ref _stackTrace, value);
-        }
+        [MaxLength(255)]
+        public string? Username { get; set; }
 
-        /// <summary>
-        /// Username of the user who encountered the error
-        /// </summary>
-        [Size(255)]
-        [Indexed]
-        public string? Username
-        {
-            get => _username;
-            set => SetPropertyValue(nameof(Username), ref _username, value);
-        }
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
-        /// <summary>
-        /// When the error occurred
-        /// </summary>
-        [Indexed]
-        public DateTime Timestamp
-        {
-            get => _timestamp;
-            set => SetPropertyValue(nameof(Timestamp), ref _timestamp, value);
-        }
+        [MaxLength(255)]
+        public string? Controller { get; set; }
 
-        /// <summary>
-        /// Controller where the error occurred
-        /// </summary>
-        [Size(255)]
-        public string? Controller
-        {
-            get => _controller;
-            set => SetPropertyValue(nameof(Controller), ref _controller, value);
-        }
+        [MaxLength(255)]
+        public string? Action { get; set; }
 
-        /// <summary>
-        /// Action/Method where the error occurred
-        /// </summary>
-        [Size(255)]
-        public string? Action
-        {
-            get => _action;
-            set => SetPropertyValue(nameof(Action), ref _action, value);
-        }
+        [MaxLength(50)]
+        public string? Level { get; set; }
+
+        [MaxLength(255)]
+        public string? Logger { get; set; }
+
+        [MaxLength(255)]
+        public string? Source { get; set; }
     }
 }

@@ -1,105 +1,54 @@
-using DevExpress.Xpo;
-using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace NodPT.Data.Models
 {
-    public class Project : XPObject
+    public class Project
     {
-        private string? _name;
-        private string? _description;
-        private bool _isActive = true;
-        private DateTime _createdAt = DateTime.UtcNow;
-        private DateTime _updatedAt = DateTime.UtcNow;
-        private User? _user;
-        private Template? _template;
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
-        public Project(Session session) : base(session) { }
-        public Project() : base(Session.DefaultSession) { }
+        [MaxLength(255)]
+        public string? Name { get; set; }
 
-        /// <summary>
-        /// Project name
-        /// </summary>
-        [Size(255)]
-        [Indexed]
-        public string? Name
-        {
-            get => _name;
-            set => SetPropertyValue(nameof(Name), ref _name, value);
-        }
+        public string? Description { get; set; }
 
-        /// <summary>
-        /// Project description
-        /// </summary>
-        [Size(SizeAttribute.Unlimited)]
-        public string? Description
-        {
-            get => _description;
-            set => SetPropertyValue(nameof(Description), ref _description, value);
-        }
+        public bool IsActive { get; set; } = true;
 
-        /// <summary>
-        /// Whether the project is active
-        /// </summary>
-        [Indexed]
-        public bool IsActive
-        {
-            get => _isActive;
-            set => SetPropertyValue(nameof(IsActive), ref _isActive, value);
-        }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        /// <summary>
-        /// When the project was created
-        /// </summary>
-        public DateTime CreatedAt
-        {
-            get => _createdAt;
-            set => SetPropertyValue(nameof(CreatedAt), ref _createdAt, value);
-        }
-
-        /// <summary>
-        /// When the project was last updated
-        /// </summary>
-        public DateTime UpdatedAt
-        {
-            get => _updatedAt;
-            set => SetPropertyValue(nameof(UpdatedAt), ref _updatedAt, value);
-        }
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         /// <summary>
         /// Many-to-one relationship: Project belongs to one User
         /// </summary>
-        [Association("User-Projects")]
+        public int? UserId { get; set; }
+
+        [ForeignKey(nameof(UserId))]
         [JsonIgnore]
-        public User? User
-        {
-            get => _user;
-            set => SetPropertyValue(nameof(User), ref _user, value);
-        }
+        public virtual User? User { get; set; }
 
         /// <summary>
         /// Many-to-one relationship: Project uses one Template
         /// </summary>
-        [Association("Template-Projects")]
+        public int? TemplateId { get; set; }
+
+        [ForeignKey(nameof(TemplateId))]
         [JsonIgnore]
-        public Template? Template
-        {
-            get => _template;
-            set => SetPropertyValue(nameof(Template), ref _template, value);
-        }
+        public virtual Template? Template { get; set; }
 
         /// <summary>
         /// One-to-many relationship: Project has many Nodes
         /// </summary>
-        [Association("Project-Nodes")]
         [JsonIgnore]
-        public XPCollection<Node> Nodes => GetCollection<Node>(nameof(Nodes));
+        public virtual ICollection<Node> Nodes { get; set; } = new List<Node>();
 
         /// <summary>
         /// One-to-many relationship: Project has many Folders
         /// </summary>
-        [Association("Project-Folders")]
         [JsonIgnore]
-        public XPCollection<Folder> Folders => GetCollection<Folder>(nameof(Folders));
+        public virtual ICollection<Folder> Folders { get; set; } = new List<Folder>();
     }
 }

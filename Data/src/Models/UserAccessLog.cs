@@ -1,88 +1,31 @@
-using DevExpress.Xpo;
-using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace NodPT.Data.Models
 {
-    public class UserAccessLog : XPObject
+    public class UserAccessLog
     {
-        private User? _user;
-        private string? _action;
-        private string? _ipAddress;
-        private string? _userAgent;
-        private DateTime _timestamp = DateTime.UtcNow;
-        private bool _success = true;
-        private string? _errorMessage;
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
-        public UserAccessLog(Session session) : base(session) { }
-        public UserAccessLog() : base(Session.DefaultSession) { }
+        public int? UserId { get; set; }
 
-        /// <summary>
-        /// Reference to the user who performed the action
-        /// </summary>
-        [Association("User-AccessLogs")]
-        public User? User
-        {
-            get => _user;
-            set => SetPropertyValue(nameof(User), ref _user, value);
-        }
+        [ForeignKey(nameof(UserId))]
+        public virtual User? User { get; set; }
 
-        /// <summary>
-        /// The action performed (login, logout, refresh_token)
-        /// </summary>
-        [Size(50)]
-        public string? Action
-        {
-            get => _action;
-            set => SetPropertyValue(nameof(Action), ref _action, value);
-        }
+        [MaxLength(100)]
+        public string? Action { get; set; }
 
-        /// <summary>
-        /// IP address of the user
-        /// </summary>
-        [Size(45)] // IPv6 can be up to 45 characters
-        public string? IpAddress
-        {
-            get => _ipAddress;
-            set => SetPropertyValue(nameof(IpAddress), ref _ipAddress, value);
-        }
+        [MaxLength(45)]
+        public string? IpAddress { get; set; }
 
-        /// <summary>
-        /// User agent string from the request
-        /// </summary>
-        [Size(SizeAttribute.Unlimited)]
-        public string? UserAgent
-        {
-            get => _userAgent;
-            set => SetPropertyValue(nameof(UserAgent), ref _userAgent, value);
-        }
+        public string? UserAgent { get; set; }
 
-        /// <summary>
-        /// When the action occurred
-        /// </summary>
-        [Indexed]
-        public DateTime Timestamp
-        {
-            get => _timestamp;
-            set => SetPropertyValue(nameof(Timestamp), ref _timestamp, value);
-        }
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
-        /// <summary>
-        /// Whether the action was successful
-        /// </summary>
-        public bool Success
-        {
-            get => _success;
-            set => SetPropertyValue(nameof(Success), ref _success, value);
-        }
+        public bool Success { get; set; } = true;
 
-        /// <summary>
-        /// Error message if the action failed
-        /// </summary>
-        [Size(SizeAttribute.Unlimited)]
-        public string? ErrorMessage
-        {
-            get => _errorMessage;
-            set => SetPropertyValue(nameof(ErrorMessage), ref _errorMessage, value);
-        }
+        public string? ErrorMessage { get; set; }
     }
 }

@@ -1,113 +1,42 @@
-using DevExpress.Xpo;
-using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace NodPT.Data.Models
 {
-    public class ProjectFile : XPObject
+    public class ProjectFile
     {
-        private string? _name;
-        private string? _path;
-        private string? _extension;
-        private long _size = 0;
-        private string? _mimeType;
-        private string? _content;
-        private Folder? _folder;
-        private DateTime _createdAt = DateTime.UtcNow;
-        private DateTime _updatedAt = DateTime.UtcNow;
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
-        public ProjectFile(Session session) : base(session) { }
-        public ProjectFile() : base(Session.DefaultSession) { }
+        [MaxLength(255)]
+        public string? Name { get; set; }
 
-        /// <summary>
-        /// File name including extension
-        /// </summary>
-        [Size(255)]
-        [Indexed]
-        public string? Name
-        {
-            get => _name;
-            set => SetPropertyValue(nameof(Name), ref _name, value);
-        }
+        [MaxLength(500)]
+        public string? Path { get; set; }
 
-        /// <summary>
-        /// Full path of the file relative to project root
-        /// </summary>
-        [Size(SizeAttribute.Unlimited)]
-        [Indexed]
-        public string? Path
-        {
-            get => _path;
-            set => SetPropertyValue(nameof(Path), ref _path, value);
-        }
+        [MaxLength(50)]
+        public string? Extension { get; set; }
 
-        /// <summary>
-        /// File extension (e.g., .txt, .js, .py)
-        /// </summary>
-        [Size(50)]
-        [Indexed]
-        public string? Extension
-        {
-            get => _extension;
-            set => SetPropertyValue(nameof(Extension), ref _extension, value);
-        }
+        public long Size { get; set; } = 0;
 
-        /// <summary>
-        /// File size in bytes
-        /// </summary>
-        public long Size
-        {
-            get => _size;
-            set => SetPropertyValue(nameof(Size), ref _size, value);
-        }
+        [MaxLength(100)]
+        public string? MimeType { get; set; }
 
-        /// <summary>
-        /// MIME type of the file
-        /// </summary>
-        [Size(100)]
-        public string? MimeType
-        {
-            get => _mimeType;
-            set => SetPropertyValue(nameof(MimeType), ref _mimeType, value);
-        }
+        public string? Content { get; set; }
 
-        /// <summary>
-        /// File content (for text files)
-        /// </summary>
-        [Size(SizeAttribute.Unlimited)]
-        public string? Content
-        {
-            get => _content;
-            set => SetPropertyValue(nameof(Content), ref _content, value);
-        }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        /// <summary>
-        /// When the file was created
-        /// </summary>
-        public DateTime CreatedAt
-        {
-            get => _createdAt;
-            set => SetPropertyValue(nameof(CreatedAt), ref _createdAt, value);
-        }
-
-        /// <summary>
-        /// When the file was last updated
-        /// </summary>
-        public DateTime UpdatedAt
-        {
-            get => _updatedAt;
-            set => SetPropertyValue(nameof(UpdatedAt), ref _updatedAt, value);
-        }
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         /// <summary>
         /// Many-to-one relationship: File belongs to one Folder
         /// </summary>
-        [Association("Folder-Files")]
+        public int? FolderId { get; set; }
+
+        [ForeignKey(nameof(FolderId))]
         [JsonIgnore]
-        public Folder? Folder
-        {
-            get => _folder;
-            set => SetPropertyValue(nameof(Folder), ref _folder, value);
-        }
+        public virtual Folder? Folder { get; set; }
     }
 }

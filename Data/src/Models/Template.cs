@@ -1,125 +1,60 @@
-using DevExpress.Xpo;
-using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace NodPT.Data.Models
 {
-    public class Template : XPObject
+    public class Template
     {
-        private string? _name;
-        private string? _description;
-        private string? _category;
-        private string? _version;
-        private bool _isActive = true;
-        private DateTime _createdAt = DateTime.UtcNow;
-        private DateTime _updatedAt = DateTime.UtcNow;
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
-        public Template(Session session) : base(session) { }
-        public Template() : base(Session.DefaultSession) { }
+        [MaxLength(255)]
+        public string? Name { get; set; }
 
-        /// <summary>
-        /// Template name
-        /// </summary>
-        [Size(255)]
-        [Indexed]
-        public string? Name
-        {
-            get => _name;
-            set => SetPropertyValue(nameof(Name), ref _name, value);
-        }
+        public string? Description { get; set; }
 
-        /// <summary>
-        /// Template description
-        /// </summary>
-        [Size(SizeAttribute.Unlimited)]
-        public string? Description
-        {
-            get => _description;
-            set => SetPropertyValue(nameof(Description), ref _description, value);
-        }
+        [MaxLength(100)]
+        public string? Category { get; set; }
 
-        /// <summary>
-        /// Template category for organization
-        /// </summary>
-        [Size(100)]
-        [Indexed]
-        public string? Category
-        {
-            get => _category;
-            set => SetPropertyValue(nameof(Category), ref _category, value);
-        }
+        [MaxLength(50)]
+        public string? Version { get; set; }
 
-        /// <summary>
-        /// Template version
-        /// </summary>
-        [Size(50)]
-        public string? Version
-        {
-            get => _version;
-            set => SetPropertyValue(nameof(Version), ref _version, value);
-        }
+        public bool IsActive { get; set; } = true;
 
-        /// <summary>
-        /// Whether the template is active and available for use
-        /// </summary>
-        [Indexed]
-        public bool IsActive
-        {
-            get => _isActive;
-            set => SetPropertyValue(nameof(IsActive), ref _isActive, value);
-        }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        /// <summary>
-        /// When the template was created
-        /// </summary>
-        public DateTime CreatedAt
-        {
-            get => _createdAt;
-            set => SetPropertyValue(nameof(CreatedAt), ref _createdAt, value);
-        }
-
-        /// <summary>
-        /// When the template was last updated
-        /// </summary>
-        public DateTime UpdatedAt
-        {
-            get => _updatedAt;
-            set => SetPropertyValue(nameof(UpdatedAt), ref _updatedAt, value);
-        }
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         /// <summary>
         /// One-to-many relationship: Template has many Projects
         /// </summary>
-        [Association("Template-Projects")]
         [JsonIgnore]
-        public XPCollection<Project> Projects => GetCollection<Project>(nameof(Projects));
+        public virtual ICollection<Project> Projects { get; set; } = new List<Project>();
 
         /// <summary>
         /// One-to-many relationship: Template has many TemplateFiles
         /// </summary>
-        [Association("Template-TemplateFiles")]
         [JsonIgnore]
-        public XPCollection<TemplateFile> TemplateFiles => GetCollection<TemplateFile>(nameof(TemplateFiles));
+        public virtual ICollection<TemplateFile> TemplateFiles { get; set; } = new List<TemplateFile>();
 
         /// <summary>
         /// One-to-many relationship: Template has many Nodes
         /// </summary>
-        [Association("Template-Nodes")]
         [JsonIgnore]
-        public XPCollection<Node> Nodes => GetCollection<Node>(nameof(Nodes));
+        public virtual ICollection<Node> Nodes { get; set; } = new List<Node>();
 
         /// <summary>
         /// One-to-many relationship: Template has many Prompts
         /// </summary>
-        [Association("Template-Prompts")]
         [JsonIgnore]
-        public XPCollection<Prompt> Prompts => GetCollection<Prompt>(nameof(Prompts));
+        public virtual ICollection<Prompt> Prompts { get; set; } = new List<Prompt>();
 
         /// <summary>
         /// One-to-many relationship: Template has many AIModels
         /// </summary>
-        [Association("Template-AIModels")]
         [JsonIgnore]
-        public XPCollection<AIModel> AIModels => GetCollection<AIModel>(nameof(AIModels));
+        public virtual ICollection<AIModel> AIModels { get; set; } = new List<AIModel>();
     }
 }
