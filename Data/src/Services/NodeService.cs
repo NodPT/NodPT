@@ -1,4 +1,4 @@
-using DevExpress.Xpo;
+using Microsoft.EntityFrameworkCore;
 using NodPT.Data.DTOs;
 using NodPT.Data.Models;
 
@@ -6,11 +6,11 @@ namespace NodPT.Data.Services
 {
     public class NodeService
     {
-        private readonly UnitOfWork session;
+        private readonly NodPTDbContext context;
 
-        public NodeService(UnitOfWork unitOfWork)
+        public NodeService(NodPTDbContext dbContext)
         {
-            this.session = unitOfWork;
+            this.context = dbContext;
         }
 
         private NodeDto MapToDto(Node node)
@@ -24,14 +24,14 @@ namespace NodPT.Data.Services
                 CreatedAt = node.CreatedAt,
                 UpdatedAt = node.UpdatedAt,
                 Status = node.Status,
-                ParentId = node.Parent?.Id,
-                ProjectId = node.Project?.Oid,
+                ParentId = node.ParentId,
+                ProjectId = node.ProjectId,
                 ProjectName = node.Project?.Name,
-                TemplateId = node.Template?.Oid,
+                TemplateId = node.TemplateId,
                 TemplateName = node.Template?.Name,
                 MessageType = node.MessageType,
                 Level = node.Level,
-                AIModelId = node.AIModel?.Oid,
+                AIModelId = node.AIModelId,
                 AIModelName = node.AIModel?.Name
             };
 
@@ -40,7 +40,7 @@ namespace NodPT.Data.Services
             {
                 dto.MatchingAIModel = new AIModelDto
                 {
-                    Id = node.MatchingAIModel.Oid,
+                    Id = node.MatchingAIModel.Id,
                     Name = node.MatchingAIModel.Name,
                     ModelIdentifier = node.MatchingAIModel.ModelIdentifier,
                     MessageType = node.MatchingAIModel.MessageType,
@@ -49,20 +49,20 @@ namespace NodPT.Data.Services
                     IsActive = node.MatchingAIModel.IsActive,
                     CreatedAt = node.MatchingAIModel.CreatedAt,
                     UpdatedAt = node.MatchingAIModel.UpdatedAt,
-                    TemplateId = node.MatchingAIModel.Template?.Oid
+                    TemplateId = node.MatchingAIModel.TemplateId
                 };
             }
 
             // Map MatchingPrompts
             dto.MatchingPrompts = node.MatchingPrompts.Select(p => new PromptDto
             {
-                Id = p.Oid,
+                Id = p.Id,
                 Content = p.Content,
                 MessageType = p.MessageType,
                 Level = p.Level,
                 CreatedAt = p.CreatedAt,
                 UpdatedAt = p.UpdatedAt,
-                TemplateId = p.Template?.Oid
+                TemplateId = p.TemplateId
             }).ToList();
 
             return dto;
@@ -70,46 +70,45 @@ namespace NodPT.Data.Services
 
         public List<NodeDto> GetAllNodes()
         {
-            var nodes = new XPCollection<Node>(session);
-            return nodes.Select(n => MapToDto(n)).ToList();
+            return context.Nodes
+                .Include(n => n.Project)
+                .Include(n => n.Template)
+                .Include(n => n.AIModel)
+                .Include(n => n.Parent)
+                .Select(n => MapToDto(n))
+                .ToList();
         }
 
         public NodeDto? GetNode(string id)
         {
-            var node = session.Query<Node>().FirstOrDefault(n => n.Id == id);
+            var node = context.Nodes
+                .Include(n => n.Project)
+                .Include(n => n.Template)
+                .Include(n => n.AIModel)
+                .Include(n => n.Parent)
+                .FirstOrDefault(n => n.Id == id);
             return node == null ? null : MapToDto(node);
         }
 
         public List<NodeDto> GetNodesByProject(int projectId)
         {
-            var project = session.GetObjectByKey<Project>(projectId);
-            if (project == null) return new List<NodeDto>();
-            
-            var nodes = new XPCollection<Node>(session, 
-                new DevExpress.Data.Filtering.BinaryOperator("Project", project));
-            return nodes.Select(n => MapToDto(n)).ToList();
+            return context.Nodes
+                .Include(n => n.Project)
+                .Include(n => n.Template)
+                .Include(n => n.AIModel)
+                .Include(n => n.Parent)
+                .Where(n => n.ProjectId == projectId)
+                .Select(n => MapToDto(n))
+                .ToList();
         }
 
         public void AddNode(NodeDto nodeDto)
         {
-            session.BeginTransaction();
+            using var transaction = context.Database.BeginTransaction();
 
             try
             {
-                var project = nodeDto.ProjectId.HasValue
-                    ? session.GetObjectByKey<Project>(nodeDto.ProjectId.Value)
-                    : null;
-                var template = nodeDto.TemplateId.HasValue
-                    ? session.GetObjectByKey<Template>(nodeDto.TemplateId.Value)
-                    : null;
-                var parent = !string.IsNullOrEmpty(nodeDto.ParentId)
-                    ? session.Query<Node>().FirstOrDefault(n => n.Id == nodeDto.ParentId)
-                    : null;
-                var aiModel = nodeDto.AIModelId.HasValue
-                    ? session.GetObjectByKey<AIModel>(nodeDto.AIModelId.Value)
-                    : null;
-
-                var node = new Node(session)
+                var node = new Node
                 {
                     Id = nodeDto.Id,
                     Name = nodeDto.Name,
@@ -118,84 +117,73 @@ namespace NodPT.Data.Services
                     CreatedAt = nodeDto.CreatedAt,
                     UpdatedAt = nodeDto.UpdatedAt,
                     Status = nodeDto.Status,
-                    Parent = parent,
-                    Project = project,
-                    Template = template,
+                    ParentId = nodeDto.ParentId,
+                    ProjectId = nodeDto.ProjectId,
+                    TemplateId = nodeDto.TemplateId,
                     MessageType = nodeDto.MessageType,
                     Level = nodeDto.Level,
-                    AIModel = aiModel
+                    AIModelId = nodeDto.AIModelId
                 };
 
-                session.Save(node);
-                session.CommitTransaction();
+                context.Nodes.Add(node);
+                context.SaveChanges();
+                transaction.Commit();
             }
             catch
             {
-                session.RollbackTransaction();
+                transaction.Rollback();
                 throw;
             }
         }
 
         public void UpdateNode(NodeDto nodeDto)
         {
-            session.BeginTransaction();
+            using var transaction = context.Database.BeginTransaction();
 
             try
             {
-                var node = session.Query<Node>().FirstOrDefault(n => n.Id == nodeDto.Id);
+                var node = context.Nodes.FirstOrDefault(n => n.Id == nodeDto.Id);
                 if (node == null) return;
-
-                var project = nodeDto.ProjectId.HasValue
-                    ? session.GetObjectByKey<Project>(nodeDto.ProjectId.Value)
-                    : null;
-                var template = nodeDto.TemplateId.HasValue
-                    ? session.GetObjectByKey<Template>(nodeDto.TemplateId.Value)
-                    : null;
-                var parent = !string.IsNullOrEmpty(nodeDto.ParentId)
-                    ? session.Query<Node>().FirstOrDefault(n => n.Id == nodeDto.ParentId)
-                    : null;
-                var aiModel = nodeDto.AIModelId.HasValue
-                    ? session.GetObjectByKey<AIModel>(nodeDto.AIModelId.Value)
-                    : null;
 
                 node.Name = nodeDto.Name;
                 node.NodeType = Enum.TryParse<NodeType>(nodeDto.NodeType, out var nodeType) ? nodeType : NodeType.Default;
                 node.PropertiesDictionary = nodeDto.Properties;
                 node.UpdatedAt = nodeDto.UpdatedAt;
                 node.Status = nodeDto.Status;
-                node.Parent = parent;
-                node.Project = project;
-                node.Template = template;
+                node.ParentId = nodeDto.ParentId;
+                node.ProjectId = nodeDto.ProjectId;
+                node.TemplateId = nodeDto.TemplateId;
                 node.MessageType = nodeDto.MessageType;
                 node.Level = nodeDto.Level;
-                node.AIModel = aiModel;
+                node.AIModelId = nodeDto.AIModelId;
 
-                session.Save(node);
-                session.CommitTransaction();
+                context.SaveChanges();
+                transaction.Commit();
             }
             catch
             {
-                session.RollbackTransaction();
+                transaction.Rollback();
                 throw;
             }
         }
 
         public void DeleteNode(string id)
         {
-            session.BeginTransaction();
+            using var transaction = context.Database.BeginTransaction();
 
             try
             {
-                var node = session.Query<Node>().FirstOrDefault(n => n.Id == id);
+                var node = context.Nodes.FirstOrDefault(n => n.Id == id);
                 if (node != null)
                 {
-                    session.Delete(node);
+                    context.Nodes.Remove(node);
+                    context.SaveChanges();
                 }
-                session.CommitTransaction();
+                transaction.Commit();
             }
             catch
             {
-                session.RollbackTransaction();
+                transaction.Rollback();
                 throw;
             }
         }
