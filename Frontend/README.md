@@ -53,8 +53,8 @@ Frontend/
 
 ### Main Components
 
-- **TopBar**: Project controls (New, Open, Save, Export, Build, Run, Publish) and node controls (Add, Clear, Group, Lock)
-- **BottomBar**: Selected node status, build progress, minimap toggle
+- **TopBar**: File controls (New, Open, Save...) and node controls (Add, Delete...)
+- **BottomBar**: Selected node status, build progress, minimap toggle, Arrange nodes, Toggle Left/Right panels
 - **LeftPanel**: Rete.js canvas for visual node editing (resizable)
 - **RightPanel**: Tabbed interface for AI Chat, Logs, Properties, Files (floating panel)
 
@@ -101,6 +101,80 @@ const service = new MyService();
 service.setApi(api);
 ```
 
+### EventBus Plugin
+
+The frontend uses **Tiny Emitter** for an event bus system, enabling loose coupling between components.
+
+**Setup** (already configured in `src/plugins/eventbus-plugin.js`):
+
+```javascript
+import TinyEmitter from 'tiny-emitter/instance';
+
+// The eventBus is registered as a Vue plugin and injected into all components
+app.provide('eventBus', TinyEmitter);
+```
+
+**Emit an Event** (send data from one component):
+
+```javascript
+import { inject } from 'vue';
+
+export default {
+  setup() {
+    const eventBus = inject('eventBus');
+    
+    const handleNodeSelected = (nodeId) => {
+      // Emit event with data
+      eventBus.emit('node:selected', { nodeId, timestamp: Date.now() });
+    };
+    
+    const handleWorkflowSaved = (workflowData) => {
+      eventBus.emit('workflow:saved', workflowData);
+    };
+    
+    return { handleNodeSelected, handleWorkflowSaved };
+  }
+};
+```
+
+**Listen to an Event** (receive data in another component):
+
+```javascript
+import { inject, onMounted, onUnmounted } from 'vue';
+
+export default {
+  setup() {
+    const eventBus = inject('eventBus');
+    
+    const onNodeSelected = (data) => {
+      console.log('Node selected:', data.nodeId);
+      // Update component state based on event
+    };
+    
+    onMounted(() => {
+      // Register listener when component mounts
+      eventBus.on('node:selected', onNodeSelected);
+    });
+    
+    onUnmounted(() => {
+      // Clean up listener when component unmounts
+      eventBus.off('node:selected', onNodeSelected);
+    });
+    
+    return {};
+  }
+};
+```
+
+**Best Practices**:
+
+- Always use `onUnmounted()` to remove listeners and prevent memory leaks
+- Use descriptive event names with namespacing (e.g., `node:selected`, `workflow:saved`)
+- Pass event data as a single object for clarity
+- Emit from child components and listen in parent/sibling components
+- Avoid event bus for simple parent-child communication (use props and events instead)
+- Document emitted events in component comments
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -118,7 +192,7 @@ service.setApi(api);
 
 2. **Install dependencies**:
    ```bash
-   npm ci
+   npm install
    ```
 
 3. **Create environment file** (`.env.local`):
@@ -166,7 +240,7 @@ npm run lint
 Create the environment file at `/home/runner_user/envs/frontend.env`:
 
 ```env
-# Firebase Configuration (encoded as single variable)
+# Firebase Configuration (encoded as single variable), sorry for my language... just easier this way to remove from codebase
 VITE_FIREBASE_SHIT={"apiKey":"xxx","authDomain":"xxx","projectId":"xxx","storageBucket":"xxx","messagingSenderId":"xxx","appId":"xxx"}
 
 # Or individual variables

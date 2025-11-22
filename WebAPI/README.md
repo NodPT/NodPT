@@ -228,20 +228,25 @@ public async Task<IActionResult> CreateItem([FromBody] ItemDto dto)
 }
 ```
 
-### User Validation
-
-Always validate the user in protected endpoints:
+### Get User 
+for using it in the controller's logic instead of using firebaseUid from frontend.
+or pass User to service layer for further processing instead of firebaseUid to avoid redundant lookups
 
 ```csharp
 // Get current user from Firebase token
 var user = await UserService.GetUser(User);
 
-if (user == null || user.IsBanned)
+if (user == null)
 {
     return Unauthorized("User is banned or not found");
 }
 
-// Proceed with authorized logic
+// Proceed with controller logic
+User.Collections.Add(new data);
+
+// or pass User to service layer for further processing instead of firebaseUid to avoid redundant lookups
+AnyService.ProcessData(user, data);
+
 ```
 
 ### Redis Integration

@@ -5,11 +5,9 @@ Shared data access layer using DevExpress XPO (eXpress Persistent Objects) for o
 ## 🛠️ Technology Stack
 
 - **DevExpress XPO 25.1.3**: Object-Relational Mapping framework
-- **DevExpress Data 25.1.3**: Data manipulation utilities
 - **.NET 8.0**: Target framework
 - **MySQL/MariaDB**: Primary database
 - **Unit of Work Pattern**: Transaction management
-- **Repository Pattern**: Data access abstraction
 
 ## 🏗️ Architecture
 
@@ -42,18 +40,13 @@ Data/
 │   ├── Models/             # XPO persistent objects
 │   │   ├── User.cs        # User entity
 │   │   ├── Project.cs     # Project entity
-│   │   ├── Workflow.cs    # Workflow entity
 │   │   └── ...            # Other entities
-│   ├── Repositories/       # Repository interfaces and implementations
-│   │   ├── IRepository.cs         # Generic repository interface
-│   │   ├── IUserRepository.cs     # User repository interface
-│   │   ├── UserRepository.cs      # User repository implementation
-│   │   └── ...                    # Other repositories
-│   ├── UnitOfWork/         # Unit of Work pattern
-│   │   ├── IUnitOfWork.cs        # UnitOfWork interface
-│   │   └── UnitOfWork.cs         # UnitOfWork implementation
-│   ├── Configuration/      # Database configuration
-│   │   └── DataLayerConfig.cs
+│   ├── Services/       # Data services and Unit of Work
+│   │   └── ...                    # Service classes
+│   ├── Attributes/       # Custom attributes
+│   │   └── ...                    # Attribute classes
+│   ├── Dto/      # Data Transfer Objects
+│   │   └── ... # DTO classes
 │   └── NodPT.Data.csproj  # Project file
 └── README.md              # This file
 ```
@@ -64,7 +57,7 @@ Data/
 
 - .NET 8.0 SDK or later
 - MySQL 8.0+ or MariaDB 10.5+
-- DevExpress Universal Subscription (for XPO license)
+- DevExpress XPO (free)
 
 ### Installation
 
@@ -79,21 +72,7 @@ This is a shared library referenced by other projects:
 
 ### Database Setup
 
-1. **Create MySQL Database**:
-   ```sql
-   CREATE DATABASE nodpt 
-   CHARACTER SET utf8mb4 
-   COLLATE utf8mb4_unicode_ci;
-   ```
-
-2. **Create Database User**:
-   ```sql
-   CREATE USER 'nodpt_user'@'%' IDENTIFIED BY 'secure_password';
-   GRANT ALL PRIVILEGES ON nodpt.* TO 'nodpt_user'@'%';
-   FLUSH PRIVILEGES;
-   ```
-
-3. **Connection String** (in appsettings.json):
+1. **Connection String** (in appsettings.json):
    ```json
    {
      "ConnectionStrings": {
@@ -102,81 +81,40 @@ This is a shared library referenced by other projects:
    }
    ```
 
-### Configuration
-
-#### Register in Program.cs (ASP.NET Core)
-
-```csharp
-// Configure XPO data layer
-builder.Services.AddSingleton<IDataLayer>((serviceProvider) =>
-{
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    XpoDefault.DataLayer = XpoDefault.GetDataLayer(
-        connectionString,
-        DevExpress.Xpo.DB.AutoCreateOption.DatabaseAndSchema
-    );
-    return XpoDefault.DataLayer;
-});
-
-// Register Unit of Work
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-// Register repositories (if needed individually)
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
-```
-
 ## 📝 Usage
-
 ### Unit of Work Pattern
-
-The recommended approach for data access:
+The recommended approach for data service:
 
 ```csharp
-public class YourController : ControllerBase
+public class YourService
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly UnitOfWork _unitOfWork;
+    private User _user;
     
-    public YourController(IUnitOfWork unitOfWork)
+    // pass the UnitOfWork via DI
+    public YourController(UnitOfWork unitOfWork)
     {
         _unitOfWork = unitOfWork;
     }
     
-    [HttpGet]
-    public async Task<IActionResult> GetUsers()
+     // pass the UnitOfWork via DI
+    public YourController(User user)
     {
-        var users = await _unitOfWork.UserRepository.GetAllAsync();
-        return Ok(users);
+        _user = user;
+        _unitOfWork = user.unitOfWork;
     }
     
-    [HttpPost]
-    public async Task<IActionResult> CreateUser([FromBody] UserDto dto)
-    {
-        var user = new User(_unitOfWork.Session)
-        {
-            FirebaseUid = dto.FirebaseUid,
-            Email = dto.Email,
-            DisplayName = dto.DisplayName,
-            CreatedAt = DateTime.UtcNow
-        };
-        
-        await _unitOfWork.UserRepository.AddAsync(user);
-        await _unitOfWork.CommitAsync();
-        
-        return Ok(user);
-    }
     
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateUser(int id, [FromBody] UserDto dto)
+    public async DataClass UpdateData(int id, DataDto dto)
     {
-        var user = await _unitOfWork.UserRepository.GetByIdAsync(id);
-        if (user == null)
+        var data = await _unitOfWork.FindObjec<DataClass>(id);
+        if (data == null)
             return NotFound();
         
-        user.DisplayName = dto.DisplayName;
-        user.UpdatedAt = DateTime.UtcNow;
+        data.DisplayName = dto.DisplayName;
+        data.UpdatedAt = DateTime.UtcNow;
         
-        await _unitOfWork.UserRepository.UpdateAsync(user);
+        data.Save(user);
         await _unitOfWork.CommitAsync();
         
         return Ok(user);
@@ -225,116 +163,7 @@ public class User : XPObject
 }
 ```
 
-### Repository Interface
 
-```csharp
-public interface IRepository<T> where T : class
-{
-    Task<IEnumerable<T>> GetAllAsync();
-    Task<T> GetByIdAsync(object id);
-    Task<T> AddAsync(T entity);
-    Task<T> UpdateAsync(T entity);
-    Task DeleteAsync(object id);
-    Task<bool> ExistsAsync(object id);
-}
-
-public interface IUserRepository : IRepository<User>
-{
-    Task<User> GetByFirebaseUidAsync(string firebaseUid);
-    Task<User> GetByEmailAsync(string email);
-    Task<IEnumerable<User>> GetApprovedUsersAsync();
-}
-```
-
-### Repository Implementation
-
-```csharp
-public class UserRepository : IUserRepository
-{
-    private readonly Session _session;
-    
-    public UserRepository(Session session)
-    {
-        _session = session;
-    }
-    
-    public async Task<IEnumerable<User>> GetAllAsync()
-    {
-        return await Task.FromResult(
-            new XPQuery<User>(_session).ToList()
-        );
-    }
-    
-    public async Task<User> GetByIdAsync(object id)
-    {
-        return await Task.FromResult(
-            _session.GetObjectByKey<User>(id)
-        );
-    }
-    
-    public async Task<User> GetByFirebaseUidAsync(string firebaseUid)
-    {
-        return await Task.FromResult(
-            new XPQuery<User>(_session)
-                .FirstOrDefault(u => u.FirebaseUid == firebaseUid)
-        );
-    }
-    
-    public async Task<User> AddAsync(User entity)
-    {
-        await _session.SaveAsync(entity);
-        return entity;
-    }
-    
-    public async Task<User> UpdateAsync(User entity)
-    {
-        await _session.SaveAsync(entity);
-        return entity;
-    }
-    
-    public async Task DeleteAsync(object id)
-    {
-        var entity = await GetByIdAsync(id);
-        if (entity != null)
-        {
-            await _session.DeleteAsync(entity);
-        }
-    }
-}
-```
-
-## 🔄 Transactions
-
-### Using Unit of Work for Transactions
-
-```csharp
-try
-{
-    // Start transaction (implicit with UnitOfWork)
-    var user = new User(_unitOfWork.Session)
-    {
-        Email = "user@example.com",
-        DisplayName = "John Doe"
-    };
-    await _unitOfWork.UserRepository.AddAsync(user);
-    
-    var project = new Project(_unitOfWork.Session)
-    {
-        Name = "My Project",
-        OwnerId = user.Id
-    };
-    await _unitOfWork.ProjectRepository.AddAsync(project);
-    
-    // Commit transaction
-    await _unitOfWork.CommitAsync();
-}
-catch (Exception ex)
-{
-    // Rollback is automatic if CommitAsync is not called
-    _logger.LogError(ex, "Transaction failed");
-    throw;
-}
-```
 
 ## 🎯 XPO Features
 
@@ -357,36 +186,6 @@ var projectsWithOwners = new XPQuery<Project>(session)
     .ToList();
 ```
 
-### Lazy Loading
-
-```csharp
-// Navigation properties are lazy-loaded by default
-var user = await _unitOfWork.UserRepository.GetByIdAsync(1);
-
-// This will trigger a separate query
-foreach (var project in user.Projects)
-{
-    Console.WriteLine(project.Name);
-}
-```
-
-### Eager Loading
-
-```csharp
-var users = new XPQuery<User>(session)
-    .Include(u => u.Projects)
-    .ToList();
-```
-
-### Aggregations
-
-```csharp
-var projectCount = new XPQuery<Project>(session)
-    .Count(p => p.OwnerId == userId);
-
-var averageNodeCount = new XPQuery<Workflow>(session)
-    .Average(w => w.NodeCount);
-```
 
 ## 🔒 Security
 
@@ -400,106 +199,7 @@ var user = new XPQuery<User>(session)
     .FirstOrDefault(u => u.Email == userInputEmail);
 ```
 
-### Validation
 
-```csharp
-public class User : XPObject
-{
-    private string _email;
-    
-    [Size(255)]
-    public string Email
-    {
-        get => _email;
-        set
-        {
-            if (!IsValidEmail(value))
-                throw new ArgumentException("Invalid email format");
-            SetPropertyValue(nameof(Email), ref _email, value);
-        }
-    }
-    
-    private bool IsValidEmail(string email)
-    {
-        // Email validation logic
-        return Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
-    }
-}
-```
-
-## 📊 Database Migrations
-
-### Schema Updates
-
-XPO can automatically update the database schema:
-
-```csharp
-// Auto create tables if they don't exist
-XpoDefault.DataLayer = XpoDefault.GetDataLayer(
-    connectionString,
-    AutoCreateOption.DatabaseAndSchema
-);
-
-// Only create missing tables (don't drop existing)
-XpoDefault.DataLayer = XpoDefault.GetDataLayer(
-    connectionString,
-    AutoCreateOption.SchemaAlreadyExists
-);
-
-// No automatic schema changes (production)
-XpoDefault.DataLayer = XpoDefault.GetDataLayer(
-    connectionString,
-    AutoCreateOption.None
-);
-```
-
-### Manual Migrations
-
-For production, use manual migration scripts:
-
-```sql
--- Add new column
-ALTER TABLE Users ADD COLUMN LastLoginAt DATETIME NULL;
-
--- Create index
-CREATE INDEX idx_users_firebase ON Users(FirebaseUid);
-
--- Add foreign key
-ALTER TABLE Projects 
-ADD CONSTRAINT fk_projects_owner 
-FOREIGN KEY (OwnerId) REFERENCES Users(Id);
-```
-
-## 🧪 Testing
-
-### Unit Testing with In-Memory Layer
-
-```csharp
-[Fact]
-public async Task CanCreateUser()
-{
-    // Arrange
-    var dataLayer = XpoDefault.GetDataLayer(
-        InMemoryDataStore.AutoCreateOption.SchemaAlreadyExists
-    );
-    var uow = new UnitOfWork(dataLayer);
-    var repository = new UserRepository(uow);
-    
-    // Act
-    var user = new User(uow)
-    {
-        Email = "test@example.com",
-        DisplayName = "Test User"
-    };
-    await repository.AddAsync(user);
-    await uow.CommitChangesAsync();
-    
-    // Assert
-    var savedUser = await repository.GetByEmailAsync("test@example.com");
-    Assert.NotNull(savedUser);
-    Assert.Equal("Test User", savedUser.DisplayName);
-}
-```
 
 ## 🛠️ Development Guidelines
 
@@ -519,25 +219,6 @@ public async Task CanCreateUser()
 - **Properties**: PascalCase (user.DisplayName)
 - **Foreign Keys**: Singular + Id (OwnerId, ProjectId)
 
-### Performance Tips
-
-```csharp
-// BAD: N+1 query problem
-var users = await _unitOfWork.UserRepository.GetAllAsync();
-foreach (var user in users)
-{
-    var projectCount = user.Projects.Count; // Separate query per user
-}
-
-// GOOD: Single query with aggregation
-var userProjectCounts = new XPQuery<User>(session)
-    .Select(u => new
-    {
-        User = u,
-        ProjectCount = u.Projects.Count
-    })
-    .ToList();
-```
 
 ## 🤝 Contributing
 
@@ -546,8 +227,6 @@ var userProjectCounts = new XPQuery<User>(session)
 1. Create XPO persistent class in `Models/`
 2. Add table attribute: `[Persistent("TableName")]`
 3. Define properties with appropriate attributes
-4. Create repository interface and implementation
-5. Add repository to `IUnitOfWork`
 6. Update this README
 
 ### Code Review Checklist
@@ -556,7 +235,6 @@ var userProjectCounts = new XPQuery<User>(session)
 - [ ] Foreign keys are defined correctly
 - [ ] Size limits are set for string fields
 - [ ] Validation is implemented where needed
-- [ ] Repository interface is defined
 - [ ] Unit tests are added
 - [ ] Documentation is updated
 

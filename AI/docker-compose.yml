@@ -13,7 +13,7 @@ services:
           devices:
             - capabilities: [ gpu ]
 
-    # OR for older Docker versions:
+    # enable all GPUs
     gpus: all
 
     volumes:

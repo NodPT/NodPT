@@ -105,8 +105,6 @@ The service will be accessible at `http://localhost:11434`
 ### Docker Compose Configuration
 
 ```yaml
-version: "3.9"
-
 services:
   ollama:
     image: ollama/ollama:latest
@@ -122,6 +120,9 @@ services:
     
     # OR for older Docker versions:
     # runtime: nvidia
+
+    # enable all GPUs
+    gpus: all
     
     volumes:
       - ollama_data:/root/.ollama
@@ -164,7 +165,7 @@ ollama list
 |------|-------|------|---------|
 | Manager | `llama2:13b` | 7.3GB | High-level planning and orchestration |
 | Inspector | `codellama:13b` | 7.3GB | Code review and analysis |
-| Agent | `mistral:7b` | 4.1GB | Fast task execution |
+| Worker | `mistral:7b` | 4.1GB | Fast task execution |
 
 ### Custom Model Configuration
 
@@ -447,15 +448,6 @@ Load Balancer
     ├─→ Ollama Instance 2 (GPU 1)
     └─→ Ollama Instance 3 (GPU 2)
 ```
-
-### Resource Requirements
-
-| Model Size | VRAM | RAM | Recommended GPU |
-|------------|------|-----|-----------------|
-| 7B | 6GB | 8GB | RTX 3060 |
-| 13B | 10GB | 16GB | RTX 3080 |
-| 30B | 20GB | 32GB | RTX 4090 |
-| 70B | 40GB | 64GB | A100 40GB |
 
 ## 🤝 Contributing
 
