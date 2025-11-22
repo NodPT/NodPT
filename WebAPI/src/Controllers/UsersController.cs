@@ -1,9 +1,8 @@
-using DevExpress.Data.Filtering;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-
 using NodPT.Data.Models;
-using DevExpress.Xpo;
+using NodPT.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace NodPT.API.Controllers
 {
@@ -12,12 +11,11 @@ namespace NodPT.API.Controllers
     [Route("api/[controller]")]
     public class UsersController : ControllerBase
     {
+        private readonly NodPTDbContext _context;
 
-        private UnitOfWork session;
-
-        public UsersController(UnitOfWork _session)
+        public UsersController(NodPTDbContext context)
         {
-            session = _session;
+            _context = context;
         }
 
 
@@ -25,13 +23,12 @@ namespace NodPT.API.Controllers
         [CustomAuthorized("Admin")]
         public IActionResult GetUsers()
         {
-
-            var users = new XPCollection<User>(session);
+            var users = _context.Users.ToList();
 
             // Project to DTOs to avoid serialization issues
             var userDtos = users.Select(u => new
             {
-                u.Oid,
+                u.Id,
                 u.FirebaseUid,
                 u.Email,
                 u.DisplayName,
@@ -50,14 +47,13 @@ namespace NodPT.API.Controllers
         [CustomAuthorized("Admin")]
         public IActionResult GetUser(string firebaseUid)
         {
-
-            var user = session.FindObject<User>(new BinaryOperator("FirebaseUid", firebaseUid));
+            var user = _context.Users.FirstOrDefault(u => u.FirebaseUid == firebaseUid);
 
             if (user == null) return NotFound();
 
             var userDto = new
             {
-                user.Oid,
+                user.Id,
                 user.FirebaseUid,
                 user.Email,
                 user.DisplayName,
@@ -75,19 +71,17 @@ namespace NodPT.API.Controllers
 
         [HttpPost]
         [CustomAuthorized("Admin")]
-        public IActionResult CreateUser([FromBody] CreateUserRequest request)
+        public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
         {
             if (request == null || string.IsNullOrEmpty(request.FirebaseUid))
                 return BadRequest("FirebaseUid is required");
 
-
-
             // Check if user already exists
-            var existingUser = session.FindObject<User>(new BinaryOperator("FirebaseUid", request.FirebaseUid));
+            var existingUser = _context.Users.FirstOrDefault(u => u.FirebaseUid == request.FirebaseUid);
             if (existingUser != null)
                 return Conflict("User already exists");
 
-            var user = new User(session)
+            var user = new User
             {
                 FirebaseUid = request.FirebaseUid,
                 Email = request.Email,
@@ -100,71 +94,56 @@ namespace NodPT.API.Controllers
                 LastLoginAt = DateTime.UtcNow
             };
 
-            session.Save(user);
-            session.CommitTransaction();
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetUser), new { firebaseUid = user.FirebaseUid }, user);
         }
 
         [CustomAuthorized("Admin")]
-        public IActionResult UpdateUserStatus(string firebaseUid, [FromBody] UpdateUserStatusRequest request)
+        public async Task<IActionResult> UpdateUserStatus(string firebaseUid, [FromBody] UpdateUserStatusRequest request)
         {
-
-            session.BeginTransaction();
-
-            var user = session.FindObject<User>(new BinaryOperator("FirebaseUid", firebaseUid));
+            var user = _context.Users.FirstOrDefault(u => u.FirebaseUid == firebaseUid);
 
             if (user == null)
             {
-                session.RollbackTransaction();
                 return NotFound();
             }
 
             user.Active = request.Active;
-            session.Save(user);
-            session.CommitTransaction();
+            await _context.SaveChangesAsync();
 
             return Ok(user);
         }
 
         [CustomAuthorized("Admin")]
-        public IActionResult ApproveUser(string firebaseUid, [FromBody] UpdateUserApprovalRequest request)
+        public async Task<IActionResult> ApproveUser(string firebaseUid, [FromBody] UpdateUserApprovalRequest request)
         {
-
-            session.BeginTransaction();
-
-            var user = session.FindObject<User>(new BinaryOperator("FirebaseUid", firebaseUid));
+            var user = _context.Users.FirstOrDefault(u => u.FirebaseUid == firebaseUid);
 
             if (user == null)
             {
-                session.RollbackTransaction();
                 return NotFound();
             }
 
             user.Approved = request.Approved;
-            session.Save(user);
-            session.CommitTransaction();
+            await _context.SaveChangesAsync();
 
             return Ok(new { message = request.Approved ? "User approved successfully" : "User approval revoked", user });
         }
 
         [CustomAuthorized("Admin")]
-        public IActionResult BanUser(string firebaseUid, [FromBody] UpdateUserBanRequest request)
+        public async Task<IActionResult> BanUser(string firebaseUid, [FromBody] UpdateUserBanRequest request)
         {
-
-            session.BeginTransaction();
-
-            var user = session.FindObject<User>(new BinaryOperator("FirebaseUid", firebaseUid));
+            var user = _context.Users.FirstOrDefault(u => u.FirebaseUid == firebaseUid);
 
             if (user == null)
             {
-                session.RollbackTransaction();
                 return NotFound();
             }
 
             user.Banned = request.Banned;
-            session.Save(user);
-            session.CommitTransaction();
+            await _context.SaveChangesAsync();
 
             return Ok(new { message = request.Banned ? "User banned successfully" : "User unbanned successfully", user });
         }
@@ -175,7 +154,7 @@ namespace NodPT.API.Controllers
         /// <param name="request"></param>
         /// <returns></returns>
         [HttpPut("me")]
-        public IActionResult UpdateMyProfile([FromBody] UpdateUserRequest request)
+        public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateUserRequest request)
         {
             // Get user from token
             var firebaseUid = User.Claims.FirstOrDefault(c => c.Type == "firebaseUid" || c.Type == "user_id")?.Value;
@@ -184,13 +163,11 @@ namespace NodPT.API.Controllers
                 return Unauthorized(new { message = "User not found or invalid" });
             }
 
-            var user = session.FindObject<User>(new BinaryOperator("FirebaseUid", firebaseUid));
+            var user = _context.Users.FirstOrDefault(u => u.FirebaseUid == firebaseUid);
             if (user == null)
             {
                 return Unauthorized(new { message = "User not found or invalid" });
             }
-
-            session.BeginTransaction();
 
             try
             {
@@ -210,19 +187,16 @@ namespace NodPT.API.Controllers
                     }
                     else
                     {
-                        session.RollbackTransaction();
                         return StatusCode(403, new { message = "Only administrators can change email addresses." });
                     }
                 }
 
-                session.Save(user);
-                session.CommitTransaction();
+                await _context.SaveChangesAsync();
 
                 return Ok(new { message = "User updated successfully", user });
             }
             catch (Exception ex)
             {
-                session.RollbackTransaction();
                 throw;
             }
         }
