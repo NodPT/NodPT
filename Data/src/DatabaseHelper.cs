@@ -1,7 +1,5 @@
-using DevExpress.Xpo;
-using DevExpress.Data;
-using DevExpress.Xpo.DB;
-using DevExpress.Xpo.Helpers;
+using Microsoft.EntityFrameworkCore;
+using NodPT.Data;
 using NodPT.Data.Models;
 using System.Runtime.CompilerServices;
 
@@ -9,34 +7,42 @@ public static class DatabaseHelper
 {
     static string connectionString = string.Empty;
 
-    public static UnitOfWork CreateUnitOfWork()
+    public static void SetConnectionString(string connStr)
     {
+        connectionString = connStr;
+    }
 
+    public static NodPTDbContext CreateDbContext()
+    {
         if (string.IsNullOrEmpty(connectionString))
-            throw new InvalidOperationException("Connection string is not set. Please set it before creating a UnitOfWork.");
+            throw new InvalidOperationException("Connection string is not set. Please set it before creating a DbContext.");
 
-        var dataStore = XpoDefault.GetConnectionProvider(connectionString, AutoCreateOption.SchemaAlreadyExists);
-        var dl = new SimpleDataLayer(dataStore);
-        return new UnitOfWork(dl);
+        var optionsBuilder = new DbContextOptionsBuilder<NodPTDbContext>();
+        
+        // Use Pomelo MySQL provider
+        var serverVersion = ServerVersion.AutoDetect(connectionString);
+        optionsBuilder.UseMySql(connectionString, serverVersion);
+
+        return new NodPTDbContext(optionsBuilder.Options);
     }
 
     private static void CreateSampleData()
     {
-        using var session = CreateUnitOfWork();
+        using var context = CreateDbContext();
 
         // Check if data already exists
-        if (session.Query<User>().Any())
+        if (context.Users.Any())
         {
             return; // Data already exists
         }
 
         // Begin transaction
-        session.BeginTransaction();
+        using var transaction = context.Database.BeginTransaction();
 
         try
         {
             // Create sample users
-            var user1 = new User(session)
+            var user1 = new User
             {
                 FirebaseUid = "sample_user_001",
                 Email = "john.doe@example.com",
@@ -50,7 +56,7 @@ public static class DatabaseHelper
                 LastLoginAt = DateTime.UtcNow.AddHours(-2)
             };
 
-            var user2 = new User(session)
+            var user2 = new User
             {
                 FirebaseUid = "sample_user_002",
                 Email = "jane.smith@example.com",
@@ -64,8 +70,12 @@ public static class DatabaseHelper
                 LastLoginAt = DateTime.UtcNow.AddMinutes(-30)
             };
 
+            context.Users.Add(user1);
+            context.Users.Add(user2);
+            context.SaveChanges();
+
             // Create sample templates
-            var template1 = new Template(session)
+            var template1 = new Template
             {
                 Name = "Data Processing Workflow",
                 Description = "A template for data processing and analysis workflows",
@@ -75,7 +85,7 @@ public static class DatabaseHelper
                 CreatedAt = DateTime.UtcNow.AddDays(-40)
             };
 
-            var template2 = new Template(session)
+            var template2 = new Template
             {
                 Name = "AI Assistant Workflow",
                 Description = "A template for AI-powered assistant workflows",
@@ -85,8 +95,12 @@ public static class DatabaseHelper
                 CreatedAt = DateTime.UtcNow.AddDays(-35)
             };
 
+            context.Templates.Add(template1);
+            context.Templates.Add(template2);
+            context.SaveChanges();
+
             // Create sample template files
-            var templateFile1 = new TemplateFile(session)
+            var templateFile1 = new TemplateFile
             {
                 Name = "workflow_config.json",
                 Path = "/config/workflow_config.json",
@@ -94,11 +108,11 @@ public static class DatabaseHelper
                 Size = 256,
                 MimeType = "application/json",
                 Content = "{\"workflow\": {\"type\": \"data_processing\", \"version\": \"1.0\", \"steps\": [\"load\", \"process\", \"analyze\"]}}",
-                Template = template1,
+                TemplateId = template1.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-38)
             };
 
-            var templateFile2 = new TemplateFile(session)
+            var templateFile2 = new TemplateFile
             {
                 Name = "data_schema.yaml",
                 Path = "/schemas/data_schema.yaml",
@@ -106,11 +120,11 @@ public static class DatabaseHelper
                 Size = 512,
                 MimeType = "text/yaml",
                 Content = "schema:\n  type: object\n  properties:\n    id: {type: integer}\n    name: {type: string}\n    data: {type: array}",
-                Template = template1,
+                TemplateId = template1.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-37)
             };
 
-            var templateFile3 = new TemplateFile(session)
+            var templateFile3 = new TemplateFile
             {
                 Name = "ai_config.json",
                 Path = "/config/ai_config.json",
@@ -118,11 +132,11 @@ public static class DatabaseHelper
                 Size = 384,
                 MimeType = "application/json",
                 Content = "{\"ai\": {\"model\": \"gpt-4\", \"temperature\": 0.7, \"max_tokens\": 2000, \"system_prompt\": \"You are a helpful AI assistant.\"}}",
-                Template = template2,
+                TemplateId = template2.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-33)
             };
 
-            var templateFile4 = new TemplateFile(session)
+            var templateFile4 = new TemplateFile
             {
                 Name = "prompt_templates.txt",
                 Path = "/templates/prompt_templates.txt",
@@ -130,126 +144,139 @@ public static class DatabaseHelper
                 Size = 1024,
                 MimeType = "text/plain",
                 Content = "User Question Template:\nUser: {user_input}\nContext: {context}\nPlease provide a helpful response.\n\nSystem Response Template:\nBased on the provided context, here is my response: {response}",
-                Template = template2,
+                TemplateId = template2.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-32)
             };
 
+            context.TemplateFiles.AddRange(templateFile1, templateFile2, templateFile3, templateFile4);
+            context.SaveChanges();
+
             // Create sample template nodes
-            var templateNode1 = new Node(session)
+            var templateNode1 = new Node
             {
                 Id = "template_node_001",
                 Name = "Data Input Node",
                 NodeType = NodeType.Data,
                 Properties = "{\"input_type\":\"csv\",\"delimiter\":\",\",\"encoding\":\"utf-8\"}",
                 Status = "template",
-                Template = template1,
+                TemplateId = template1.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-36)
             };
 
-            var templateNode2 = new Node(session)
+            var templateNode2 = new Node
             {
                 Id = "template_node_002",
                 Name = "Data Processor Node",
                 NodeType = NodeType.Action,
                 Properties = "{\"processing_type\":\"transform\",\"operations\":[\"clean\",\"normalize\",\"validate\"]}",
                 Status = "template",
-                Template = template1,
+                TemplateId = template1.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-36)
             };
 
-            var templateNode3 = new Node(session)
+            var templateNode3 = new Node
             {
                 Id = "template_node_003",
                 Name = "Analysis Node",
                 NodeType = NodeType.Action,
                 Properties = "{\"analysis_type\":\"statistical\",\"metrics\":[\"mean\",\"median\",\"std_dev\"]}",
                 Status = "template",
-                Template = template1,
+                TemplateId = template1.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-36)
             };
 
-            var templateNode4 = new Node(session)
+            var templateNode4 = new Node
             {
                 Id = "template_node_004",
                 Name = "AI Input Node",
                 NodeType = NodeType.Data,
                 Properties = "{\"input_type\":\"text\",\"max_length\":1000}",
                 Status = "template",
-                Template = template2,
+                TemplateId = template2.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-33)
             };
 
-            var templateNode5 = new Node(session)
+            var templateNode5 = new Node
             {
                 Id = "template_node_005",
                 Name = "AI Processing Node",
                 NodeType = NodeType.Action,
                 Properties = "{\"model\":\"gpt-4\",\"temperature\":0.7,\"max_tokens\":2000}",
                 Status = "template",
-                Template = template2,
+                TemplateId = template2.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-33)
             };
 
-            var templateNode6 = new Node(session)
+            var templateNode6 = new Node
             {
                 Id = "template_node_006",
                 Name = "Response Formatter",
                 NodeType = NodeType.Panel,
                 Properties = "{\"format\":\"json\",\"include_metadata\":true}",
                 Status = "template",
-                Template = template2,
+                TemplateId = template2.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-33)
             };
 
+            context.Nodes.AddRange(templateNode1, templateNode2, templateNode3, templateNode4, templateNode5, templateNode6);
+            context.SaveChanges();
+
             // Create sample projects
-            var project1 = new Project(session)
+            var project1 = new Project
             {
                 Name = "Customer Data Analysis",
                 Description = "Analyze customer behavior data for insights",
-                User = user1,
-                Template = template1,
+                UserId = user1.Id,
+                TemplateId = template1.Id,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow.AddDays(-20)
             };
 
-            var project2 = new Project(session)
+            var project2 = new Project
             {
                 Name = "AI Support Bot",
                 Description = "Intelligent customer support chatbot",
-                User = user2,
-                Template = template2,
+                UserId = user2.Id,
+                TemplateId = template2.Id,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow.AddDays(-10)
             };
 
+            context.Projects.Add(project1);
+            context.Projects.Add(project2);
+            context.SaveChanges();
+
             // Create sample folders
-            var folder1 = new Folder(session)
+            var folder1 = new Folder
             {
                 Name = "src",
                 Path = "/src",
-                Project = project1,
+                ProjectId = project1.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-18)
             };
 
-            var folder2 = new Folder(session)
+            var folder2 = new Folder
             {
                 Name = "data",
                 Path = "/data",
-                Project = project1,
+                ProjectId = project1.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-18)
             };
 
-            var folder3 = new Folder(session)
+            var folder3 = new Folder
             {
                 Name = "components",
                 Path = "/src/components",
-                Project = project2,
-                Parent = folder1,
+                ProjectId = project2.Id,
+                ParentId = folder1.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-8)
             };
 
+            context.Folders.AddRange(folder1, folder2, folder3);
+            context.SaveChanges();
+
             // Create sample files
-            var file1 = new ProjectFile(session)
+            var file1 = new ProjectFile
             {
                 Name = "data_processor.py",
                 Path = "/src/data_processor.py",
@@ -257,11 +284,11 @@ public static class DatabaseHelper
                 MimeType = "text/x-python",
                 Size = 2048,
                 Content = "# Data processing module\nimport pandas as pd\n\ndef process_data(df):\n    return df.dropna()",
-                Folder = folder1,
+                FolderId = folder1.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-15)
             };
 
-            var file2 = new ProjectFile(session)
+            var file2 = new ProjectFile
             {
                 Name = "customer_data.csv",
                 Path = "/data/customer_data.csv",
@@ -269,167 +296,141 @@ public static class DatabaseHelper
                 MimeType = "text/csv",
                 Size = 10240,
                 Content = "id,name,email,age\n1,John Doe,john@example.com,30\n2,Jane Smith,jane@example.com,25",
-                Folder = folder2,
+                FolderId = folder2.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-16)
             };
 
-            // Create sample nodes for projects (not users directly)
-            var node1 = new Node(session)
+            context.ProjectFiles.AddRange(file1, file2);
+            context.SaveChanges();
+
+            // Create sample nodes for projects
+            var node1 = new Node
             {
                 Id = "node_001",
                 Name = "Data Processing Node",
                 NodeType = NodeType.Data,
                 Properties = "{\"input_type\":\"csv\",\"delimiter\":\",\"}",
                 Status = "active",
-                Project = project1,
+                ProjectId = project1.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-10)
             };
 
-            var node2 = new Node(session)
+            var node2 = new Node
             {
                 Id = "node_002",
                 Name = "AI Analysis Node",
                 NodeType = NodeType.Action,
                 Properties = "{\"model\":\"gpt-4\",\"temperature\":0.7}",
                 Status = "active",
-                Project = project1,
+                ProjectId = project1.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-9)
             };
 
-            var node3 = new Node(session)
+            var node3 = new Node
             {
                 Id = "node_003",
                 Name = "Output Formatter",
                 NodeType = NodeType.Panel,
                 Properties = "{\"format\":\"json\",\"pretty\":true}",
                 Status = "active",
-                Project = project2,
+                ProjectId = project2.Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-5)
             };
+
+            context.Nodes.AddRange(node1, node2, node3);
+            context.SaveChanges();
 
             // Create sample chat messages
             var chatMessages = new[]
             {
-                    new ChatMessage(session)
-                    {
-                        Sender = "User",
-                        Message = "How do I configure the data processing node?",
-                        Timestamp = DateTime.UtcNow.AddDays(-8),
-                        User = user1,
-                        Node = node1,
-                        MarkedAsSolution = false,
-                        Liked = false,
-                        Disliked = false
-                    },
-                    new ChatMessage(session)
-                    {
-                        Sender = "AI Assistant",
-                        Message = "To configure the data processing node, you need to set the input_type property to specify your data format (csv, json, xml) and configure any format-specific options like delimiter for CSV files.",
-                        Timestamp = DateTime.UtcNow.AddDays(-8).AddMinutes(2),
-                        User = user1,
-                        Node = node1,
-                        MarkedAsSolution = true,
-                        Liked = true,
-                        Disliked = false
-                    },
-                    new ChatMessage(session)
-                    {
-                        Sender = "User",
-                        Message = "What's the best temperature setting for the AI model?",
-                        Timestamp = DateTime.UtcNow.AddDays(-7),
-                        User = user1,
-                        Node = node2,
-                        MarkedAsSolution = false,
-                        Liked = false,
-                        Disliked = false
-                    },
-                    new ChatMessage(session)
-                    {
-                        Sender = "AI Assistant",
-                        Message = "For most tasks, a temperature between 0.3-0.7 works well. Lower values (0.1-0.3) for more deterministic outputs, higher values (0.7-0.9) for more creative responses. The current setting of 0.7 is good for balanced creativity and consistency.",
-                        Timestamp = DateTime.UtcNow.AddDays(-7).AddMinutes(1),
-                        User = user1,
-                        Node = node2,
-                        MarkedAsSolution = true,
-                        Liked = true,
-                        Disliked = false
-                    },
-                    new ChatMessage(session)
-                    {
-                        Sender = "User",
-                        Message = "Can I export the results in different formats?",
-                        Timestamp = DateTime.UtcNow.AddDays(-4),
-                        User = user2,
-                        Node = node3,
-                        MarkedAsSolution = false,
-                        Liked = false,
-                        Disliked = false
-                    },
-                    new ChatMessage(session)
-                    {
-                        Sender = "AI Assistant",
-                        Message = "Yes! The output formatter supports multiple formats including JSON, XML, CSV, and plain text. You can configure the format property and enable pretty printing for better readability.",
-                        Timestamp = DateTime.UtcNow.AddDays(-4).AddMinutes(3),
-                        User = user2,
-                        Node = node3,
-                        MarkedAsSolution = true,
-                        Liked = true,
-                        Disliked = false
-                    },
-                    new ChatMessage(session)
-                    {
-                        Sender = "User",
-                        Message = "Thanks! This is very helpful.",
-                        Timestamp = DateTime.UtcNow.AddDays(-4).AddMinutes(5),
-                        User = user2,
-                        Node = node3,
-                        MarkedAsSolution = false,
-                        Liked = false,
-                        Disliked = false
-                    }
-                };
+                new ChatMessage
+                {
+                    Sender = "User",
+                    Message = "How do I configure the data processing node?",
+                    Timestamp = DateTime.UtcNow.AddDays(-8),
+                    UserId = user1.Id,
+                    NodeId = node1.Id,
+                    MarkedAsSolution = false,
+                    Liked = false,
+                    Disliked = false
+                },
+                new ChatMessage
+                {
+                    Sender = "AI Assistant",
+                    Message = "To configure the data processing node, you need to set the input_type property to specify your data format (csv, json, xml) and configure any format-specific options like delimiter for CSV files.",
+                    Timestamp = DateTime.UtcNow.AddDays(-8).AddMinutes(2),
+                    UserId = user1.Id,
+                    NodeId = node1.Id,
+                    MarkedAsSolution = true,
+                    Liked = true,
+                    Disliked = false
+                },
+                new ChatMessage
+                {
+                    Sender = "User",
+                    Message = "What's the best temperature setting for the AI model?",
+                    Timestamp = DateTime.UtcNow.AddDays(-7),
+                    UserId = user1.Id,
+                    NodeId = node2.Id,
+                    MarkedAsSolution = false,
+                    Liked = false,
+                    Disliked = false
+                },
+                new ChatMessage
+                {
+                    Sender = "AI Assistant",
+                    Message = "For most tasks, a temperature between 0.3-0.7 works well. Lower values (0.1-0.3) for more deterministic outputs, higher values (0.7-0.9) for more creative responses. The current setting of 0.7 is good for balanced creativity and consistency.",
+                    Timestamp = DateTime.UtcNow.AddDays(-7).AddMinutes(1),
+                    UserId = user1.Id,
+                    NodeId = node2.Id,
+                    MarkedAsSolution = true,
+                    Liked = true,
+                    Disliked = false
+                },
+                new ChatMessage
+                {
+                    Sender = "User",
+                    Message = "Can I export the results in different formats?",
+                    Timestamp = DateTime.UtcNow.AddDays(-4),
+                    UserId = user2.Id,
+                    NodeId = node3.Id,
+                    MarkedAsSolution = false,
+                    Liked = false,
+                    Disliked = false
+                },
+                new ChatMessage
+                {
+                    Sender = "AI Assistant",
+                    Message = "Yes! The output formatter supports multiple formats including JSON, XML, CSV, and plain text. You can configure the format property and enable pretty printing for better readability.",
+                    Timestamp = DateTime.UtcNow.AddDays(-4).AddMinutes(3),
+                    UserId = user2.Id,
+                    NodeId = node3.Id,
+                    MarkedAsSolution = true,
+                    Liked = true,
+                    Disliked = false
+                },
+                new ChatMessage
+                {
+                    Sender = "User",
+                    Message = "Thanks! This is very helpful.",
+                    Timestamp = DateTime.UtcNow.AddDays(-4).AddMinutes(5),
+                    UserId = user2.Id,
+                    NodeId = node3.Id,
+                    MarkedAsSolution = false,
+                    Liked = false,
+                    Disliked = false
+                }
+            };
 
-            // Save all sample data
-            session.Save(user1);
-            session.Save(user2);
-            session.Save(template1);
-            session.Save(template2);
-            session.Save(templateFile1);
-            session.Save(templateFile2);
-            session.Save(templateFile3);
-            session.Save(templateFile4);
-            session.Save(templateNode1);
-            session.Save(templateNode2);
-            session.Save(templateNode3);
-            session.Save(templateNode4);
-            session.Save(templateNode5);
-            session.Save(templateNode6);
-            session.Save(project1);
-            session.Save(project2);
-            session.Save(folder1);
-            session.Save(folder2);
-            session.Save(folder3);
-            session.Save(file1);
-            session.Save(file2);
-            session.Save(node1);
-            session.Save(node2);
-            session.Save(node3);
+            context.ChatMessages.AddRange(chatMessages);
+            context.SaveChanges();
 
-            foreach (var message in chatMessages)
-            {
-                session.Save(message);
-            }
-
-            session.CommitTransaction();
+            transaction.Commit();
         }
         catch
         {
-            session.RollbackTransaction();
+            transaction.Rollback();
             throw;
         }
-    }
-    public static void SetConnectionString(string _connectionString)
-    {
-        connectionString = _connectionString;
     }
 }

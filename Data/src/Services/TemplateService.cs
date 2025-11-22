@@ -1,4 +1,4 @@
-using DevExpress.Xpo;
+using Microsoft.EntityFrameworkCore;
 using NodPT.Data.DTOs;
 using NodPT.Data.Models;
 
@@ -6,39 +6,38 @@ namespace NodPT.Data.Services
 {
     public class TemplateService
     {
-        private readonly UnitOfWork session;
+        private readonly NodPTDbContext context;
 
-        public TemplateService(UnitOfWork unitOfWork)
+        public TemplateService(NodPTDbContext dbContext)
         {
-            this.session = unitOfWork;
+            this.context = dbContext;
         }
 
         public List<TemplateDto> GetAllTemplates()
         {
-            var templates = new XPCollection<Template>(session);
-
-            return templates.Select(t => new TemplateDto
-            {
-                Id = t.Oid,
-                Name = t.Name,
-                Description = t.Description,
-                Category = t.Category,
-                Version = t.Version,
-                IsActive = t.IsActive,
-                CreatedAt = t.CreatedAt,
-                UpdatedAt = t.UpdatedAt
-            }).ToList();
+            return context.Templates
+                .Select(t => new TemplateDto
+                {
+                    Id = t.Id,
+                    Name = t.Name,
+                    Description = t.Description,
+                    Category = t.Category,
+                    Version = t.Version,
+                    IsActive = t.IsActive,
+                    CreatedAt = t.CreatedAt,
+                    UpdatedAt = t.UpdatedAt
+                }).ToList();
         }
 
         public TemplateDto? GetTemplate(int id)
         {
-            var template = session.GetObjectByKey<Template>(id);
+            var template = context.Templates.FirstOrDefault(t => t.Id == id);
 
             if (template == null) return null;
 
             return new TemplateDto
             {
-                Id = template.Oid,
+                Id = template.Id,
                 Name = template.Name,
                 Description = template.Description,
                 Category = template.Category,
@@ -51,11 +50,11 @@ namespace NodPT.Data.Services
 
         public TemplateDto CreateTemplate(TemplateDto templateDto)
         {
-            session.BeginTransaction();
+            using var transaction = context.Database.BeginTransaction();
 
             try
             {
-                var template = new Template(session)
+                var template = new Template
                 {
                     Name = templateDto.Name,
                     Description = templateDto.Description,
@@ -66,10 +65,11 @@ namespace NodPT.Data.Services
                     UpdatedAt = DateTime.UtcNow
                 };
 
-                session.Save(template);
-                session.CommitTransaction();
+                context.Templates.Add(template);
+                context.SaveChanges();
+                transaction.Commit();
 
-                templateDto.Id = template.Oid;
+                templateDto.Id = template.Id;
                 templateDto.CreatedAt = template.CreatedAt;
                 templateDto.UpdatedAt = template.UpdatedAt;
 
@@ -77,18 +77,18 @@ namespace NodPT.Data.Services
             }
             catch
             {
-                session.RollbackTransaction();
+                transaction.Rollback();
                 throw;
             }
         }
 
         public TemplateDto? UpdateTemplate(int id, TemplateDto templateDto)
         {
-            session.BeginTransaction();
+            using var transaction = context.Database.BeginTransaction();
 
             try
             {
-                var template = session.GetObjectByKey<Template>(id);
+                var template = context.Templates.FirstOrDefault(t => t.Id == id);
 
                 if (template == null) return null;
 
@@ -99,39 +99,40 @@ namespace NodPT.Data.Services
                 template.IsActive = templateDto.IsActive;
                 template.UpdatedAt = DateTime.UtcNow;
 
-                session.Save(template);
-                session.CommitTransaction();
+                context.SaveChanges();
+                transaction.Commit();
 
-                templateDto.Id = template.Oid;
+                templateDto.Id = template.Id;
                 templateDto.UpdatedAt = template.UpdatedAt;
 
                 return templateDto;
             }
             catch
             {
-                session.RollbackTransaction();
+                transaction.Rollback();
                 throw;
             }
         }
 
         public bool DeleteTemplate(int id)
         {
-            session.BeginTransaction();
+            using var transaction = context.Database.BeginTransaction();
 
             try
             {
-                var template = session.GetObjectByKey<Template>(id);
+                var template = context.Templates.FirstOrDefault(t => t.Id == id);
 
                 if (template == null) return false;
 
-                session.Delete(template);
-                session.CommitTransaction();
+                context.Templates.Remove(template);
+                context.SaveChanges();
+                transaction.Commit();
 
                 return true;
             }
             catch
             {
-                session.RollbackTransaction();
+                transaction.Rollback();
                 throw;
             }
         }

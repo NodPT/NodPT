@@ -1,137 +1,77 @@
-using DevExpress.Xpo;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
 
 namespace NodPT.Data.Models
 {
-    public class Node : XPLiteObject
+    public class Node
     {
-        private string? _id;
-        private string? _name;
-        private NodeType _nodeType;
-        private string? _properties;
-        private DateTime _createdAt = DateTime.UtcNow;
-        private DateTime _updatedAt = DateTime.UtcNow;
-        private string? _status;
-        private Node? _parent;
-        private Project? _project;
-        private Template? _template;
-        private MessageTypeEnum _messageType;
-        private LevelEnum _level;
-        private AIModel? _aiModel;
-
-        public Node(Session session) : base(session) { }
-        public Node() : base(Session.DefaultSession) { }
-
         [Key]
-        public string? Id
-        {
-            get => _id;
-            set => SetPropertyValue(nameof(Id), ref _id, value);
-        }
+        [MaxLength(450)]
+        public string? Id { get; set; }
 
-        public string? Name
-        {
-            get => _name;
-            set => SetPropertyValue(nameof(Name), ref _name, value);
-        }
+        public string? Name { get; set; }
 
-        public NodeType NodeType
-        {
-            get => _nodeType;
-            set => SetPropertyValue(nameof(NodeType), ref _nodeType, value);
-        }
+        public NodeType NodeType { get; set; }
 
-        [Size(SizeAttribute.Unlimited)]
-        public string? Properties
-        {
-            get => _properties;
-            set => SetPropertyValue(nameof(Properties), ref _properties, value);
-        }
+        public string? Properties { get; set; }
 
-        public DateTime CreatedAt
-        {
-            get => _createdAt;
-            set => SetPropertyValue(nameof(CreatedAt), ref _createdAt, value);
-        }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public DateTime UpdatedAt
-        {
-            get => _updatedAt;
-            set => SetPropertyValue(nameof(UpdatedAt), ref _updatedAt, value);
-        }
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-        public string? Status
-        {
-            get => _status;
-            set => SetPropertyValue(nameof(Status), ref _status, value);
-        }
+        public string? Status { get; set; }
 
-        [Association("Node-ChatMessages")]
+        public string? ParentId { get; set; }
+
+        [ForeignKey(nameof(ParentId))]
         [JsonIgnore]
-        public XPCollection<ChatMessage> ChatMessages => GetCollection<ChatMessage>(nameof(ChatMessages));
+        public virtual Node? Parent { get; set; }
 
-        [Association("ParentNode-ChildNodes")]
         [JsonIgnore]
-        public Node? Parent
-        {
-            get => _parent;
-            set => SetPropertyValue(nameof(Parent), ref _parent, value);
-        }
+        public virtual ICollection<Node> Children { get; set; } = new List<Node>();
 
-        [Association("ParentNode-ChildNodes")]
-        [JsonIgnore]
-        public XPCollection<Node> Children => GetCollection<Node>(nameof(Children));
+        public int? ProjectId { get; set; }
 
-        [Association("Project-Nodes")]
+        [ForeignKey(nameof(ProjectId))]
         [JsonIgnore]
-        public Project? Project
-        {
-            get => _project;
-            set => SetPropertyValue(nameof(Project), ref _project, value);
-        }
+        public virtual Project? Project { get; set; }
 
         /// <summary>
         /// Many-to-one relationship: Node can belong to a Template (nullable)
         /// </summary>
-        [Association("Template-Nodes")]
+        public int? TemplateId { get; set; }
+
+        [ForeignKey(nameof(TemplateId))]
         [JsonIgnore]
-        public Template? Template
-        {
-            get => _template;
-            set => SetPropertyValue(nameof(Template), ref _template, value);
-        }
+        public virtual Template? Template { get; set; }
 
         /// <summary>
         /// Type of message: Discussion or Decision
         /// </summary>
-        public MessageTypeEnum MessageType
-        {
-            get => _messageType;
-            set => SetPropertyValue(nameof(MessageType), ref _messageType, value);
-        }
+        public MessageTypeEnum MessageType { get; set; }
 
         /// <summary>
         /// Level: Brain, Manager, Inspector, or Worker
         /// </summary>
-        public LevelEnum Level
-        {
-            get => _level;
-            set => SetPropertyValue(nameof(Level), ref _level, value);
-        }
+        public LevelEnum Level { get; set; }
 
         /// <summary>
         /// Many-to-one relationship: Node can have an AIModel (nullable)
         /// </summary>
-        [Association("AIModel-Nodes")]
+        public int? AIModelId { get; set; }
+
+        [ForeignKey(nameof(AIModelId))]
         [JsonIgnore]
-        public AIModel? AIModel
-        {
-            get => _aiModel;
-            set => SetPropertyValue(nameof(AIModel), ref _aiModel, value);
-        }
+        public virtual AIModel? AIModel { get; set; }
+
+        [JsonIgnore]
+        public virtual ICollection<ChatMessage> ChatMessages { get; set; } = new List<ChatMessage>();
 
         // Helper property to work with Properties as Dictionary
+        [NotMapped]
         [Browsable(false)]
         public Dictionary<string, string> PropertiesDictionary
         {
@@ -159,8 +99,8 @@ namespace NodPT.Data.Models
         /// <summary>
         /// Readonly property that returns the AIModel from Project.Template that matches this Node's MessageType and Level
         /// </summary>
+        [NotMapped]
         [Browsable(false)]
-        [NonPersistent]
         public AIModel? MatchingAIModel
         {
             get
@@ -175,8 +115,8 @@ namespace NodPT.Data.Models
         /// <summary>
         /// Readonly property that returns the list of Prompts from Project.Template that match this Node's MessageType and Level
         /// </summary>
+        [NotMapped]
         [Browsable(false)]
-        [NonPersistent]
         public List<Prompt> MatchingPrompts
         {
             get

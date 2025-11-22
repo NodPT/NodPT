@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 
+using NodPT.Data;
 using NodPT.Data.DTOs;
 using NodPT.Data.Services;
-using DevExpress.Xpo;
 
 namespace NodPT.API.Controllers
 {
@@ -12,13 +12,13 @@ namespace NodPT.API.Controllers
     [Route("api/[controller]")]
     public class TemplatesController : ControllerBase
     {
-        private readonly UnitOfWork unitOfWork;
+        private readonly NodPTDbContext dbContext;
         private readonly TemplateService _templateService;
 
-        public TemplatesController(UnitOfWork _unitOfWork)
+        public TemplatesController(NodPTDbContext _dbContext)
         {
-            this.unitOfWork = _unitOfWork;
-            this._templateService = new TemplateService(unitOfWork);
+            this.dbContext = _dbContext;
+            this._templateService = new TemplateService(dbContext);
         }
 
         [HttpGet]

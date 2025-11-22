@@ -1,4 +1,4 @@
-using DevExpress.Xpo;
+using Microsoft.EntityFrameworkCore;
 using NodPT.Data.DTOs;
 using NodPT.Data.Models;
 
@@ -6,46 +6,50 @@ namespace NodPT.Data.Services
 {
     public class FolderService
     {
-        private readonly UnitOfWork session;
+        private readonly NodPTDbContext context;
 
-        public FolderService(UnitOfWork unitOfWork)
+        public FolderService(NodPTDbContext dbContext)
         {
-            this.session = unitOfWork;
+            this.context = dbContext;
         }
 
         public List<FolderDto> GetAllFolders()
         {
-            var folders = new XPCollection<Folder>(session);
-            
-            return folders.Select(f => new FolderDto
-            {
-                Id = f.Oid,
-                Name = f.Name,
-                Path = f.Path,
-                CreatedAt = f.CreatedAt,
-                UpdatedAt = f.UpdatedAt,
-                ProjectId = f.Project?.Oid,
-                ParentId = f.Parent?.Oid,
-                ProjectName = f.Project?.Name,
-                ParentName = f.Parent?.Name
-            }).ToList();
+            return context.Folders
+                .Include(f => f.Project)
+                .Include(f => f.Parent)
+                .Select(f => new FolderDto
+                {
+                    Id = f.Id,
+                    Name = f.Name,
+                    Path = f.Path,
+                    CreatedAt = f.CreatedAt,
+                    UpdatedAt = f.UpdatedAt,
+                    ProjectId = f.ProjectId,
+                    ParentId = f.ParentId,
+                    ProjectName = f.Project != null ? f.Project.Name : null,
+                    ParentName = f.Parent != null ? f.Parent.Name : null
+                }).ToList();
         }
 
         public FolderDto? GetFolder(int id)
         {
-            var folder = session.GetObjectByKey<Folder>(id);
+            var folder = context.Folders
+                .Include(f => f.Project)
+                .Include(f => f.Parent)
+                .FirstOrDefault(f => f.Id == id);
             
             if (folder == null) return null;
             
             return new FolderDto
             {
-                Id = folder.Oid,
+                Id = folder.Id,
                 Name = folder.Name,
                 Path = folder.Path,
                 CreatedAt = folder.CreatedAt,
                 UpdatedAt = folder.UpdatedAt,
-                ProjectId = folder.Project?.Oid,
-                ParentId = folder.Parent?.Oid,
+                ProjectId = folder.ProjectId,
+                ParentId = folder.ParentId,
                 ProjectName = folder.Project?.Name,
                 ParentName = folder.Parent?.Name
             };
@@ -53,95 +57,122 @@ namespace NodPT.Data.Services
 
         public List<FolderDto> GetFoldersByProject(int projectId)
         {
-            var project = session.GetObjectByKey<Project>(projectId);
-            
-            if (project == null) return new List<FolderDto>();
-            
-            return project.Folders.Select(f => new FolderDto
-            {
-                Id = f.Oid,
-                Name = f.Name,
-                Path = f.Path,
-                CreatedAt = f.CreatedAt,
-                UpdatedAt = f.UpdatedAt,
-                ProjectId = f.Project?.Oid,
-                ParentId = f.Parent?.Oid,
-                ProjectName = f.Project?.Name,
-                ParentName = f.Parent?.Name
-            }).ToList();
+            return context.Folders
+                .Include(f => f.Project)
+                .Include(f => f.Parent)
+                .Where(f => f.ProjectId == projectId)
+                .Select(f => new FolderDto
+                {
+                    Id = f.Id,
+                    Name = f.Name,
+                    Path = f.Path,
+                    CreatedAt = f.CreatedAt,
+                    UpdatedAt = f.UpdatedAt,
+                    ProjectId = f.ProjectId,
+                    ParentId = f.ParentId,
+                    ProjectName = f.Project != null ? f.Project.Name : null,
+                    ParentName = f.Parent != null ? f.Parent.Name : null
+                }).ToList();
         }
 
         public FolderDto CreateFolder(FolderDto folderDto)
         {
-            var project = folderDto.ProjectId.HasValue 
-                ? session.GetObjectByKey<Project>(folderDto.ProjectId.Value) 
-                : null;
-            var parent = folderDto.ParentId.HasValue 
-                ? session.GetObjectByKey<Folder>(folderDto.ParentId.Value) 
-                : null;
-            
-            var folder = new Folder(session)
+            using var transaction = context.Database.BeginTransaction();
+
+            try
             {
-                Name = folderDto.Name,
-                Path = folderDto.Path,
-                Project = project,
-                Parent = parent,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-            
-            session.Save(folder);
-            session.CommitTransaction();
-            
-            folderDto.Id = folder.Oid;
-            folderDto.CreatedAt = folder.CreatedAt;
-            folderDto.UpdatedAt = folder.UpdatedAt;
-            folderDto.ProjectName = folder.Project?.Name;
-            folderDto.ParentName = folder.Parent?.Name;
-            
-            return folderDto;
+                var folder = new Folder
+                {
+                    Name = folderDto.Name,
+                    Path = folderDto.Path,
+                    ProjectId = folderDto.ProjectId,
+                    ParentId = folderDto.ParentId,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                context.Folders.Add(folder);
+                context.SaveChanges();
+                transaction.Commit();
+
+                // Reload with includes
+                folder = context.Folders
+                    .Include(f => f.Project)
+                    .Include(f => f.Parent)
+                    .FirstOrDefault(f => f.Id == folder.Id);
+
+                folderDto.Id = folder!.Id;
+                folderDto.CreatedAt = folder.CreatedAt;
+                folderDto.UpdatedAt = folder.UpdatedAt;
+                folderDto.ProjectName = folder.Project?.Name;
+                folderDto.ParentName = folder.Parent?.Name;
+
+                return folderDto;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
 
         public FolderDto? UpdateFolder(int id, FolderDto folderDto)
         {
-            var folder = session.GetObjectByKey<Folder>(id);
-            
-            if (folder == null) return null;
-            
-            var project = folderDto.ProjectId.HasValue 
-                ? session.GetObjectByKey<Project>(folderDto.ProjectId.Value) 
-                : null;
-            var parent = folderDto.ParentId.HasValue 
-                ? session.GetObjectByKey<Folder>(folderDto.ParentId.Value) 
-                : null;
-            
-            folder.Name = folderDto.Name;
-            folder.Path = folderDto.Path;
-            folder.Project = project;
-            folder.Parent = parent;
-            folder.UpdatedAt = DateTime.UtcNow;
-            
-            session.Save(folder);
-            session.CommitTransaction();
-            
-            folderDto.Id = folder.Oid;
-            folderDto.UpdatedAt = folder.UpdatedAt;
-            folderDto.ProjectName = folder.Project?.Name;
-            folderDto.ParentName = folder.Parent?.Name;
-            
-            return folderDto;
+            using var transaction = context.Database.BeginTransaction();
+
+            try
+            {
+                var folder = context.Folders
+                    .Include(f => f.Project)
+                    .Include(f => f.Parent)
+                    .FirstOrDefault(f => f.Id == id);
+
+                if (folder == null) return null;
+
+                folder.Name = folderDto.Name;
+                folder.Path = folderDto.Path;
+                folder.ProjectId = folderDto.ProjectId;
+                folder.ParentId = folderDto.ParentId;
+                folder.UpdatedAt = DateTime.UtcNow;
+
+                context.SaveChanges();
+                transaction.Commit();
+
+                folderDto.Id = folder.Id;
+                folderDto.UpdatedAt = folder.UpdatedAt;
+                folderDto.ProjectName = folder.Project?.Name;
+                folderDto.ParentName = folder.Parent?.Name;
+
+                return folderDto;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
 
         public bool DeleteFolder(int id)
         {
-            var folder = session.GetObjectByKey<Folder>(id);
-            
-            if (folder == null) return false;
-            
-            session.Delete(folder);
-            session.CommitTransaction();
-            
-            return true;
+            using var transaction = context.Database.BeginTransaction();
+
+            try
+            {
+                var folder = context.Folders.FirstOrDefault(f => f.Id == id);
+
+                if (folder == null) return false;
+
+                context.Folders.Remove(folder);
+                context.SaveChanges();
+                transaction.Commit();
+
+                return true;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
     }
 }

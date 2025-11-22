@@ -1,44 +1,26 @@
-using DevExpress.Xpo;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace NodPT.Data.Models
 {
-    public class ChatResponse : XPObject
+    public class ChatResponse
     {
-        private ChatMessage? _chatMessage;
-        private string? _action; // "like", "dislike", "regenerate"
-        private DateTime _timestamp = DateTime.UtcNow;
-        private User? _user;
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
-        public ChatResponse(Session session) : base(session) { }
-        public ChatResponse() : base(Session.DefaultSession) { }
+        public int? ChatMessageId { get; set; }
 
-        [Association("ChatMessage-ChatResponses")]
+        [ForeignKey(nameof(ChatMessageId))]
         [JsonIgnore]
-        public ChatMessage? ChatMessage
-        {
-            get => _chatMessage;
-            set => SetPropertyValue(nameof(ChatMessage), ref _chatMessage, value);
-        }
+        public virtual ChatMessage? ChatMessage { get; set; }
 
-        public string? Action
-        {
-            get => _action;
-            set => SetPropertyValue(nameof(Action), ref _action, value);
-        }
+        [MaxLength(50)]
+        public string? Role { get; set; }
 
-        public DateTime Timestamp
-        {
-            get => _timestamp;
-            set => SetPropertyValue(nameof(Timestamp), ref _timestamp, value);
-        }
+        public string? Content { get; set; }
 
-        [Association("User-ChatResponses")]
-        [JsonIgnore]
-        public User? User
-        {
-            get => _user;
-            set => SetPropertyValue(nameof(User), ref _user, value);
-        }
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     }
 }

@@ -1,80 +1,41 @@
-using DevExpress.Xpo;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace NodPT.Data.Models
 {
-    public class ChatMessage : XPObject
+    public class ChatMessage
     {
-        private string? _sender;
-        private string? _message;
-        private DateTime _timestamp = DateTime.UtcNow;
-        private bool _markedAsSolution;
-        private Node? _node;
-        private bool _liked;
-        private bool _disliked;
-        private User? _user;
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
-        public ChatMessage(Session session) : base(session) { }
-        public ChatMessage() : base(Session.DefaultSession) { }
+        [MaxLength(100)]
+        public string? Sender { get; set; }
 
-        public string? Sender
-        {
-            get => _sender;
-            set => SetPropertyValue(nameof(Sender), ref _sender, value);
-        }
+        public string? Message { get; set; }
 
-        [Size(SizeAttribute.Unlimited)]
-        public string? Message
-        {
-            get => _message;
-            set => SetPropertyValue(nameof(Message), ref _message, value);
-        }
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
-        public DateTime Timestamp
-        {
-            get => _timestamp;
-            set => SetPropertyValue(nameof(Timestamp), ref _timestamp, value);
-        }
+        public bool MarkedAsSolution { get; set; }
 
-        public bool MarkedAsSolution
-        {
-            get => _markedAsSolution;
-            set => SetPropertyValue(nameof(MarkedAsSolution), ref _markedAsSolution, value);
-        }
+        public bool Liked { get; set; }
 
-        [Association("Node-ChatMessages")]
+        public bool Disliked { get; set; }
+
+        public string? NodeId { get; set; }
+
+        [ForeignKey(nameof(NodeId))]
         [JsonIgnore]
-        public Node? Node
-        {
-            get => _node;
-            set => SetPropertyValue(nameof(Node), ref _node, value);
-        }
+        public virtual Node? Node { get; set; }
 
-        public bool Liked
-        {
-            get => _liked;
-            set => SetPropertyValue(nameof(Liked), ref _liked, value);
-        }
+        public int? UserId { get; set; }
 
-        public bool Disliked
-        {
-            get => _disliked;
-            set => SetPropertyValue(nameof(Disliked), ref _disliked, value);
-        }
-
-        [Association("User-ChatMessages")]
+        [ForeignKey(nameof(UserId))]
         [JsonIgnore]
-        public User? User
-        {
-            get => _user;
-            set => SetPropertyValue(nameof(User), ref _user, value);
-        }
+        public virtual User? User { get; set; }
 
-        [Association("ChatMessage-ChatResponses")]
         [JsonIgnore]
-        public XPCollection<ChatResponse> ChatResponses
-        {
-            get => GetCollection<ChatResponse>(nameof(ChatResponses));
-        }
+        public virtual ICollection<ChatResponse> ChatResponses { get; set; } = new List<ChatResponse>();
     }
 }

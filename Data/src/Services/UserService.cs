@@ -1,20 +1,18 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using DevExpress.Data.Filtering;
-using DevExpress.Xpo;
+using Microsoft.EntityFrameworkCore;
+using NodPT.Data;
 using NodPT.Data.Models;
 using NodPT.Data.Services;
 
 public class UserService
 {
     // verify if user is active, approved, and not banned
-    public static bool IsUserValid(string firebaseUId, UnitOfWork session)
+    public static bool IsUserValid(string firebaseUId, NodPTDbContext context)
     {
         try
         {
-            User? user = session.FindObject<User>(CriteriaOperator.Parse("FirebaseUid=?", firebaseUId));
-            session.AutoCreateOption.ToString();
-            var users = session.Query<User>().ToList();
+            User? user = context.Users.FirstOrDefault(u => u.FirebaseUid == firebaseUId);
             return user != null && user.Active && user.Approved && !user.Banned;
         }
         catch (Exception ex)
@@ -29,13 +27,13 @@ public class UserService
     /// get user by firebaseUId if active, approved, and not banned
     /// </summary>
     /// <param name="firebaseUId"></param>
-    /// <param name="session"></param>
+    /// <param name="context"></param>
     /// <returns></returns>
-    public static User? GetUser(string firebaseUId, UnitOfWork session)
+    public static User? GetUser(string firebaseUId, NodPTDbContext context)
     {
         try
         {
-            var user = session.FindObject<User>(CriteriaOperator.Parse("FirebaseUid=?", firebaseUId));
+            var user = context.Users.FirstOrDefault(u => u.FirebaseUid == firebaseUId);
             if (user != null && user.Active && user.Approved && !user.Banned)
                 return user;
         }

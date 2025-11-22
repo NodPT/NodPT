@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 
+using NodPT.Data;
 using NodPT.Data.DTOs;
 using NodPT.Data.Services;
-using DevExpress.Xpo;
 
 namespace NodPT.API.Controllers
 {
@@ -12,13 +12,13 @@ namespace NodPT.API.Controllers
     [Route("api/[controller]")]
     public class ProjectsController : ControllerBase
     {
-        // UnitOfWork is injected for use in future methods that need transaction control
-        // Currently, ProjectService creates its own Session instances
-        private readonly UnitOfWork unitOfWork;
+        // NodPTDbContext is injected for use in future methods that need transaction control
+        // Currently, ProjectService creates its own DbContext instances
+        private readonly NodPTDbContext dbContext;
 
-        public ProjectsController(UnitOfWork _unitOfWork)
+        public ProjectsController(NodPTDbContext _dbContext)
         {
-            this.unitOfWork = _unitOfWork;
+            this.dbContext = _dbContext;
         }
 
         [HttpGet]
@@ -27,7 +27,7 @@ namespace NodPT.API.Controllers
         {
             try
             {
-                var projectService = new ProjectService(unitOfWork);
+                var projectService = new ProjectService(dbContext);
                 return Ok(projectService.GetAllProjects());
             }
             catch (Exception ex)
@@ -42,7 +42,7 @@ namespace NodPT.API.Controllers
         {
             try
             {
-                var projectService = new ProjectService(unitOfWork);
+                var projectService = new ProjectService(dbContext);
                 var project = projectService.GetProject(id);
                 return project == null ? NotFound() : Ok(project);
             }
@@ -58,7 +58,7 @@ namespace NodPT.API.Controllers
         {
             try
             {
-                var projectService = new ProjectService(unitOfWork);
+                var projectService = new ProjectService(dbContext);
                 var projects = projectService.GetProjectsByUser(firebaseUid);
                 return Ok(projects);
             }
@@ -80,7 +80,7 @@ namespace NodPT.API.Controllers
                 {
                     return Unauthorized(new { error = "Invalid user token." });
                 }
-                var projectService = new ProjectService(unitOfWork);
+                var projectService = new ProjectService(dbContext);
                 var createdProject = projectService.CreateProject(project, firebaseUid);
                 return CreatedAtAction(nameof(GetProject), new { id = createdProject.Id }, createdProject);
             }
@@ -98,7 +98,7 @@ namespace NodPT.API.Controllers
             {
                 if (project == null) return BadRequest();
 
-                var projectService = new ProjectService(unitOfWork);
+                var projectService = new ProjectService(dbContext);
                 var updatedProject = projectService.UpdateProject(id, project);
                 return updatedProject == null ? NotFound() : Ok(updatedProject);
             }
@@ -125,7 +125,7 @@ namespace NodPT.API.Controllers
                     return Unauthorized(new { error = "Invalid user token." });
                 }
 
-                var projectService = new ProjectService(unitOfWork);
+                var projectService = new ProjectService(dbContext);
                 var updatedProject = projectService.UpdateProjectName(id, request.Name, firebaseUid);
                 return updatedProject == null ? NotFound() : Ok(updatedProject);
             }
@@ -147,7 +147,7 @@ namespace NodPT.API.Controllers
                 {
                     return Unauthorized(new { error = "Invalid user token." });
                 }
-                var projectService = new ProjectService(unitOfWork);
+                var projectService = new ProjectService(dbContext);
                 var deleted = projectService.DeleteProject(id, firebaseUid);
                 return deleted ? NoContent() : NotFound();
             }

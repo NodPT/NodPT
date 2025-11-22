@@ -1,4 +1,4 @@
-using DevExpress.Xpo;
+using Microsoft.EntityFrameworkCore;
 using NodPT.Data.DTOs;
 using NodPT.Data.Models;
 
@@ -6,27 +6,27 @@ namespace NodPT.Data.Services
 {
     public class LogService
     {
-        private readonly UnitOfWork session;
+        private readonly NodPTDbContext context;
 
-        public LogService(UnitOfWork unitOfWork)
+        public LogService(NodPTDbContext dbContext)
         {
-            this.session = unitOfWork;
+            this.context = dbContext;
         }
 
         public List<LogDto> GetAllLogs()
         {
-            var logs = new XPCollection<Log>(session);
-
-            return logs.Select(l => new LogDto
-            {
-                Id = l.Oid,
-                ErrorMessage = l.ErrorMessage,
-                StackTrace = l.StackTrace,
-                Username = l.Username,
-                Timestamp = l.Timestamp,
-                Controller = l.Controller,
-                Action = l.Action
-            }).OrderByDescending(l => l.Timestamp).ToList();
+            return context.Logs
+                .OrderByDescending(l => l.Timestamp)
+                .Select(l => new LogDto
+                {
+                    Id = l.Id,
+                    ErrorMessage = l.ErrorMessage,
+                    StackTrace = l.StackTrace,
+                    Username = l.Username,
+                    Timestamp = l.Timestamp,
+                    Controller = l.Controller,
+                    Action = l.Action
+                }).ToList();
         }
 
 
@@ -42,12 +42,12 @@ namespace NodPT.Data.Services
 
         public static void LogError(string errorMessage, string? stackTrace, string? username, string? controller, string? action)
         {
-            using var session = DatabaseHelper.CreateUnitOfWork();
-            session.BeginTransaction();
+            using var context = DatabaseHelper.CreateDbContext();
+            using var transaction = context.Database.BeginTransaction();
 
             try
             {
-                var log = new Log(session)
+                var log = new Log
                 {
                     ErrorMessage = errorMessage,
                     StackTrace = stackTrace,
@@ -57,12 +57,13 @@ namespace NodPT.Data.Services
                     Action = action
                 };
 
-                session.Save(log);
-                session.CommitTransaction();
+                context.Logs.Add(log);
+                context.SaveChanges();
+                transaction.Commit();
             }
             catch (Exception ex)
             {
-                session.RollbackTransaction();
+                transaction.Rollback();
                 // If logging fails, we don't want to throw another exception
                 // Log to console as fallback
                 Console.WriteLine($"Failed to log error: {errorMessage}. Exception: {ex.Message}");

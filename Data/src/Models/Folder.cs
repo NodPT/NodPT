@@ -1,95 +1,53 @@
-using DevExpress.Xpo;
-using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace NodPT.Data.Models
 {
-    public class Folder : XPObject
+    public class Folder
     {
-        private string? _name;
-        private string? _path;
-        private Folder? _parent;
-        private Project? _project;
-        private DateTime _createdAt = DateTime.UtcNow;
-        private DateTime _updatedAt = DateTime.UtcNow;
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
-        public Folder(Session session) : base(session) { }
-        public Folder() : base(Session.DefaultSession) { }
+        [MaxLength(255)]
+        public string? Name { get; set; }
 
-        /// <summary>
-        /// Folder name
-        /// </summary>
-        [Size(255)]
-        [Indexed]
-        public string? Name
-        {
-            get => _name;
-            set => SetPropertyValue(nameof(Name), ref _name, value);
-        }
+        [MaxLength(500)]
+        public string? Path { get; set; }
 
-        /// <summary>
-        /// Full path of the folder relative to project root
-        /// </summary>
-        [Size(SizeAttribute.Unlimited)]
-        [Indexed]
-        public string? Path
-        {
-            get => _path;
-            set => SetPropertyValue(nameof(Path), ref _path, value);
-        }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        /// <summary>
-        /// When the folder was created
-        /// </summary>
-        public DateTime CreatedAt
-        {
-            get => _createdAt;
-            set => SetPropertyValue(nameof(CreatedAt), ref _createdAt, value);
-        }
-
-        /// <summary>
-        /// When the folder was last updated
-        /// </summary>
-        public DateTime UpdatedAt
-        {
-            get => _updatedAt;
-            set => SetPropertyValue(nameof(UpdatedAt), ref _updatedAt, value);
-        }
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         /// <summary>
         /// Many-to-one relationship: Folder belongs to one Project
         /// </summary>
-        [Association("Project-Folders")]
+        public int? ProjectId { get; set; }
+
+        [ForeignKey(nameof(ProjectId))]
         [JsonIgnore]
-        public Project? Project
-        {
-            get => _project;
-            set => SetPropertyValue(nameof(Project), ref _project, value);
-        }
+        public virtual Project? Project { get; set; }
 
         /// <summary>
         /// Self-referencing relationship: Folder can have a parent folder
         /// </summary>
-        [Association("ParentFolder-ChildFolders")]
+        public int? ParentId { get; set; }
+
+        [ForeignKey(nameof(ParentId))]
         [JsonIgnore]
-        public Folder? Parent
-        {
-            get => _parent;
-            set => SetPropertyValue(nameof(Parent), ref _parent, value);
-        }
+        public virtual Folder? Parent { get; set; }
 
         /// <summary>
         /// Self-referencing relationship: Folder can have child folders
         /// </summary>
-        [Association("ParentFolder-ChildFolders")]
         [JsonIgnore]
-        public XPCollection<Folder> Children => GetCollection<Folder>(nameof(Children));
+        public virtual ICollection<Folder> Children { get; set; } = new List<Folder>();
 
         /// <summary>
         /// One-to-many relationship: Folder has many Files
         /// </summary>
-        [Association("Folder-Files")]
         [JsonIgnore]
-        public XPCollection<ProjectFile> Files => GetCollection<ProjectFile>(nameof(Files));
+        public virtual ICollection<ProjectFile> Files { get; set; } = new List<ProjectFile>();
     }
 }

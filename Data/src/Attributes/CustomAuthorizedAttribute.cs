@@ -1,16 +1,16 @@
-using DevExpress.Data.Filtering;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using NodPT.Data;
 using NodPT.Data.Models;
-using DevExpress.Xpo;
+using NodPT.Data.Services;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Principal; // Added for JwtRegisteredClaimNames
 
 /// <summary>
 /// Custom authorization attribute that optionally checks if the user has admin privileges in the database
-/// Usage: [Custom] -> requires authenticated user only
-/// [Custom("Admin")] -> requires authenticated user who is admin
+/// Usage: [CustomAuthorized] -> requires authenticated user only
+/// [CustomAuthorized("Admin")] -> requires authenticated user who is admin
 /// </summary>
 public class CustomAuthorizedAttribute : Attribute, IAuthorizationFilter
 {
@@ -40,14 +40,14 @@ public class CustomAuthorizedAttribute : Attribute, IAuthorizationFilter
         // Check database for admin status
         try
         {
-            using var session = DatabaseHelper.CreateUnitOfWork();
+            using var dbContext = DatabaseHelper.CreateDbContext();
             if (UserService.IsValidFirebaseUid(firebaseUid, context.HttpContext.User) == false)
             {
                 context.Result = new UnauthorizedObjectResult(new { message = "User is not valid" });
                 return;
             }
 
-            var dbUser = session.FindObject<User>(new BinaryOperator("FirebaseUid", firebaseUid));
+            var dbUser = dbContext.Users.FirstOrDefault(u => u.FirebaseUid == firebaseUid);
             if (dbUser == null)
             {
                 context.Result = new UnauthorizedObjectResult(new { message = "User not found" });
