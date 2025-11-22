@@ -69,12 +69,12 @@ NodPT is built using a modern microservices architecture with Docker containers.
 | Service | Technology | Description | Port |
 |---------|-----------|-------------|------|
 | **Frontend** | Vue.js 3, Rete.js, Bootstrap 5, Vite | Visual workflow editor with node-based interface | 8443 |
-| **WebAPI** | .NET 8, ASP.NET Core, DevExpress XPO | RESTful API for data management and authentication | 8846 |
+| **WebAPI** | .NET 8, ASP.NET Core, Entity Framework Core | RESTful API for data management and authentication | 8846 |
 | **SignalR** | .NET 8, SignalR Core | Real-time communication hub | 8848 |
 | **Executor** | .NET 8, Worker Service | Background job processor | N/A |
 | **AI** | Ollama | LLM inference engine (requires GPU) | 11434 |
 | **Redis** | Redis 7 Alpine | Message broker and caching | 8847 |
-| **Data** | DevExpress XPO, MySQL/MariaDB | Data access layer and ORM | N/A |
+| **Data** | Entity Framework Core, MySQL/MariaDB | Data access layer and ORM | N/A |
 
 ## 🚀 Quick Start with Docker
 
@@ -207,6 +207,173 @@ Get started by checking out our [Issues](https://github.com/NodPT/NodPT/issues) 
 - Firefox
 
 PWA features require HTTPS in production.
+
+## 📊 Data Layer - Entity Framework Core
+
+### Working with the Database
+
+The NodPT project uses Entity Framework Core as the Object-Relational Mapping (ORM) framework with MySQL/MariaDB as the database.
+
+### Database Migrations
+
+#### Creating a Migration
+```bash
+cd /home/runner/work/NodPT/NodPT/WebAPI/src
+dotnet ef migrations add MigrationName --project ../../Data/src
+```
+
+#### Applying Migrations
+```bash
+cd /home/runner/work/NodPT/NodPT/WebAPI/src
+dotnet ef database update --project ../../Data/src
+```
+
+#### Removing the Last Migration
+```bash
+cd /home/runner/work/NodPT/NodPT/WebAPI/src
+dotnet ef migrations remove --project ../../Data/src
+```
+
+### Using the DbContext
+
+#### Dependency Injection
+The `NodPTDbContext` is registered in the DI container and can be injected into services and controllers:
+
+```csharp
+public class ProjectService
+{
+    private readonly NodPTDbContext context;
+    
+    public ProjectService(NodPTDbContext dbContext)
+    {
+        this.context = dbContext;
+    }
+}
+```
+
+#### CRUD Operations
+
+**Create (Add)**
+```csharp
+var user = new User
+{
+    FirebaseUid = "uid123",
+    Email = "user@example.com",
+    DisplayName = "John Doe",
+    Active = true,
+    Approved = true
+};
+
+context.Users.Add(user);
+context.SaveChanges();
+```
+
+**Read (Query)**
+```csharp
+// Get single entity
+var user = context.Users.FirstOrDefault(u => u.FirebaseUid == "uid123");
+
+// Get with related entities (eager loading)
+var project = context.Projects
+    .Include(p => p.User)
+    .Include(p => p.Template)
+    .Include(p => p.Nodes)
+    .FirstOrDefault(p => p.Id == projectId);
+
+// Get all entities
+var allUsers = context.Users.ToList();
+
+// Get with filtering
+var activeProjects = context.Projects
+    .Where(p => p.IsActive && p.UserId == userId)
+    .ToList();
+```
+
+**Update**
+```csharp
+var user = context.Users.FirstOrDefault(u => u.Id == userId);
+if (user != null)
+{
+    user.DisplayName = "Jane Doe";
+    user.Email = "jane@example.com";
+    context.SaveChanges();
+}
+```
+
+**Delete**
+```csharp
+var user = context.Users.FirstOrDefault(u => u.Id == userId);
+if (user != null)
+{
+    context.Users.Remove(user);
+    context.SaveChanges();
+}
+```
+
+#### Transactions
+```csharp
+using var transaction = context.Database.BeginTransaction();
+try
+{
+    // Multiple operations
+    context.Users.Add(newUser);
+    context.Projects.Add(newProject);
+    
+    context.SaveChanges();
+    transaction.Commit();
+}
+catch
+{
+    transaction.Rollback();
+    throw;
+}
+```
+
+### Model Relationships
+
+#### One-to-Many
+```csharp
+public class User
+{
+    public int Id { get; set; }
+    public virtual ICollection<Project> Projects { get; set; } = new List<Project>();
+}
+
+public class Project
+{
+    public int Id { get; set; }
+    public int? UserId { get; set; }
+    
+    [ForeignKey(nameof(UserId))]
+    public virtual User? User { get; set; }
+}
+```
+
+#### Self-Referencing
+```csharp
+public class Node
+{
+    public string Id { get; set; }
+    public string? ParentId { get; set; }
+    
+    [ForeignKey(nameof(ParentId))]
+    public virtual Node? Parent { get; set; }
+    
+    public virtual ICollection<Node> Children { get; set; } = new List<Node>();
+}
+```
+
+### Best Practices
+
+1. **Always use transactions** for operations affecting multiple entities
+2. **Use `.Include()` for eager loading** to avoid N+1 query problems
+3. **Dispose DbContext properly** - use dependency injection or `using` statements
+4. **Use async methods** when available for better performance
+5. **Avoid tracking for read-only queries** using `.AsNoTracking()`
+
+### Migration from DevExpress XPO
+
+If you're migrating from the previous DevExpress XPO implementation, please refer to [BREAKING_CHANGES.md](BREAKING_CHANGES.md) for detailed migration instructions.
 
 ## 📄 License
 
