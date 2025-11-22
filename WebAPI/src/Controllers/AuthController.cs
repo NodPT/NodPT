@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using DevExpress.Xpo;
 using System.Security.Cryptography;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
@@ -7,6 +6,7 @@ using NodPT.Data.DTOs;
 using NodPT.Data.Models;
 using Microsoft.IdentityModel.JsonWebTokens;
 using System.Linq;
+using NodPT.Data;
 
 namespace NodPT.API.Controllers
 {
@@ -14,10 +14,11 @@ namespace NodPT.API.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        UnitOfWork? session;
-        public AuthController(UnitOfWork _unitOfWork)
+        private readonly NodPTDbContext _context;
+        
+        public AuthController(NodPTDbContext context)
         {
-            this.session = _unitOfWork;
+            _context = context;
         }
 
         private static readonly HttpClient httpClient = new();
@@ -51,16 +52,14 @@ namespace NodPT.API.Controllers
                     });
                 }
 
-                session!.BeginTransaction();
-
                 // Find or create user
-                var user = session.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("FirebaseUid", firebaseUserInfo.Uid));
+                var user = _context.Users.FirstOrDefault(u => u.FirebaseUid == firebaseUserInfo.Uid);
 
                 bool isNewUser = false;
                 if (user == null)
                 {
                     // Auto-create user if not exists - defaults to Approved=false, Banned=false
-                    user = new User(session)
+                    user = new User
                     {
                         FirebaseUid = firebaseUserInfo.Uid,
                         Email = firebaseUserInfo.Email,
@@ -72,6 +71,7 @@ namespace NodPT.API.Controllers
                         CreatedAt = DateTime.UtcNow,
                         LastLoginAt = DateTime.UtcNow
                     };
+                    _context.Users.Add(user);
                     isNewUser = true;
                 }
                 else
@@ -88,12 +88,7 @@ namespace NodPT.API.Controllers
                     // Save new user even if not approved, so account is created
                     if (isNewUser)
                     {
-                        session.Save(user);
-                        session.CommitTransaction();
-                    }
-                    else
-                    {
-                        session.RollbackTransaction();
+                        await _context.SaveChangesAsync();
                     }
 
                     await LogUserAccessAsync(user, "login", false, validationError.Message);
@@ -108,8 +103,7 @@ namespace NodPT.API.Controllers
                     user.RefreshToken = refreshToken;
                 }
 
-                session.Save(user);
-                session.CommitTransaction();
+                await _context.SaveChangesAsync();
 
                 // Log successful login
                 await LogUserAccessAsync(user, "login", true);
@@ -120,7 +114,7 @@ namespace NodPT.API.Controllers
                     Message = "Login successful",
                     User = new UserDto
                     {
-                        Oid = user.Oid,
+                        Oid = user.Id,
                         FirebaseUid = user.FirebaseUid,
                         Email = user.Email,
                         DisplayName = user.DisplayName,
@@ -165,15 +159,11 @@ namespace NodPT.API.Controllers
 
             try
             {
-
-                session!.BeginTransaction();
-
                 // Find user by refresh token
-                var user = session.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("RefreshToken", request.RefreshToken));
+                var user = _context.Users.FirstOrDefault(u => u.RefreshToken == request.RefreshToken);
 
                 if (user == null || !user.Active)
                 {
-                    session.RollbackTransaction();
                     return Unauthorized(new AuthResponseDto
                     {
                         Success = false,
@@ -185,7 +175,6 @@ namespace NodPT.API.Controllers
                 var validationError = ValidateUserStatus(user);
                 if (validationError != null)
                 {
-                    session.RollbackTransaction();
                     await LogUserAccessAsync(user, "refresh_token", false, validationError.Message);
                     return Unauthorized(validationError);
                 }
@@ -197,8 +186,7 @@ namespace NodPT.API.Controllers
                 var newRefreshToken = GenerateRefreshToken();
                 user.RefreshToken = newRefreshToken;
 
-                session.Save(user);
-                session.CommitTransaction();
+                await _context.SaveChangesAsync();
 
                 // Log successful token refresh
                 await LogUserAccessAsync(user, "refresh_token", true);
@@ -209,7 +197,7 @@ namespace NodPT.API.Controllers
                     Message = "Token refreshed successfully",
                     User = new UserDto
                     {
-                        Oid = user.Oid,
+                        Oid = user.Id,
                         FirebaseUid = user.FirebaseUid,
                         Email = user.Email,
                         DisplayName = user.DisplayName,
@@ -241,17 +229,14 @@ namespace NodPT.API.Controllers
         /// Logout and invalidate refresh token
         /// </summary>
         [HttpGet("logout")]
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
             try
             {
-                session!.BeginTransaction();
-
                 string? uid = UserService.GetFirebaseUIDFromContent(User);
 
                 if (string.IsNullOrEmpty(uid))
                 {
-                    session.RollbackTransaction();
                     return Unauthorized(new AuthResponseDto
                     {
                         Success = false,
@@ -260,21 +245,16 @@ namespace NodPT.API.Controllers
                 }
 
                 // Find user by the user who was login with the jwt token
-                var user = session.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("FirebaseUid", uid));
+                var user = _context.Users.FirstOrDefault(u => u.FirebaseUid == uid);
 
                 if (user != null)
                 {
                     // Clear refresh token
                     user.RefreshToken = null;
-                    session.Save(user);
-                    session.CommitTransaction();
+                    await _context.SaveChangesAsync();
 
                     // Log successful logout
                     // LogUserAccess(user, "logout", true);
-                }
-                else
-                {
-                    session.RollbackTransaction();
                 }
 
                 return Ok(new AuthResponseDto
@@ -356,24 +336,26 @@ namespace NodPT.API.Controllers
             // Database logging in background task to avoid transaction conflicts
             try
             {
-                var freshUser = this.session!.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("Oid", user.Oid));
+                // Use a separate context for logging to avoid transaction conflicts
+                using var logContext = DatabaseHelper.CreateDbContext();
+                
+                var freshUser = logContext.Users.FirstOrDefault(u => u.Id == user.Id);
                 if (freshUser == null)
                     return;
 
-                this.session.BeginTransaction();
-                freshUser.AccessLogs.Add(new UserAccessLog(this.session)
+                var accessLog = new UserAccessLog
                 {
-                    User = freshUser,
+                    UserId = freshUser.Id,
                     Action = action,
                     IpAddress = ip,
                     UserAgent = Request.Headers.UserAgent.ToString(),
                     Timestamp = DateTime.UtcNow,
                     Success = success,
                     ErrorMessage = errorMessage
-                });
+                };
 
-                this.session.Save(freshUser);
-                await this.session.CommitTransactionAsync();
+                logContext.UserAccessLogs.Add(accessLog);
+                await logContext.SaveChangesAsync();
             }
             catch (Exception ex)
             {

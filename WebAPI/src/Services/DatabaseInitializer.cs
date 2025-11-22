@@ -26,11 +26,6 @@ public static class DatabaseInitializer
             options.UseMySql(connectionString, serverVersion);
         });
 
-        // Make IHttpContextAccessor available for ConfigureJsonOptions which requires it.
-        builder.Services.AddHttpContextAccessor();
-        builder.Services.ConfigureOptions<ConfigureJsonOptions>();
-        builder.Services.AddSingleton(typeof(IModelMetadataProvider), typeof(XpoMetadataProvider));
-
         // Create sample data
         //CreateSampleData();
     }

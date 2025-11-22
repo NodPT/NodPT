@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using NodPT.Data.Models;
-using DevExpress.Xpo;
+using NodPT.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace NodPT.API.Controllers
 {
@@ -10,23 +11,26 @@ namespace NodPT.API.Controllers
     [Route("api/[controller]")]
     public class ChatMessagesController : ControllerBase
     {
-        private readonly UnitOfWork session;
+        private readonly NodPTDbContext _context;
 
-        public ChatMessagesController(UnitOfWork _unitOfWork)
+        public ChatMessagesController(NodPTDbContext context)
         {
-            this.session = _unitOfWork;
+            _context = context;
         }
 
         [HttpGet]
         [CustomAuthorized("Admin")]
         public IActionResult GetAllChatMessages()
         {
-            var messages = new XPCollection<ChatMessage>(session);
+            var messages = _context.ChatMessages
+                .Include(m => m.Node)
+                .Include(m => m.User)
+                .ToList();
             
             // Project to DTOs to avoid serialization issues
             var messageDtos = messages.Select(m => new
             {
-                m.Oid,
+                m.Id,
                 m.Sender,
                 m.Message,
                 m.Timestamp,
@@ -45,16 +49,18 @@ namespace NodPT.API.Controllers
         [HttpGet("me")]
         public IActionResult GetMyChatMessages()
         {
-            // Get user from token using XPO session
-            var user = UserService.GetUser(User, session);
+            // Get user from token using EF Core context
+            var user = UserService.GetUser(User, _context);
             if (user == null) return Unauthorized(new { error = "User not found or invalid" });
             
-            var messages = new XPCollection<ChatMessage>(session, 
-                new DevExpress.Data.Filtering.BinaryOperator("User", user));
+            var messages = _context.ChatMessages
+                .Include(m => m.Node)
+                .Where(m => m.UserId == user.Id)
+                .ToList();
             
             var messageDtos = messages.Select(m => new
             {
-                m.Oid,
+                m.Id,
                 m.Sender,
                 m.Message,
                 m.Timestamp,
@@ -72,16 +78,20 @@ namespace NodPT.API.Controllers
         
         public IActionResult GetChatMessagesByNode(string nodeId)
         {
-            var node = session.FindObject<Node>(new DevExpress.Data.Filtering.BinaryOperator("Id", nodeId));
+            var node = _context.Nodes.FirstOrDefault(n => n.Id == nodeId);
             
             if (node == null) return NotFound("Node not found");
             
-            var messages = new XPCollection<ChatMessage>(session, 
-                new DevExpress.Data.Filtering.BinaryOperator("Node", node));
+            var messages = _context.ChatMessages
+                .Include(m => m.Node)
+                .Include(m => m.User)
+                .Where(m => m.NodeId == nodeId)
+                .OrderBy(m => m.Timestamp)
+                .ToList();
             
-            var messageDtos = messages.OrderBy(m => m.Timestamp).Select(m => new
+            var messageDtos = messages.Select(m => new
             {
-                m.Oid,
+                m.Id,
                 m.Sender,
                 m.Message,
                 m.Timestamp,

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using NodPT.API.Services;
 using System.Text.Json;
 using NodPT.Data.Models;
-using DevExpress.Xpo;
+using NodPT.Data;
 
 namespace NodPT.API.Controllers
 {
@@ -17,11 +17,13 @@ namespace NodPT.API.Controllers
         private readonly ChatService _chatService = new();
         private readonly IRedisService _redisService;
         private readonly ILogger<ChatController> _logger;
+        private readonly NodPTDbContext _context;
 
-        public ChatController(IRedisService redisService, ILogger<ChatController> logger)
+        public ChatController(IRedisService redisService, ILogger<ChatController> logger, NodPTDbContext context)
         {
             _redisService = redisService;
             _logger = logger;
+            _context = context;
         }
 
         [HttpGet]
@@ -129,22 +131,30 @@ namespace NodPT.API.Controllers
                 string? modelName = null;
                 if (!string.IsNullOrEmpty(dto.NodeLevel))
                 {
-                    using var session = new Session();
-                    var node = session.FindObject<Node>(new DevExpress.Data.Filtering.BinaryOperator("Id", dto.NodeLevel));
+                    var node = _context.Nodes.FirstOrDefault(n => n.Id == dto.NodeLevel);
                     
                     if (node != null)
                     {
                         // First check if node has a direct AIModel
-                        if (node.AIModel != null && !string.IsNullOrEmpty(node.AIModel.ModelIdentifier))
+                        if (node.AIModelId != null)
                         {
-                            modelName = node.AIModel.ModelIdentifier;
-                            _logger.LogInformation($"Using model from node's AIModel: {modelName}");
+                            var aiModel = _context.AIModels.FirstOrDefault(m => m.Id == node.AIModelId);
+                            if (aiModel != null && !string.IsNullOrEmpty(aiModel.ModelIdentifier))
+                            {
+                                modelName = aiModel.ModelIdentifier;
+                                _logger.LogInformation($"Using model from node's AIModel: {modelName}");
+                            }
                         }
                         // Otherwise, check for matching AIModel from template
-                        else if (node.MatchingAIModel != null && !string.IsNullOrEmpty(node.MatchingAIModel.ModelIdentifier))
+                        else if (node.TemplateId != null)
                         {
-                            modelName = node.MatchingAIModel.ModelIdentifier;
-                            _logger.LogInformation($"Using model from template's matching AIModel: {modelName}");
+                            var matchingModel = _context.AIModels
+                                .FirstOrDefault(m => m.TemplateId == node.TemplateId && m.IsActive);
+                            if (matchingModel != null && !string.IsNullOrEmpty(matchingModel.ModelIdentifier))
+                            {
+                                modelName = matchingModel.ModelIdentifier;
+                                _logger.LogInformation($"Using model from template's matching AIModel: {modelName}");
+                            }
                         }
                     }
                 }

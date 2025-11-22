@@ -11,7 +11,6 @@ using NodPT.Data.Services;
 using NodPT.API.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using StackExchange.Redis;
-using NodPT.Data.Services;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args); // 🔹 Create builder
 
