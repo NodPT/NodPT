@@ -19,12 +19,6 @@ Controllers/Services
     ▼
 Unit of Work
     │
-    ├─→ User Repository
-    ├─→ Project Repository
-    ├─→ Workflow Repository
-    ├─→ Node Repository
-    └─→ ... other repositories
-    │
     ▼
 XPO Session
     │
@@ -180,7 +174,56 @@ public class ProjectService
 }
 ```
 
-### use the benefits of DevExpress XPO from User data model
+### XPO Associations and Navigation Properties
+
+**IMPORTANT**: Always use XPO's `Association` attribute to define relationships between entities. Use proper collection types and GetCollection method for accessing related entities.
+
+#### Defining Associations in Models
+
+```csharp
+public class User : XPObject
+{
+    // One-to-Many: User has many Projects
+    [Association("User-Projects")]
+    public XPCollection<Project> Projects
+    {
+        get { return GetCollection<Project>(nameof(Projects)); }
+    }
+}
+
+public class Project : XPObject
+{
+    // Many-to-One: Project belongs to User
+    private User _user;
+    [Association("User-Projects")]
+    public User User
+    {
+        get { return _user; }
+        set { SetPropertyValue(nameof(User), ref _user, value); }
+    }
+
+    // One-to-Many: Project has many Nodes
+    [Association("Project-Nodes")]
+    public XPCollection<Node> Nodes
+    {
+        get { return GetCollection<Node>(nameof(Nodes)); }
+    }
+}
+
+public class Node : XPObject
+{
+    // Many-to-One: Node belongs to Project
+    private Project _project;
+    [Association("Project-Nodes")]
+    public Project Project
+    {
+        get { return _project; }
+        set { SetPropertyValue(nameof(Project), ref _project, value); }
+    }
+}
+```
+
+#### Using Navigation Properties
 
 ```csharp
 // Access related Projects directly from User entity
@@ -197,22 +240,20 @@ var project = user.Projects
 var newProject = new Project(unitOfWork)
 {
     Name = "New Project",
-    User = user, // set the owner
+    User = user, // set the owner - association handles the relationship
     CreatedAt = DateTime.UtcNow,
     UpdatedAt = DateTime.UtcNow
 };
-user.Projects.Add(newProject);
 unitOfWork.Save(newProject);
 unitOfWork.CommitTransaction();
+// Note: No need to manually add to user.Projects, the Association handles it
 
-// get nodes from a project
+// get nodes from a project using navigation property
 var nodes = user.Projects
     .FirstOrDefault(p => p.Id == projectId)?
     .Nodes
     .Where(n => n.IsActive)
     .ToList();
-}
-
 ```
 
 ### 🛠️ Development Guidelines
