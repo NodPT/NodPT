@@ -331,11 +331,11 @@ export default {
 			}
 		};
 
-		// Check if message content contains solution=true
+		// Check if message content contains the hidden solution marker <!-- solution:true -->
 		const hasSolution = (message) => {
 			if (!message || !message.content) return false;
-			// Check if message content contains solution=true (case-insensitive)
-			return /solution\s*=\s*true/i.test(message.content);
+			// Look for the hidden HTML comment marker <!-- solution:true --> (case-insensitive, allow whitespace)
+			return /<!--\s*solution\s*:\s*true\s*-->/i.test(message.content);
 		};
 
 		// Build solution from AI message
