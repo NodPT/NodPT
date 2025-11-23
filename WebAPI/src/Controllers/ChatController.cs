@@ -44,16 +44,23 @@ namespace NodPT.API.Controllers
                 var messages = ChatService.GetMessagesByNodeIdFromDb(nodeId, user, session);
 
                 // Convert to DTOs
-                var messageDtos = messages.Select(m => new ChatMessageDto
+                var messageDtos = messages.Select(m => 
                 {
-                    Id = new Guid(m.Oid, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-                    Sender = m.Sender,
-                    Message = m.Message,
-                    Timestamp = m.Timestamp,
-                    NodeId = m.Node?.Id,
-                    MarkedAsSolution = m.MarkedAsSolution,
-                    Liked = m.Liked,
-                    Disliked = m.Disliked
+                    // Convert int Oid to Guid deterministically
+                    byte[] guidBytes = new byte[16];
+                    BitConverter.GetBytes(m.Oid).CopyTo(guidBytes, 0);
+                    
+                    return new ChatMessageDto
+                    {
+                        Id = new Guid(guidBytes),
+                        Sender = m.Sender,
+                        Message = m.Message,
+                        Timestamp = m.Timestamp,
+                        NodeId = m.Node?.Id,
+                        MarkedAsSolution = m.MarkedAsSolution,
+                        Liked = m.Liked,
+                        Disliked = m.Disliked
+                    };
                 }).ToList();
 
                 return Ok(messageDtos);

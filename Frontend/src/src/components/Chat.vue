@@ -201,6 +201,23 @@ export default {
 			}
 		};
 
+		// Helper function to add AI response to chat
+		const addAiResponseToChat = (response) => {
+			if (response.aiResponse) {
+				const aiMessage = {
+					id: response.aiResponse.id,
+					type: 'ai',
+					content: response.aiResponse.message,
+					timestamp: response.aiResponse.timestamp,
+					markedAsSolution: response.aiResponse.markedAsSolution,
+					liked: response.aiResponse.liked || false,
+					disliked: response.aiResponse.disliked || false
+				};
+				chatData.messages.push(aiMessage);
+				scrollToBottom();
+			}
+		};
+
 		// Chat functions
 		const sendMessage = async () => {
 			if (!newMessage.value.trim() || isLoading.value) return;
@@ -243,21 +260,7 @@ export default {
 							content: userMessageContent,
 							nodeId: currentNodeId.value
 						});
-
-						// Add AI response to UI
-						if (response.aiResponse) {
-							const aiMessage = {
-								id: response.aiResponse.id,
-								type: 'ai',
-								content: response.aiResponse.message,
-								timestamp: response.aiResponse.timestamp,
-								markedAsSolution: response.aiResponse.markedAsSolution,
-								liked: response.aiResponse.liked || false,
-								disliked: response.aiResponse.disliked || false
-							};
-							chatData.messages.push(aiMessage);
-							scrollToBottom();
-						}
+						addAiResponseToChat(response);
 					}
 				} else {
 					// No node context, use old send behavior
@@ -265,21 +268,7 @@ export default {
 						content: userMessageContent,
 						nodeId: currentNodeId.value
 					});
-
-					// Add AI response to UI
-					if (response.aiResponse) {
-						const aiMessage = {
-							id: response.aiResponse.id,
-							type: 'ai',
-							content: response.aiResponse.message,
-							timestamp: response.aiResponse.timestamp,
-							markedAsSolution: response.aiResponse.markedAsSolution,
-							liked: response.aiResponse.liked || false,
-							disliked: response.aiResponse.disliked || false
-						};
-						chatData.messages.push(aiMessage);
-						scrollToBottom();
-					}
+					addAiResponseToChat(response);
 				}
 
 			} catch (error) {
