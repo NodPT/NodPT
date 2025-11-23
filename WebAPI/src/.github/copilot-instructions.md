@@ -268,29 +268,11 @@ Access logs at: `GET /api/logs`
 
 ---
 
-### 🔑 Authentication & User Management
+## 🔑 Controllers and Authentication
 
-**IMPORTANT**: Always use `UserService.GetUser(User, unitOfWork)` to get the current user from Context.User. **NEVER** require firebaseUid from frontend clients. The user's identity is extracted from the JWT token in the Authorization header.
+Controllers should use dependency injection for UnitOfWork and pass `User` (ClaimsPrincipal) to service constructors. Services handle user validation (see Data Layer for UserService and authentication patterns).
 
-### Getting Current User
-
-```csharp
-// Get current user from Context.User (ClaimsPrincipal)
-var user = UserService.GetUser(User, unitOfWork);
-
-if (user == null)
-{
-    return Unauthorized(new { error = "User is banned, not approved, or not found" });
-}
-
-// Use the user object for all operations
-user.Projects.Add(newProject);
-await unitOfWork.CommitAsync();
-```
-
-### Service Layer Pattern
-
-**RECOMMENDED**: Controllers should pass `User` (ClaimsPrincipal) to service constructors. Services will validate users at construction time, eliminating the need for validation in controllers:
+**IMPORTANT**: Controllers should **NOT** accept firebaseUid as a parameter from the frontend. User identity is extracted from JWT token in Authorization header by the UserService in the Data layer.
 
 ```csharp
 [ApiController]
@@ -309,7 +291,7 @@ public class ProjectsController : ControllerBase
     {
         try
         {
-            // Service validates user in constructor
+            // Service validates user in constructor (Data layer)
             var service = new ProjectService(unitOfWork, User);
             var project = service.CreateProject(projectDto);
             return Ok(project);
@@ -342,10 +324,6 @@ public class ProjectsController : ControllerBase
     }
 }
 ```
-
-### No FirebaseUid from Frontend
-
-Controllers should **NOT** accept firebaseUid as a parameter from the frontend. Instead, extract it from Context.User:
 
 ```csharp
 // ❌ BAD - Don't do this
