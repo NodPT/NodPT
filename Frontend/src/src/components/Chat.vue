@@ -3,7 +3,7 @@
 		<div class="chat-messages" ref="chatMessages">
 			<div v-for="message in chatData.messages" :key="message.id"
 				:class="['message', message.type === 'ai' ? 'ai-message' : 'user-message']">
-				<div class="message-content">{{ message.content }}</div>
+				<div class="message-content" v-html="renderMarkdown(message.content)"></div>
 				<!-- Copy button available for user messages -->
 				<div v-if="message.type !== 'ai'"
 					class="message-controls d-flex justify-content-start align-items-center mt-1">
@@ -48,12 +48,19 @@
 				</div>
 			</div>
 		</div>
-		<div class="chat-input">
-			<div class="input-group">
-				<input v-model="newMessage" @keyup.enter="sendMessage" type="text" class="form-control"
-					placeholder="Type your message..." :disabled="isLoading" />
-				<button @click="sendMessage" class="btn btn-primary" :disabled="isLoading">
-					<span v-if="isLoading" class="spinner-border spinner-border-sm me-1"></span>
+		<div class="chat-input-container">
+			<div class="chat-input-wrapper">
+				<textarea 
+					v-model="newMessage" 
+					@keydown.enter.exact="handleEnter"
+					ref="messageTextarea"
+					class="chat-textarea form-control"
+					placeholder="Type your message... (Shift+Enter for new line)"
+					:disabled="isLoading"
+					rows="1"
+				></textarea>
+				<button @click="sendMessage" class="btn btn-primary send-btn" :disabled="isLoading || !newMessage.trim()">
+					<span v-if="isLoading" class="spinner-border spinner-border-sm"></span>
 					<i v-else class="bi bi-send fw-bold"></i>
 				</button>
 			</div>
@@ -62,9 +69,11 @@
 </template>
 
 <script>
-import { ref, reactive, inject, onMounted, nextTick, onBeforeUnmount } from 'vue';
+import { ref, reactive, inject, onMounted, nextTick, onBeforeUnmount, watch } from 'vue';
 import { eventBus, listenEvent, EVENT_TYPES } from '../rete/eventBus.js';
 import chatApiService from '../service/chatApiService.js';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 export default {
 	name: 'Chat',
@@ -80,8 +89,22 @@ export default {
 
 		// Refs for DOM elements
 		const chatMessages = ref(null);
+		const messageTextarea = ref(null);
 
 		const eventListeners = [];
+
+		// Configure marked for markdown rendering
+		marked.setOptions({
+			breaks: true,
+			gfm: true,
+		});
+
+		// Render markdown content with sanitization
+		const renderMarkdown = (content) => {
+			if (!content) return '';
+			const rawHtml = marked(content);
+			return DOMPurify.sanitize(rawHtml);
+		};
 
 		const createDefaultAiMessage = () => ({
 			id: Date.now(),
@@ -191,6 +214,33 @@ export default {
 				chatMessages.value.scrollTop = chatMessages.value.scrollHeight;
 			}
 		};
+
+		// Auto-resize textarea based on content
+		const autoResizeTextarea = () => {
+			if (!messageTextarea.value) return;
+			
+			// Reset height to auto to get the correct scrollHeight
+			messageTextarea.value.style.height = 'auto';
+			
+			// Set height based on scrollHeight, with a max of 150px
+			const newHeight = Math.min(messageTextarea.value.scrollHeight, 150);
+			messageTextarea.value.style.height = `${newHeight}px`;
+		};
+
+		// Handle Enter key - send on Enter, new line on Shift+Enter
+		const handleEnter = (event) => {
+			if (!event.shiftKey) {
+				event.preventDefault();
+				sendMessage();
+			}
+		};
+
+		// Watch for message changes to auto-resize textarea
+		watch(newMessage, () => {
+			nextTick(() => {
+				autoResizeTextarea();
+			});
+		});
 
 		// Chat functions
 		const sendMessage = async () => {
@@ -393,6 +443,7 @@ export default {
 
 			// Refs
 			chatMessages,
+			messageTextarea,
 
 			// Methods
 			formatTime,
@@ -403,6 +454,8 @@ export default {
 			dislikeMessage,
 			copyMessage,
 			triggerStartRequest,
+			renderMarkdown,
+			handleEnter,
 		};
 	},
 };
