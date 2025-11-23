@@ -1,10 +1,12 @@
 using NodPT.Data.DTOs;
+using NodPT.Data.Models;
+using DevExpress.Xpo;
+using DevExpress.Data.Filtering;
 
 namespace NodPT.Data.Services
 {
     public class ChatService
     {
-        private static List<ChatMessageDto> _messages = new();
         private static readonly List<string> _aiResponses = new()
         {
             "I understand your request. Let me analyze this for you...",
@@ -29,26 +31,103 @@ namespace NodPT.Data.Services
 
         private static readonly Random _random = new();
 
-        public List<ChatMessageDto> GetMessages() => _messages;
-
-        public List<ChatMessageDto> GetMessagesByNodeId(string nodeId) =>
-            _messages.Where(m => m.NodeId == nodeId).ToList();
-
-        public void AddMessage(ChatMessageDto message)
+        /// <summary>
+        /// Get chat messages for a specific node, ensuring the node belongs to a project owned by the user
+        /// </summary>
+        /// <param name="nodeId">The node ID</param>
+        /// <param name="user">The current user</param>
+        /// <param name="session">The database session</param>
+        /// <returns>List of chat messages for the node</returns>
+        public List<ChatMessageDto> GetMessagesByNodeId(string nodeId, User user, UnitOfWork session)
         {
-            message.Id = Guid.NewGuid();
-            message.Timestamp = DateTime.UtcNow;
-            _messages.Add(message);
+            // Find the node
+            var node = session.FindObject<Node>(CriteriaOperator.Parse("Id = ?", nodeId));
+            
+            if (node == null)
+            {
+                throw new ArgumentException($"Node with ID '{nodeId}' not found");
+            }
+
+            // Verify the node belongs to a project owned by the user
+            if (node.Project == null)
+            {
+                throw new UnauthorizedAccessException($"Node '{nodeId}' does not belong to any project");
+            }
+
+            if (node.Project.User == null || node.Project.User.Oid != user.Oid)
+            {
+                throw new UnauthorizedAccessException($"Node '{nodeId}' does not belong to a project owned by the current user");
+            }
+
+            // Get messages for this node
+            var messages = new XPCollection<ChatMessage>(session, 
+                CriteriaOperator.Parse("Node.Id = ?", nodeId));
+
+            return messages.OrderBy(m => m.Timestamp).Select(m => new ChatMessageDto
+            {
+                Id = m.Oid,
+                Sender = m.Sender,
+                Message = m.Message,
+                Timestamp = m.Timestamp,
+                MarkedAsSolution = m.MarkedAsSolution,
+                NodeId = m.Node?.Id,
+                Liked = m.Liked,
+                Disliked = m.Disliked
+            }).ToList();
         }
 
+        [Obsolete("Use GetMessagesByNodeId with user validation instead")]
+        public List<ChatMessageDto> GetMessages() => new List<ChatMessageDto>();
+
+        /// <summary>
+        /// Add a chat message to the database
+        /// </summary>
+        public ChatMessage AddMessage(ChatMessageDto messageDto, User user, UnitOfWork session)
+        {
+            var chatMessage = new ChatMessage(session)
+            {
+                Sender = messageDto.Sender,
+                Message = messageDto.Message,
+                Timestamp = DateTime.UtcNow,
+                MarkedAsSolution = messageDto.MarkedAsSolution,
+                Liked = false,
+                Disliked = false,
+                User = user
+            };
+
+            // If nodeId is provided, associate the message with the node
+            if (!string.IsNullOrEmpty(messageDto.NodeId))
+            {
+                var node = session.FindObject<Node>(CriteriaOperator.Parse("Id = ?", messageDto.NodeId));
+                if (node == null)
+                {
+                    throw new ArgumentException($"Node with ID '{messageDto.NodeId}' not found");
+                }
+
+                // Verify the node belongs to a project owned by the user
+                if (node.Project == null || node.Project.User == null || node.Project.User.Oid != user.Oid)
+                {
+                    throw new UnauthorizedAccessException($"Node '{messageDto.NodeId}' does not belong to a project owned by the current user");
+                }
+
+                chatMessage.Node = node;
+            }
+
+            chatMessage.Save();
+            return chatMessage;
+        }
+
+        /// <summary>
+        /// Generate AI response (for backward compatibility, but messages should be queued to Redis)
+        /// </summary>
+        [Obsolete("Use Redis queuing instead for AI responses")]
         public ChatMessageDto GenerateAiResponse(ChatMessageDto userMessage)
         {
-            // Generate a randomized AI response
             var responseText = _aiResponses[_random.Next(_aiResponses.Count)];
             
-            var aiResponse = new ChatMessageDto
+            return new ChatMessageDto
             {
-                Id = Guid.NewGuid(),
+                Id = 0, // Will be assigned by database
                 Sender = "ai",
                 Message = responseText,
                 Timestamp = DateTime.UtcNow,
@@ -57,114 +136,61 @@ namespace NodPT.Data.Services
                 Liked = false,
                 Disliked = false
             };
-
-            _messages.Add(aiResponse);
-            return aiResponse;
         }
 
-        public ChatMessageDto MarkAsSolutionAndRespond(string? nodeId)
+        /// <summary>
+        /// Mark a message as solution
+        /// </summary>
+        public ChatMessage? MarkAsSolution(int messageId, User user, UnitOfWork session)
         {
-            // Find the latest AI message for this node and mark it as solution
-            var latestAiMessage = _messages
-                .Where(m => m.Sender == "ai" && (nodeId == null || m.NodeId == nodeId))
-                .OrderByDescending(m => m.Timestamp)
-                .FirstOrDefault();
-
-            if (latestAiMessage != null)
+            var message = session.GetObjectByKey<ChatMessage>(messageId);
+            if (message == null)
             {
-                latestAiMessage.MarkedAsSolution = true;
-                UpdateMessage(latestAiMessage);
+                throw new ArgumentException($"Message with ID '{messageId}' not found");
             }
 
-            // Generate a comprehensive solution response
-            var comprehensiveResponse = _comprehensiveSolutions[_random.Next(_comprehensiveSolutions.Count)];
-            
-            var solutionMessage = new ChatMessageDto
+            // Verify the message belongs to a node in a project owned by the user
+            if (message.Node?.Project == null || message.Node.Project.User == null || message.Node.Project.User.Oid != user.Oid)
             {
-                Id = Guid.NewGuid(),
-                Sender = "ai",
-                Message = comprehensiveResponse,
-                Timestamp = DateTime.UtcNow,
-                NodeId = nodeId,
-                MarkedAsSolution = true,
-                Liked = false,
-                Disliked = false
-            };
+                throw new UnauthorizedAccessException("Message does not belong to a project owned by the current user");
+            }
 
-            _messages.Add(solutionMessage);
-            return solutionMessage;
+            message.MarkedAsSolution = true;
+            message.Save();
+            return message;
         }
 
-        public void UpdateMessage(ChatMessageDto message)
+        /// <summary>
+        /// Update a chat message's like/dislike status
+        /// </summary>
+        public ChatMessage? UpdateMessageReaction(int messageId, string action, User user, UnitOfWork session)
         {
-            var existingMessage = _messages.FirstOrDefault(m => m.Id.Equals(message.Id));
-            if (existingMessage != null)
+            var message = session.GetObjectByKey<ChatMessage>(messageId);
+            if (message == null)
             {
-                var index = _messages.IndexOf(existingMessage);
-                _messages[index] = message;
-            }
-        }
-
-        public void DeleteMessage(Guid messageId)
-        {
-            var message = _messages.FirstOrDefault(m => m.Id.Equals(messageId));
-            if (message != null)
-            {
-                _messages.Remove(message);
-            }
-        }
-
-        public ChatResponseDto AddChatResponse(ChatResponseDto chatResponse)
-        {
-            chatResponse.Id = Guid.NewGuid();
-            chatResponse.Timestamp = DateTime.UtcNow;
-
-            // Update the message like/dislike status based on the action
-            var message = _messages.FirstOrDefault(m => m.Id.Equals(chatResponse.ChatMessageId));
-            if (message != null)
-            {
-                switch (chatResponse.Action?.ToLower())
-                {
-                    case "like":
-                        message.Liked = true;
-                        message.Disliked = false; // Can't be both liked and disliked
-                        break;
-                    case "dislike":
-                        message.Disliked = true;
-                        message.Liked = false; // Can't be both liked and disliked
-                        break;
-                }
+                throw new ArgumentException($"Message with ID '{messageId}' not found");
             }
 
-            return chatResponse;
-        }
-
-        public ChatMessageDto RegenerateResponse(Guid originalMessageId, string? nodeId)
-        {
-            // Find the original message
-            var originalMessage = _messages.FirstOrDefault(m => m.Id.Equals(originalMessageId));
-            if (originalMessage == null)
+            // Verify the message belongs to a node in a project owned by the user
+            if (message.Node?.Project == null || message.Node.Project.User == null || message.Node.Project.User.Oid != user.Oid)
             {
-                throw new ArgumentException("Original message not found");
+                throw new UnauthorizedAccessException("Message does not belong to a project owned by the current user");
             }
 
-            // Generate a new AI response with different content
-            var responseText = _aiResponses[_random.Next(_aiResponses.Count)];
-            
-            var newResponse = new ChatMessageDto
+            switch (action?.ToLower())
             {
-                Id = Guid.NewGuid(),
-                Sender = "ai",
-                Message = $"[Regenerated] {responseText}",
-                Timestamp = DateTime.UtcNow,
-                NodeId = nodeId ?? originalMessage.NodeId,
-                MarkedAsSolution = false,
-                Liked = false,
-                Disliked = false
-            };
+                case "like":
+                    message.Liked = !message.Liked;
+                    message.Disliked = false;
+                    break;
+                case "dislike":
+                    message.Disliked = !message.Disliked;
+                    message.Liked = false;
+                    break;
+            }
 
-            _messages.Add(newResponse);
-            return newResponse;
+            message.Save();
+            return message;
         }
     }
 }

@@ -148,22 +148,21 @@ export default {
 			const currentKey = nodeKey || 'default';
 
 			try {
-				// Try to load from API first, fallback to local data
+				// Only load from API if we have a nodeId
 				if (currentNodeId.value) {
-					const apiMessages = await chatApiService.getPersistedMessagesByNodeId(currentNodeId.value);
+					const apiMessages = await chatApiService.getMessagesByNodeId(currentNodeId.value);
 					chatData.messages = apiMessages.map(msg => ({
-						id: msg.oid,
-						type: msg.sender === 'user' ? 'user' : 'ai',
-						content: msg.message,
-						timestamp: msg.timestamp,
-						markedAsSolution: msg.markedAsSolution,
-						liked: msg.liked || false,
-						disliked: msg.disliked || false
+						id: msg.Id,
+						type: msg.Sender === 'user' ? 'user' : 'ai',
+						content: msg.Message,
+						timestamp: msg.Timestamp,
+						markedAsSolution: msg.MarkedAsSolution,
+						Liked: msg.Liked || false,
+						Disliked: msg.Disliked || false
 					}));
 				} else {
-					// Fallback to local data
-					const chatResult = await fetchData('chat', currentKey);
-					Object.assign(chatData, chatResult);
+					// No node selected, show default message
+					chatData.messages = [createDefaultAiMessage()];
 				}
 
 				if (!chatData.messages || chatData.messages.length === 0) {
@@ -175,15 +174,8 @@ export default {
 				}
 			} catch (error) {
 				console.error('Error loading chat data:', error);
-				// Load fallback data
-				const chatResult = await fetchData('chat', currentKey);
-				Object.assign(chatData, chatResult);
-				if (!chatData.messages || chatData.messages.length === 0) {
-					await resetChatMessages();
-				} else {
-					await nextTick();
-					scrollToBottom();
-				}
+				// Load default message on error
+				await resetChatMessages();
 			}
 		};
 
@@ -204,6 +196,13 @@ export default {
 		const sendMessage = async () => {
 			if (!newMessage.value.trim() || isLoading.value) return;
 
+			// Validate that we have a nodeId
+			if (!currentNodeId.value) {
+				console.error('Cannot send message: No node selected');
+				alert('Please select a node first');
+				return;
+			}
+
 			const userMessageContent = newMessage.value;
 			newMessage.value = '';
 			isLoading.value = true;
@@ -219,43 +218,34 @@ export default {
 				chatData.messages.push(userMessage);
 				scrollToBottom();
 
-				// Send to API and get AI response
+				// Send to API (will be queued to Redis for AI processing)
 				const response = await chatApiService.sendMessage({
 					content: userMessageContent,
 					nodeId: currentNodeId.value
 				});
 
-				// Add AI response to UI
-				if (response.aiResponse) {
-					const aiMessage = {
-						id: response.aiResponse.id,
-						type: 'ai',
-						content: response.aiResponse.message,
-						timestamp: response.aiResponse.timestamp,
-						markedAsSolution: response.aiResponse.markedAsSolution,
-						liked: response.aiResponse.liked || false,
-						disliked: response.aiResponse.disliked || false
-					};
-					chatData.messages.push(aiMessage);
-					scrollToBottom();
+				// Update the user message ID with the saved message ID
+				if (response.userMessage) {
+					userMessage.id = response.userMessage.Id;
 				}
+
+				// AI response will come through SignalR, not in HTTP response
+				console.log('Message sent and queued for AI processing:', response);
 
 			} catch (error) {
 				console.error('Error sending message:', error);
-				// Fallback to local simulation
-				setTimeout(() => {
-					const aiResponse = {
-						id: Date.now() + 1,
-						type: 'ai',
-						content: "I'm having trouble connecting to the server, but I'm processing your request locally...",
-						timestamp: new Date().toISOString(),
-						markedAsSolution: false,
-						liked: false,
-						disliked: false
-					};
-					chatData.messages.push(aiResponse);
-					scrollToBottom();
-				}, 1000);
+				// Show error to user
+				const errorMessage = {
+					id: Date.now() + 1,
+					type: 'ai',
+					content: "Sorry, I'm having trouble processing your request. Please try again later.",
+					timestamp: new Date().toISOString(),
+					markedAsSolution: false,
+					liked: false,
+					disliked: false
+				};
+				chatData.messages.push(errorMessage);
+				scrollToBottom();
 			} finally {
 				isLoading.value = false;
 			}
@@ -269,52 +259,18 @@ export default {
 
 			try {
 				// Mark the message as solution
+				await chatApiService.markAsSolution(message.id, currentNodeId.value);
+				
+				// Update UI to reflect the change
 				message.markedAsSolution = true;
 
-				// Get comprehensive solution from API
-				const solutionResponse = await chatApiService.markAsSolution(currentNodeId.value);
-
-				// Add comprehensive solution to chat
-				const comprehensiveMessage = {
-					id: solutionResponse.id,
-					type: 'ai',
-					content: solutionResponse.message,
-					timestamp: solutionResponse.timestamp,
-					markedAsSolution: true,
-					liked: false,
-					disliked: false
-				};
-				chatData.messages.push(comprehensiveMessage);
-				scrollToBottom();
-
-				// Call demo function from demo.js as specified in requirements
-				try {
-					// Import and call demo function - this needs to be dynamic
-					const { createDemoNodes } = await import('../rete/demo.js');
-					if (typeof createDemoNodes === 'function') {
-						// Get editor manager from global context or event bus
-						eventBus.emit('CALL_DEMO_FUNCTION', { action: 'createDemoNodes' });
-						console.log('Demo function called after marking solution');
-					}
-				} catch (demoError) {
-					console.error('Error calling demo function:', demoError);
-				}
+				console.log('Message marked as solution:', message.id);
 
 			} catch (error) {
 				console.error('Error marking as solution:', error);
-				// Fallback behavior
-				message.markedAsSolution = true;
-				const fallbackSolution = {
-					id: Date.now() + 1,
-					type: 'ai',
-					content: "Here's a comprehensive solution: I've analyzed your request and recommend a structured approach to address your needs. This includes implementing best practices, optimizing performance, and ensuring maintainability.",
-					timestamp: new Date().toISOString(),
-					markedAsSolution: true,
-					liked: false,
-					disliked: false
-				};
-				chatData.messages.push(fallbackSolution);
-				scrollToBottom();
+				// Revert UI change on error
+				message.markedAsSolution = false;
+				alert('Failed to mark message as solution. Please try again.');
 			} finally {
 				isLoading.value = false;
 			}
@@ -325,15 +281,13 @@ export default {
 			if (isLoading.value) return;
 
 			try {
-				await chatApiService.likeMessage(message.id);
-				// Update local state
-				message.liked = !message.liked;
-				message.disliked = false; // Can't be both liked and disliked
+				const result = await chatApiService.likeMessage(message.id);
+				// Update local state with server response
+				message.Liked = result.Liked;
+				message.Disliked = result.Disliked;
 			} catch (error) {
 				console.error('Error liking message:', error);
-				// Fallback: just update local state
-				message.liked = !message.liked;
-				message.disliked = false;
+				alert('Failed to like message. Please try again.');
 			}
 		};
 
@@ -342,56 +296,21 @@ export default {
 			if (isLoading.value) return;
 
 			try {
-				await chatApiService.dislikeMessage(message.id);
-				// Update local state
-				message.disliked = !message.disliked;
-				message.liked = false; // Can't be both liked and disliked
+				const result = await chatApiService.dislikeMessage(message.id);
+				// Update local state with server response
+				message.Liked = result.Liked;
+				message.Disliked = result.Disliked;
 			} catch (error) {
 				console.error('Error disliking message:', error);
-				// Fallback: just update local state
-				message.disliked = !message.disliked;
-				message.liked = false;
+				alert('Failed to dislike message. Please try again.');
 			}
 		};
 
-		// Regenerate message handler
+		// Regenerate message handler (not implemented - will use Redis queue)
 		const regenerateMessage = async (message) => {
 			if (isLoading.value) return;
 
-			isLoading.value = true;
-
-			try {
-				const newMessage = await chatApiService.regenerateMessage(message.id);
-
-				// Add the new regenerated message to the chat
-				const regeneratedMessage = {
-					id: newMessage.id,
-					type: 'ai',
-					content: newMessage.message,
-					timestamp: newMessage.timestamp,
-					markedAsSolution: false,
-					liked: false,
-					disliked: false
-				};
-				chatData.messages.push(regeneratedMessage);
-				scrollToBottom();
-			} catch (error) {
-				console.error('Error regenerating message:', error);
-				// Fallback: create a local regenerated message
-				const fallbackRegenerated = {
-					id: Date.now() + Math.random(),
-					type: 'ai',
-					content: "[Regenerated] I apologize for the connection issue. Let me provide an alternative response: " + message.content.substring(0, 50) + "... (regenerated locally)",
-					timestamp: new Date().toISOString(),
-					markedAsSolution: false,
-					liked: false,
-					disliked: false
-				};
-				chatData.messages.push(fallbackRegenerated);
-				scrollToBottom();
-			} finally {
-				isLoading.value = false;
-			}
+			alert('Message regeneration is not yet implemented. This feature will queue a new AI request.');
 		};
 
 		// Copy message content to clipboard with transient UI feedback

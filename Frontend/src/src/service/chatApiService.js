@@ -5,6 +5,7 @@ class ChatApiService {
     constructor() {
         this.baseURL = `${API_BASE_URL}/chat`;
         this.api = null;
+        this.connectionId = null;
     }
 
     /**
@@ -16,22 +17,40 @@ class ChatApiService {
     }
 
     /**
-     * Send a message to the chat API and get AI response
+     * Set the SignalR connection ID for chat requests
+     * @param {string} connectionId - The SignalR connection ID
+     */
+    setConnectionId(connectionId) {
+        this.connectionId = connectionId;
+    }
+
+    /**
+     * Send a message to the chat API and queue for AI processing
      * @param {Object} message - Message object with content, nodeId, etc.
-     * @returns {Promise<Object>} API response with AI message
+     * @returns {Promise<Object>} API response
      */
     async sendMessage(message) {
         try {
+            if (!message.nodeId) {
+                throw new Error('nodeId is required for sending messages');
+            }
+
             const messageDto = {
-                sender: 'user',
-                message: message.content,
-                nodeId: message.nodeId || null,
-                markedAsSolution: false,
-                liked: false,
-                disliked: false
+                Sender: 'user',
+                Message: message.content,
+                NodeId: message.nodeId,
+                MarkedAsSolution: false,
+                Liked: false,
+                Disliked: false
             };
 
-            const response = await this.api.post(`${this.baseURL}/send`, messageDto);
+            // Add SignalR connectionId to headers if available
+            const headers = {};
+            if (this.connectionId) {
+                headers['X-SignalR-ConnectionId'] = this.connectionId;
+            }
+
+            const response = await this.api.post(`${this.baseURL}/send`, messageDto, { headers });
             return response;
         } catch (error) {
             console.error('Failed to send message:', error);
@@ -40,14 +59,20 @@ class ChatApiService {
     }
 
     /**
-     * Mark the latest message as solution and get comprehensive AI response
+     * Mark a message as solution
+     * @param {string} messageId - Message ID to mark as solution
      * @param {string} nodeId - Optional node ID context
-     * @returns {Promise<Object>} API response with comprehensive solution
+     * @returns {Promise<Object>} API response
      */
-    async markAsSolution(nodeId = null) {
+    async markAsSolution(messageId, nodeId = null) {
         try {
+            if (!messageId) {
+                throw new Error('messageId is required for marking as solution');
+            }
+
             const response = await this.api.post(`${this.baseURL}/mark-solution`, {
-                nodeId: nodeId
+                MessageId: messageId,
+                NodeId: nodeId
             });
             return response;
         } catch (error) {
@@ -57,12 +82,16 @@ class ChatApiService {
     }
 
     /**
-     * Get chat messages for a specific node (from in-memory chat service)
+     * Get chat messages for a specific node (from database)
      * @param {string} nodeId - Node ID
      * @returns {Promise<Array>} Array of chat messages
      */
     async getMessagesByNodeId(nodeId) {
         try {
+            if (!nodeId) {
+                throw new Error('nodeId is required');
+            }
+
             const response = await this.api.get(`${this.baseURL}/node/${nodeId}`);
             return response;
         } catch (error) {
@@ -87,28 +116,18 @@ class ChatApiService {
     }
 
     /**
-     * Get all chat messages
-     * @returns {Promise<Array>} Array of all chat messages
-     */
-    async getAllMessages() {
-        try {
-            const response = await this.api.get(this.baseURL);
-            return response;
-        } catch (error) {
-            console.error('Failed to get all messages:', error);
-            throw error;
-        }
-    }
-
-    /**
      * Like a chat message
      * @param {string} messageId - Message ID to like
      * @returns {Promise<Object>} API response
      */
     async likeMessage(messageId) {
         try {
+            if (!messageId) {
+                throw new Error('messageId is required');
+            }
+
             const response = await this.api.post(`${this.baseURL}/like`, {
-                chatMessageId: messageId
+                ChatMessageId: messageId
             });
             return response;
         } catch (error) {
@@ -124,8 +143,12 @@ class ChatApiService {
      */
     async dislikeMessage(messageId) {
         try {
+            if (!messageId) {
+                throw new Error('messageId is required');
+            }
+
             const response = await this.api.post(`${this.baseURL}/dislike`, {
-                chatMessageId: messageId
+                ChatMessageId: messageId
             });
             return response;
         } catch (error) {
@@ -133,23 +156,7 @@ class ChatApiService {
             throw error;
         }
     }
-
-    /**
-     * Regenerate a chat message
-     * @param {string} messageId - Original message ID to regenerate
-     * @returns {Promise<Object>} API response with new message
-     */
-    async regenerateMessage(messageId) {
-        try {
-            const response = await this.api.post(`${this.baseURL}/regenerate`, {
-                chatMessageId: messageId
-            });
-            return response;
-        } catch (error) {
-            console.error('Failed to regenerate message:', error);
-            throw error;
-        }
-    }
+}
 }
 
 export default new ChatApiService();
