@@ -177,7 +177,7 @@ namespace NodPT.Data.Services
         {
             if (node == null)
             {
-                throw new ArgumentException("Node not found");
+                throw new ArgumentNullException(nameof(node), "Node not found");
             }
 
             if (node.Project == null || node.Project.User == null || node.Project.User.Oid != user.Oid)

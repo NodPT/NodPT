@@ -28,10 +28,12 @@ namespace NodPT.API.Controllers
 
         /// <summary>
         /// Convert integer Oid to deterministic Guid using MD5 hash
+        /// Note: MD5 is used here only for deterministic ID conversion, not for security purposes
         /// </summary>
         private static Guid ConvertOidToGuid(int oid)
         {
             // Create a deterministic Guid from the integer Oid using MD5
+            // MD5 is sufficient for this use case as we only need deterministic mapping, not cryptographic security
             using (var md5 = MD5.Create())
             {
                 byte[] oidBytes = BitConverter.GetBytes(oid);
