@@ -133,12 +133,32 @@ namespace NodPT.Data.Services
             switch (action?.ToLower())
             {
                 case "like":
-                    message.Liked = !message.Liked;
-                    message.Disliked = false;
+                    if (message.Liked)
+                    {
+                        // If already liked, remove the like (unlike)
+                        message.Liked = false;
+                        // Do not touch Disliked
+                    }
+                    else
+                    {
+                        // If disliked or neutral, set like and clear dislike
+                        message.Liked = true;
+                        message.Disliked = false;
+                    }
                     break;
                 case "dislike":
-                    message.Disliked = !message.Disliked;
-                    message.Liked = false;
+                    if (message.Disliked)
+                    {
+                        // If already disliked, remove the dislike (undislike)
+                        message.Disliked = false;
+                        // Do not touch Liked
+                    }
+                    else
+                    {
+                        // If liked or neutral, set dislike and clear like
+                        message.Disliked = true;
+                        message.Liked = false;
+                    }
                     break;
             }
 
