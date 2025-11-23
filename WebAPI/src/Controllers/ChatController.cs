@@ -6,6 +6,8 @@ using NodPT.API.Services;
 using System.Text.Json;
 using NodPT.Data.Models;
 using DevExpress.Xpo;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace NodPT.API.Controllers
 {
@@ -22,6 +24,20 @@ namespace NodPT.API.Controllers
         {
             _redisService = redisService;
             _logger = logger;
+        }
+
+        /// <summary>
+        /// Convert integer Oid to deterministic Guid using MD5 hash
+        /// </summary>
+        private static Guid ConvertOidToGuid(int oid)
+        {
+            // Create a deterministic Guid from the integer Oid using MD5
+            using (var md5 = MD5.Create())
+            {
+                byte[] oidBytes = BitConverter.GetBytes(oid);
+                byte[] hash = md5.ComputeHash(oidBytes);
+                return new Guid(hash);
+            }
         }
 
         [HttpGet]
@@ -44,23 +60,16 @@ namespace NodPT.API.Controllers
                 var messages = ChatService.GetMessagesByNodeIdFromDb(nodeId, user, session);
 
                 // Convert to DTOs
-                var messageDtos = messages.Select(m => 
+                var messageDtos = messages.Select(m => new ChatMessageDto
                 {
-                    // Convert int Oid to Guid deterministically
-                    byte[] guidBytes = new byte[16];
-                    BitConverter.GetBytes(m.Oid).CopyTo(guidBytes, 0);
-                    
-                    return new ChatMessageDto
-                    {
-                        Id = new Guid(guidBytes),
-                        Sender = m.Sender,
-                        Message = m.Message,
-                        Timestamp = m.Timestamp,
-                        NodeId = m.Node?.Id,
-                        MarkedAsSolution = m.MarkedAsSolution,
-                        Liked = m.Liked,
-                        Disliked = m.Disliked
-                    };
+                    Id = ConvertOidToGuid(m.Oid),
+                    Sender = m.Sender,
+                    Message = m.Message,
+                    Timestamp = m.Timestamp,
+                    NodeId = m.Node?.Id,
+                    MarkedAsSolution = m.MarkedAsSolution,
+                    Liked = m.Liked,
+                    Disliked = m.Disliked
                 }).ToList();
 
                 return Ok(messageDtos);

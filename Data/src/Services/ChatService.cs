@@ -171,6 +171,22 @@ namespace NodPT.Data.Services
         }
 
         /// <summary>
+        /// Validate node ownership - ensures the node belongs to a project owned by the user
+        /// </summary>
+        private static void ValidateNodeOwnership(Node node, User user)
+        {
+            if (node == null)
+            {
+                throw new ArgumentException("Node not found");
+            }
+
+            if (node.Project == null || node.Project.User == null || node.Project.User.Oid != user.Oid)
+            {
+                throw new UnauthorizedAccessException("Node does not belong to a project owned by the current user");
+            }
+        }
+
+        /// <summary>
         /// Get chat messages from database by nodeId, ensuring the node belongs to a project owned by the user
         /// </summary>
         /// <param name="nodeId">The node ID</param>
@@ -181,16 +197,9 @@ namespace NodPT.Data.Services
         {
             // Find the node
             var node = session.FindObject<Node>(new BinaryOperator("Id", nodeId));
-            if (node == null)
-            {
-                throw new ArgumentException("Node not found");
-            }
-
-            // Validate that the node belongs to a project owned by the user
-            if (node.Project == null || node.Project.User == null || node.Project.User.Oid != user.Oid)
-            {
-                throw new UnauthorizedAccessException("Node does not belong to a project owned by the current user");
-            }
+            
+            // Validate node ownership
+            ValidateNodeOwnership(node, user);
 
             // Get all chat messages for this node
             var messages = new XPCollection<ChatMessage>(session, 
@@ -212,16 +221,9 @@ namespace NodPT.Data.Services
         {
             // Find the node
             var node = session.FindObject<Node>(new BinaryOperator("Id", nodeId));
-            if (node == null)
-            {
-                throw new ArgumentException("Node not found");
-            }
-
-            // Validate that the node belongs to a project owned by the user
-            if (node.Project == null || node.Project.User == null || node.Project.User.Oid != user.Oid)
-            {
-                throw new UnauthorizedAccessException("Node does not belong to a project owned by the current user");
-            }
+            
+            // Validate node ownership
+            ValidateNodeOwnership(node, user);
 
             // Create and save the chat message
             var chatMessage = new ChatMessage(session)
