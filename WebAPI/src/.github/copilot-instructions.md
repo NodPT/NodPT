@@ -265,3 +265,109 @@ public class LogsController : ControllerBase
 ```
 
 Access logs at: `GET /api/logs`
+
+---
+
+### 🔑 Authentication & User Management
+
+**IMPORTANT**: Always use `UserService.GetUser(User, unitOfWork)` to get the current user from Context.User. **NEVER** require firebaseUid from frontend clients. The user's identity is extracted from the JWT token in the Authorization header.
+
+### Getting Current User
+
+```csharp
+// Get current user from Context.User (ClaimsPrincipal)
+var user = UserService.GetUser(User, unitOfWork);
+
+if (user == null)
+{
+    return Unauthorized(new { error = "User is banned, not approved, or not found" });
+}
+
+// Use the user object for all operations
+user.Projects.Add(newProject);
+await unitOfWork.CommitAsync();
+```
+
+### Service Layer Pattern
+
+**RECOMMENDED**: Controllers should pass `User` (ClaimsPrincipal) to service constructors. Services will validate users at construction time, eliminating the need for validation in controllers:
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class ProjectsController : ControllerBase
+{
+    private readonly UnitOfWork unitOfWork;
+    
+    public ProjectsController(UnitOfWork _unitOfWork)
+    {
+        this.unitOfWork = _unitOfWork;
+    }
+    
+    [HttpPost]
+    public IActionResult CreateProject([FromBody] ProjectDto projectDto)
+    {
+        try
+        {
+            // Service validates user in constructor
+            var service = new ProjectService(unitOfWork, User);
+            var project = service.CreateProject(projectDto);
+            return Ok(project);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            LogService.LogError(ex.Message, ex.StackTrace, User?.Identity?.Name, "ProjectsController", "CreateProject");
+            return StatusCode(500, new { error = "An error occurred." });
+        }
+    }
+    
+    [HttpGet]
+    public IActionResult GetProjects()
+    {
+        try
+        {
+            // Service validates user and returns their projects
+            var service = new ProjectService(unitOfWork, User);
+            var projects = service.GetUserProjects();
+            return Ok(projects);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { error = ex.Message });
+        }
+    }
+}
+```
+
+### No FirebaseUid from Frontend
+
+Controllers should **NOT** accept firebaseUid as a parameter from the frontend. Instead, extract it from Context.User:
+
+```csharp
+// ❌ BAD - Don't do this
+[HttpGet("user/{firebaseUid}")]
+public IActionResult GetProjectsByUser(string firebaseUid)
+{
+    // This allows users to access other users' data
+}
+
+// ✅ GOOD - Do this instead
+[HttpGet]
+public IActionResult GetProjects()
+{
+    try
+    {
+        var service = new ProjectService(unitOfWork, User);
+        var projects = service.GetUserProjects();
+        return Ok(projects);
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return Unauthorized(new { error = "User not authorized" });
+    }
+}
+```

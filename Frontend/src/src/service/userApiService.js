@@ -16,14 +16,15 @@ class UserApiService {
 	}
 
 	/**
-	 * Update user profile
-	 * @param {string} firebaseUid - Firebase UID of the user
+	 * Update user profile for the authenticated user
+	 * No need to pass firebaseUid - backend extracts it from JWT token
 	 * @param {Object} profileData - Profile data to update (DisplayName, PhotoUrl)
 	 * @returns {Promise<Object>} API response
 	 */
-	async updateProfile(firebaseUid, profileData) {
+	async updateProfile(profileData) {
 		try {
-			const response = await this.api.put(`${this.baseURL}/${firebaseUid}`, profileData);
+			// Backend will use the authenticated user from JWT token
+			const response = await this.api.put(`${this.baseURL}/me`, profileData);
 			return response;
 		} catch (error) {
 			console.error('Failed to update profile:', error);
