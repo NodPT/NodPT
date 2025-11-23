@@ -65,6 +65,7 @@
 import { ref, reactive, inject, onMounted, nextTick, onBeforeUnmount } from 'vue';
 import { eventBus, listenEvent, EVENT_TYPES } from '../rete/eventBus.js';
 import chatApiService from '../service/chatApiService.js';
+import signalRService from '../service/signalRService.js';
 
 export default {
 	name: 'Chat',
@@ -219,25 +220,66 @@ export default {
 				chatData.messages.push(userMessage);
 				scrollToBottom();
 
-				// Send to API and get AI response
-				const response = await chatApiService.sendMessage({
-					content: userMessageContent,
-					nodeId: currentNodeId.value
-				});
+				// Get SignalR connection ID
+				const connectionId = signalRService.getConnectionId();
+				
+				// If we have a current node ID, submit to the backend for AI processing
+				if (currentNodeId.value) {
+					try {
+						// Submit chat message with nodeId for backend processing
+						await chatApiService.submitChatMessage({
+							nodeId: currentNodeId.value,
+							message: userMessageContent,
+							connectionId: connectionId
+						});
+						
+						// The AI response will be received via SignalR
+						// For now, we just acknowledge the submission
+						console.log('Chat message submitted for AI processing');
+					} catch (submitError) {
+						console.error('Error submitting chat for AI processing:', submitError);
+						// Fallback to old behavior if submit fails
+						const response = await chatApiService.sendMessage({
+							content: userMessageContent,
+							nodeId: currentNodeId.value
+						});
 
-				// Add AI response to UI
-				if (response.aiResponse) {
-					const aiMessage = {
-						id: response.aiResponse.id,
-						type: 'ai',
-						content: response.aiResponse.message,
-						timestamp: response.aiResponse.timestamp,
-						markedAsSolution: response.aiResponse.markedAsSolution,
-						liked: response.aiResponse.liked || false,
-						disliked: response.aiResponse.disliked || false
-					};
-					chatData.messages.push(aiMessage);
-					scrollToBottom();
+						// Add AI response to UI
+						if (response.aiResponse) {
+							const aiMessage = {
+								id: response.aiResponse.id,
+								type: 'ai',
+								content: response.aiResponse.message,
+								timestamp: response.aiResponse.timestamp,
+								markedAsSolution: response.aiResponse.markedAsSolution,
+								liked: response.aiResponse.liked || false,
+								disliked: response.aiResponse.disliked || false
+							};
+							chatData.messages.push(aiMessage);
+							scrollToBottom();
+						}
+					}
+				} else {
+					// No node context, use old send behavior
+					const response = await chatApiService.sendMessage({
+						content: userMessageContent,
+						nodeId: currentNodeId.value
+					});
+
+					// Add AI response to UI
+					if (response.aiResponse) {
+						const aiMessage = {
+							id: response.aiResponse.id,
+							type: 'ai',
+							content: response.aiResponse.message,
+							timestamp: response.aiResponse.timestamp,
+							markedAsSolution: response.aiResponse.markedAsSolution,
+							liked: response.aiResponse.liked || false,
+							disliked: response.aiResponse.disliked || false
+						};
+						chatData.messages.push(aiMessage);
+						scrollToBottom();
+					}
 				}
 
 			} catch (error) {

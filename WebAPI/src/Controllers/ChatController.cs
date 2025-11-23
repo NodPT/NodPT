@@ -28,8 +28,52 @@ namespace NodPT.API.Controllers
         public IActionResult GetMessages() => Ok(_chatService.GetMessages());
 
         [HttpGet("node/{nodeId}")]
-        public IActionResult GetMessagesByNodeId(string nodeId) =>
-            Ok(_chatService.GetMessagesByNodeId(nodeId));
+        public IActionResult GetMessagesByNodeId(string nodeId)
+        {
+            try
+            {
+                using var session = new UnitOfWork();
+                var user = UserService.GetUser(User, session);
+                
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not found or not authorized" });
+                }
+
+                // Get messages from database with validation
+                var messages = ChatService.GetMessagesByNodeIdFromDb(nodeId, user, session);
+
+                // Convert to DTOs
+                var messageDtos = messages.Select(m => new ChatMessageDto
+                {
+                    Id = new Guid(m.Oid, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+                    Sender = m.Sender,
+                    Message = m.Message,
+                    Timestamp = m.Timestamp,
+                    NodeId = m.Node?.Id,
+                    MarkedAsSolution = m.MarkedAsSolution,
+                    Liked = m.Liked,
+                    Disliked = m.Disliked
+                }).ToList();
+
+                return Ok(messageDtos);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogError(ex, "ArgumentException getting messages by node ID");
+                return NotFound(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogError(ex, "UnauthorizedAccessException getting messages by node ID");
+                return Unauthorized(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting messages by node ID");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
 
         [HttpPost]
         public IActionResult PostMessage([FromBody] ChatMessageDto message)
@@ -125,62 +169,100 @@ namespace NodPT.API.Controllers
 
             try
             {
+                using var session = new UnitOfWork();
+                var user = UserService.GetUser(User, session);
+                
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not found or not authorized" });
+                }
+
+                // Validate nodeId is provided
+                if (string.IsNullOrEmpty(dto.NodeLevel))
+                {
+                    return BadRequest(new { error = "NodeId is required" });
+                }
+
+                // Find the node and validate ownership
+                var node = session.FindObject<Node>(new DevExpress.Data.Filtering.BinaryOperator("Id", dto.NodeLevel));
+                
+                if (node == null)
+                {
+                    return NotFound(new { error = "Node not found" });
+                }
+
+                // Validate that the node belongs to a project owned by the user
+                if (node.Project == null || node.Project.User == null || node.Project.User.Oid != user.Oid)
+                {
+                    return Unauthorized(new { error = "Node does not belong to a project owned by the current user" });
+                }
+
+                // Get the project ID
+                var projectId = node.Project.Oid.ToString();
+
                 // Determine model name from node or template
                 string? modelName = null;
-                if (!string.IsNullOrEmpty(dto.NodeLevel))
+                // First check if node has a direct AIModel
+                if (node.AIModel != null && !string.IsNullOrEmpty(node.AIModel.ModelIdentifier))
                 {
-                    using var session = new Session();
-                    var node = session.FindObject<Node>(new DevExpress.Data.Filtering.BinaryOperator("Id", dto.NodeLevel));
-                    
-                    if (node != null)
-                    {
-                        // First check if node has a direct AIModel
-                        if (node.AIModel != null && !string.IsNullOrEmpty(node.AIModel.ModelIdentifier))
-                        {
-                            modelName = node.AIModel.ModelIdentifier;
-                            _logger.LogInformation($"Using model from node's AIModel: {modelName}");
-                        }
-                        // Otherwise, check for matching AIModel from template
-                        else if (node.MatchingAIModel != null && !string.IsNullOrEmpty(node.MatchingAIModel.ModelIdentifier))
-                        {
-                            modelName = node.MatchingAIModel.ModelIdentifier;
-                            _logger.LogInformation($"Using model from template's matching AIModel: {modelName}");
-                        }
-                    }
+                    modelName = node.AIModel.ModelIdentifier;
+                    _logger.LogInformation($"Using model from node's AIModel: {modelName}");
+                }
+                // Otherwise, check for matching AIModel from template
+                else if (node.MatchingAIModel != null && !string.IsNullOrEmpty(node.MatchingAIModel.ModelIdentifier))
+                {
+                    modelName = node.MatchingAIModel.ModelIdentifier;
+                    _logger.LogInformation($"Using model from template's matching AIModel: {modelName}");
                 }
 
                 // Set the model in the DTO
                 dto.Model = modelName;
+                dto.ProjectId = projectId;
+                dto.UserId = user.FirebaseUid;
 
-                // Save to DB (using in-memory ChatService for now)
-                var chatMessage = new ChatMessageDto
+                // Save user message to database
+                var chatMessage = ChatService.SaveMessageToDb(dto.NodeLevel, dto.Message ?? "", "user", user, session);
+
+                // Prepare data for Redis with all required fields for SignalR
+                var redisData = new
                 {
-                    Id = Guid.NewGuid(),
-                    Sender = "user",
-                    Message = dto.Message,
-                    Timestamp = DateTime.UtcNow,
+                    FirebaseUid = user.FirebaseUid,
+                    ConnectionId = dto.ConnectionId,
                     NodeId = dto.NodeLevel,
-                    MarkedAsSolution = false
+                    ProjectId = projectId,
+                    Message = dto.Message,
+                    Model = modelName,
+                    ChatMessageId = chatMessage.Oid.ToString(),
+                    Timestamp = DateTime.UtcNow
                 };
-                _chatService.AddMessage(chatMessage);
 
                 // Push to Redis queue for executor
-                var jobData = JsonSerializer.Serialize(dto);
+                var jobData = JsonSerializer.Serialize(redisData);
                 await _redisService.ListRightPushAsync("chat.jobs", jobData);
 
-                _logger.LogInformation($"Chat message queued for processing: UserId={dto.UserId}, ConnectionId={dto.ConnectionId}, Model={modelName}");
+                _logger.LogInformation($"Chat message queued for processing: UserId={user.FirebaseUid}, ConnectionId={dto.ConnectionId}, NodeId={dto.NodeLevel}, ProjectId={projectId}, Model={modelName}");
 
-                return Ok(new { status = "queued", messageId = chatMessage.Id });
+                return Ok(new { status = "queued", messageId = chatMessage.Oid.ToString(), projectId = projectId });
             }
             catch (ArgumentNullException ex)
             {
                 _logger.LogError(ex, "ArgumentNullException submitting chat message");
                 return BadRequest(new { error = "Invalid argument: " + ex.ParamName });
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogError(ex, "UnauthorizedAccessException submitting chat message");
+                return Unauthorized(new { error = ex.Message });
+            }
             catch (InvalidOperationException ex)
             {
                 _logger.LogError(ex, "InvalidOperationException submitting chat message");
                 return StatusCode(500, new { error = "Operation failed: " + ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error submitting chat message");
+                return StatusCode(500, new { error = "Internal server error" });
             }
         }
     }

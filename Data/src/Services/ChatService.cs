@@ -1,4 +1,7 @@
 using NodPT.Data.DTOs;
+using NodPT.Data.Models;
+using DevExpress.Xpo;
+using DevExpress.Data.Filtering;
 
 namespace NodPT.Data.Services
 {
@@ -165,6 +168,78 @@ namespace NodPT.Data.Services
 
             _messages.Add(newResponse);
             return newResponse;
+        }
+
+        /// <summary>
+        /// Get chat messages from database by nodeId, ensuring the node belongs to a project owned by the user
+        /// </summary>
+        /// <param name="nodeId">The node ID</param>
+        /// <param name="user">The authenticated user</param>
+        /// <param name="session">The database session</param>
+        /// <returns>List of chat messages for the node</returns>
+        public static List<ChatMessage> GetMessagesByNodeIdFromDb(string nodeId, User user, UnitOfWork session)
+        {
+            // Find the node
+            var node = session.FindObject<Node>(new BinaryOperator("Id", nodeId));
+            if (node == null)
+            {
+                throw new ArgumentException("Node not found");
+            }
+
+            // Validate that the node belongs to a project owned by the user
+            if (node.Project == null || node.Project.User == null || node.Project.User.Oid != user.Oid)
+            {
+                throw new UnauthorizedAccessException("Node does not belong to a project owned by the current user");
+            }
+
+            // Get all chat messages for this node
+            var messages = new XPCollection<ChatMessage>(session, 
+                new BinaryOperator("Node", node));
+
+            return messages.OrderBy(m => m.Timestamp).ToList();
+        }
+
+        /// <summary>
+        /// Save a chat message to the database
+        /// </summary>
+        /// <param name="nodeId">The node ID</param>
+        /// <param name="message">The message content</param>
+        /// <param name="sender">The sender (user or ai)</param>
+        /// <param name="user">The authenticated user</param>
+        /// <param name="session">The database session</param>
+        /// <returns>The saved chat message</returns>
+        public static ChatMessage SaveMessageToDb(string nodeId, string message, string sender, User user, UnitOfWork session)
+        {
+            // Find the node
+            var node = session.FindObject<Node>(new BinaryOperator("Id", nodeId));
+            if (node == null)
+            {
+                throw new ArgumentException("Node not found");
+            }
+
+            // Validate that the node belongs to a project owned by the user
+            if (node.Project == null || node.Project.User == null || node.Project.User.Oid != user.Oid)
+            {
+                throw new UnauthorizedAccessException("Node does not belong to a project owned by the current user");
+            }
+
+            // Create and save the chat message
+            var chatMessage = new ChatMessage(session)
+            {
+                Sender = sender,
+                Message = message,
+                Timestamp = DateTime.UtcNow,
+                Node = node,
+                User = user,
+                MarkedAsSolution = false,
+                Liked = false,
+                Disliked = false
+            };
+
+            chatMessage.Save();
+            session.CommitChanges();
+
+            return chatMessage;
         }
     }
 }

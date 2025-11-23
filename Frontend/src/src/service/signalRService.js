@@ -300,6 +300,17 @@ class SignalRService {
   }
 
   /**
+   * Get SignalR connection ID
+   * @returns {string|null} Connection ID or null if not connected
+   */
+  getConnectionId() {
+    if (this.connection && this.connection.connectionId) {
+      return this.connection.connectionId;
+    }
+    return null;
+  }
+
+  /**
    * Add a listener for connection status changes
    * @param {Function} callback - Callback function
    * @returns {Function} Cleanup function

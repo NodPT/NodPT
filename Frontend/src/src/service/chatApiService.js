@@ -150,6 +150,28 @@ class ChatApiService {
             throw error;
         }
     }
+
+    /**
+     * Submit a chat message to the backend for AI processing
+     * @param {Object} submitData - Data object with nodeId, message, connectionId, etc.
+     * @returns {Promise<Object>} API response with status and messageId
+     */
+    async submitChatMessage(submitData) {
+        try {
+            const response = await this.api.post(`${this.baseURL}/submit`, {
+                NodeLevel: submitData.nodeId,
+                Message: submitData.message,
+                ConnectionId: submitData.connectionId,
+                UserId: submitData.userId,
+                ProjectId: submitData.projectId,
+                Model: submitData.model
+            });
+            return response;
+        } catch (error) {
+            console.error('Failed to submit chat message:', error);
+            throw error;
+        }
+    }
 }
 
 export default new ChatApiService();
