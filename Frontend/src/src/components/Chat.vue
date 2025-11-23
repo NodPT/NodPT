@@ -3,41 +3,44 @@
 		<div class="chat-messages" ref="chatMessages">
 			<div v-for="message in chatData.messages" :key="message.id"
 				:class="['message', message.type === 'ai' ? 'ai-message' : 'user-message']">
-				<div class="message-content">{{ message.content }}</div>
-				<!-- Copy button available for both AI and user messages -->
+				<div class="message-content" v-html="renderMarkdown(message.content)"></div>
+				<!-- Copy button available for user messages -->
 				<div v-if="message.type !== 'ai'"
 					class="message-controls d-flex justify-content-start align-items-center mt-1">
 					<button @click="copyMessage(message)"
-						:class="['btn', 'btn-sm btn-light', message._copied ? 'btn-success shadow-none' : 'btn-secondary shadow-none', 'me-1']"
+						class="action-btn"
 						:disabled="isLoading" :title="message._copied ? 'Copied' : 'Copy to clipboard'">
-						<i :class="message._copied ? 'bi bi-check-lg' : 'bi bi-clipboard'"></i>
+						<i :class="['bi', message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold']"></i>
 					</button>
 				</div>
 				<div class="message-actions" v-if="message.type === 'ai'">
 					<!-- Chat response buttons -->
 					<div class="chat-response-buttons">
-						<button @click="regenerateMessage(message)" class="btn btn-sm  me-1 shadow-none"
-							:disabled="isLoading" title="Regenerate response">
-							<i class="bi bi-arrow-clockwise"></i>
-						</button>
 						<button @click="likeMessage(message)"
-							:class="['btn', 'btn-sm', message.liked ? 'btn-success shadow-none' : 'shadow-none', 'me-1']"
+							class="action-btn"
 							:disabled="isLoading" title="Like this response">
-							<i class="bi bi-hand-thumbs-up"></i>
+							<i :class="['bi', 'bi-hand-thumbs-up', 'fw-bold', message.Liked ? 'text-success' : '']"></i>
 						</button>
 						<button @click="dislikeMessage(message)"
-							:class="['btn', 'btn-sm', message.disliked ? 'btn-danger shadow-none' : 'shadow-none', 'me-1']"
+							class="action-btn"
 							:disabled="isLoading" title="Dislike this response">
-							<i class="bi bi-hand-thumbs-down"></i>
+							<i :class="['bi', 'bi-hand-thumbs-down', 'fw-bold', message.Disliked ? 'text-danger' : '']"></i>
+						</button>
+						<button @click="copyMessage(message)"
+							class="action-btn"
+							:disabled="isLoading" :title="message._copied ? 'Copied' : 'Copy to clipboard'">
+							<i :class="['bi', message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold']"></i>
 						</button>
 					</div>
-					<!-- Mark as Solution button -->
-					<button v-if="!message.markedAsSolution" @click="markAsSolution(message)"
-						class="btn btn-sm  ms-2 shadow-none" :disabled="isLoading" title="Mark as Solution">
-						<i class="bi bi-check2-square"></i>
+					<!-- Build Solution button - shown when message content contains solution=true -->
+					<button v-if="hasSolution(message) && !message.markedAsSolution" @click="buildSolution(message)"
+						class="action-btn ms-2" :disabled="isLoading" title="Build Solution">
+						<i class="bi bi-tools fw-bold"></i>
+						<span class="ms-1">Build Solution</span>
 					</button>
-					<span v-else class="badge bg-success fs-bold ms-2">
-						<i class="bi bi-check2-square me-1"></i>
+					<span v-if="message.markedAsSolution" class="badge bg-success ms-2">
+						<i class="bi bi-check2-square me-1 fw-bold"></i>
+						<span>Solution</span>
 					</span>
 				</div>
 				<div class="message-time">
@@ -45,16 +48,20 @@
 				</div>
 			</div>
 		</div>
-		<div class="chat-input fixed-bottom">
-			<div class="input-group">
-				<input v-model="newMessage" @keyup.enter="sendMessage" type="text" class="form-control"
-					placeholder="Type your message..." :disabled="isLoading" />
-				<button @click="sendMessage" class="btn btn-primary shadow-none" :disabled="isLoading">
-					<span v-if="isLoading" class="spinner-border spinner-border-sm me-1"></span>
-					Send
-				</button>
-				<button @click="triggerStartRequest" class="btn btn-success ms-2 shadow-none" title="Start AI Request">
-					<i class="bi bi-rocket-fill"></i>
+		<div class="chat-input-container">
+			<div class="chat-input-wrapper">
+				<textarea 
+					v-model="newMessage" 
+					@keydown.enter.exact="handleEnter"
+					ref="messageTextarea"
+					class="chat-textarea form-control"
+					placeholder="Type your message... (Shift+Enter for new line)"
+					:disabled="isLoading"
+					rows="1"
+				></textarea>
+				<button @click="sendMessage" class="btn btn-primary send-btn" :disabled="isSendDisabled">
+					<span v-if="isLoading" class="spinner-border spinner-border-sm"></span>
+					<i v-else class="bi bi-send fw-bold"></i>
 				</button>
 			</div>
 		</div>
@@ -62,9 +69,11 @@
 </template>
 
 <script>
-import { ref, reactive, inject, onMounted, nextTick, onBeforeUnmount } from 'vue';
+import { ref, reactive, inject, onMounted, nextTick, onBeforeUnmount, watch, computed } from 'vue';
 import { eventBus, listenEvent, EVENT_TYPES } from '../rete/eventBus.js';
 import chatApiService from '../service/chatApiService.js';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 export default {
 	name: 'Chat',
@@ -78,10 +87,54 @@ export default {
 		const newMessage = ref('');
 		const isLoading = ref(false);
 
+		// Computed properties
+		const isSendDisabled = computed(() => isLoading.value || !newMessage.value.trim());
+
 		// Refs for DOM elements
 		const chatMessages = ref(null);
+		const messageTextarea = ref(null);
 
 		const eventListeners = [];
+
+		// Constants
+		const MAX_TEXTAREA_HEIGHT = 150; // pixels - matches CSS --chat-input-max-height
+
+		// Configure marked for markdown rendering with security options
+		marked.setOptions({
+			breaks: true,
+			gfm: true,
+			headerIds: false,
+			mangle: false,
+		});
+
+		// Render markdown content with sanitization
+		// All content (user and AI) goes through DOMPurify to prevent XSS
+		const renderMarkdown = (content) => {
+			if (!content) return '';
+			const rawHtml = marked(content);
+			// DOMPurify removes all potentially dangerous HTML/JS
+			// Only allow safe tags and attributes on specific elements
+			return DOMPurify.sanitize(rawHtml, {
+				ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'code', 'pre', 'a', 'ul', 'ol', 'li', 'blockquote'],
+				ALLOWED_ATTR: {
+					'a': ['href', 'target', 'rel']
+				},
+				ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):)/i,
+				ADD_ATTR: ['target', 'rel'],
+				FORBID_ATTR: ['style', 'onerror', 'onload'],
+				transformTags: {
+					'a': (el) => {
+						const href = el.getAttribute('href') || '';
+						// Only set target/rel for external links (http/https)
+						if (/^https?:\/\//i.test(href)) {
+							el.setAttribute('target', '_blank');
+							el.setAttribute('rel', 'noopener noreferrer');
+						}
+						return el;
+					}
+				}
+			});
+		};
 
 		const createDefaultAiMessage = () => ({
 			id: Date.now(),
@@ -192,6 +245,33 @@ export default {
 			}
 		};
 
+		// Auto-resize textarea based on content
+		const autoResizeTextarea = () => {
+			if (!messageTextarea.value) return;
+			
+			// Reset height to auto to get the correct scrollHeight
+			messageTextarea.value.style.height = 'auto';
+			
+			// Set height based on scrollHeight, with max height constant
+			const newHeight = Math.min(messageTextarea.value.scrollHeight, MAX_TEXTAREA_HEIGHT);
+			messageTextarea.value.style.height = `${newHeight}px`;
+		};
+
+		// Handle Enter key - send on Enter, new line on Shift+Enter
+		const handleEnter = (event) => {
+			if (!event.shiftKey) {
+				event.preventDefault();
+				sendMessage();
+			}
+		};
+
+		// Watch for message changes to auto-resize textarea
+		watch(newMessage, () => {
+			nextTick(() => {
+				autoResizeTextarea();
+			});
+		});
+
 		// Chat functions
 		const sendMessage = async () => {
 			if (!newMessage.value.trim() || isLoading.value) return;
@@ -251,26 +331,33 @@ export default {
 			}
 		};
 
-		// Mark message as solution and get comprehensive response
-		const markAsSolution = async (message) => {
+		// Check if message content contains the hidden solution marker <!-- solution:true -->
+		const hasSolution = (message) => {
+			if (!message || !message.content) return false;
+			// Look for the hidden HTML comment marker <!-- solution:true --> (case-insensitive, allow whitespace)
+			return /<!--\s*solution\s*:\s*true\s*-->/i.test(message.content);
+		};
+
+		// Build solution from AI message
+		const buildSolution = async (message) => {
 			if (isLoading.value) return;
 
 			isLoading.value = true;
 
 			try {
-				// Mark the message as solution
+				// Call the mark as solution API
 				await chatApiService.markAsSolution(message.id, currentNodeId.value);
 				
 				// Update UI to reflect the change
 				message.markedAsSolution = true;
 
-				console.log('Message marked as solution:', message.id);
+				console.log('Solution built for message:', message.id);
 
 			} catch (error) {
-				console.error('Error marking as solution:', error);
+				console.error('Error building solution:', error);
 				// Revert UI change on error
 				message.markedAsSolution = false;
-				alert('Failed to mark message as solution. Please try again.');
+				alert('Failed to build solution. Please try again.');
 			} finally {
 				isLoading.value = false;
 			}
@@ -304,13 +391,6 @@ export default {
 				console.error('Error disliking message:', error);
 				alert('Failed to dislike message. Please try again.');
 			}
-		};
-
-		// Regenerate message handler (not implemented - will use Redis queue)
-		const regenerateMessage = async (message) => {
-			if (isLoading.value) return;
-
-			alert('Message regeneration is not yet implemented. This feature will queue a new AI request.');
 		};
 
 		// Copy message content to clipboard with transient UI feedback
@@ -393,16 +473,22 @@ export default {
 
 			// Refs
 			chatMessages,
+			messageTextarea,
+
+			// Computed
+			isSendDisabled,
 
 			// Methods
 			formatTime,
 			sendMessage,
-			markAsSolution,
+			buildSolution,
+			hasSolution,
 			likeMessage,
 			dislikeMessage,
-			regenerateMessage,
 			copyMessage,
 			triggerStartRequest,
+			renderMarkdown,
+			handleEnter,
 		};
 	},
 };
