@@ -8,7 +8,7 @@ namespace NodPT.Data.Services
     public class ProjectService
     {
         private UnitOfWork session;
-        private User? user;
+        private readonly User? user;
 
         public ProjectService(UnitOfWork unitOfWork)
         {
