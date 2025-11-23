@@ -624,7 +624,7 @@ namespace NodPT.Data.Services
 
                 if (project == null)
                 {
-                    throw new ArgumentException("Project not found or user unauthorized", nameof(id));
+                    throw new UnauthorizedAccessException("Project not found or access denied");
                 }
 
                 session.Delete(project);
