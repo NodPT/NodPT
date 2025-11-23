@@ -8,7 +8,7 @@ namespace NodPT.Data.Services
     public class ProjectService
     {
         private UnitOfWork session;
-        private User? user;
+        private readonly User? user;
 
         public ProjectService(UnitOfWork unitOfWork)
         {
@@ -519,7 +519,16 @@ namespace NodPT.Data.Services
                 var project = session.Query<Project>()
                     .FirstOrDefault(p => p.Oid == id && p.User != null && p.User.Oid == this.user.Oid);
 
-                if (project == null) return null;
+                if (project == null)
+                {
+                    // Check if project exists but user is unauthorized
+                    var existingProject = session.GetObjectByKey<Project>(id);
+                    if (existingProject != null)
+                    {
+                        throw new UnauthorizedAccessException("You don't have permission to update this project");
+                    }
+                    return null; // Project doesn't exist
+                }
 
                 project.Name = name;
                 project.UpdatedAt = DateTime.UtcNow;
@@ -615,7 +624,7 @@ namespace NodPT.Data.Services
 
                 if (project == null)
                 {
-                    throw new ArgumentException("Project not found or user unauthorized", nameof(id));
+                    throw new UnauthorizedAccessException("Project not found or access denied");
                 }
 
                 session.Delete(project);

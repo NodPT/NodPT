@@ -299,9 +299,9 @@ public class ProjectsController : ControllerBase
 {
     private readonly UnitOfWork unitOfWork;
     
-    public ProjectsController(UnitOfWork _unitOfWork)
+    public ProjectsController(UnitOfWork unitOfWork)
     {
-        this.unitOfWork = _unitOfWork;
+        this.unitOfWork = unitOfWork;
     }
     
     [HttpPost]

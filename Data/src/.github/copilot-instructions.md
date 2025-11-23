@@ -41,23 +41,23 @@ The recommended approach for data service:
 ```csharp
 public class YourService
 {
-    private readonly UnitOfWork _unitOfWork;
-    private User _user;
+    private readonly UnitOfWork unitOfWork;
+    private User user;
     
     // pass the UnitOfWork via DI
     public YourService(UnitOfWork unitOfWork)
     {
-        _unitOfWork = unitOfWork;
+        this.unitOfWork = unitOfWork;
     }
     
     // RECOMMENDED: Accept ClaimsPrincipal or User in constructor for automatic user validation
     public YourService(UnitOfWork unitOfWork, ClaimsPrincipal claimsPrincipal)
     {
-        _unitOfWork = unitOfWork;
-        _user = UserService.GetUser(claimsPrincipal, unitOfWork);
+        this.unitOfWork = unitOfWork;
+        this.user = UserService.GetUser(claimsPrincipal, unitOfWork);
         
         // Validate user at constructor level
-        if (_user == null)
+        if (this.user == null)
         {
             throw new UnauthorizedAccessException("User is not authorized or not found");
         }
@@ -66,10 +66,10 @@ public class YourService
     // Alternative: Accept User directly
     public YourService(UnitOfWork unitOfWork, User user)
     {
-        _unitOfWork = unitOfWork;
-        _user = user;
+        this.unitOfWork = unitOfWork;
+        this.user = user;
         
-        if (_user == null)
+        if (this.user == null)
         {
             throw new ArgumentNullException(nameof(user));
         }
@@ -78,7 +78,7 @@ public class YourService
     public async Task<DataClass> UpdateData(int id, DataDto dto)
     {
         // User is already validated in constructor, so you can use it directly
-        var data = await _unitOfWork.FindObject<DataClass>(id);
+        var data = await this.unitOfWork.FindObject<DataClass>(id);
         if (data == null)
             throw new KeyNotFoundException("Data not found");
         
@@ -86,7 +86,7 @@ public class YourService
         data.UpdatedAt = DateTime.UtcNow;
         
         data.Save();
-        await _unitOfWork.CommitAsync();
+        await this.unitOfWork.CommitAsync();
         
         return data;
     }
@@ -135,15 +135,15 @@ Services should accept `ClaimsPrincipal` or `User` in their constructor to enabl
 // Example: ProjectService
 public class ProjectService
 {
-    private readonly UnitOfWork _unitOfWork;
-    private readonly User _user;
+    private readonly UnitOfWork unitOfWork;
+    private readonly User user;
     
     public ProjectService(UnitOfWork unitOfWork, ClaimsPrincipal claimsPrincipal)
     {
-        _unitOfWork = unitOfWork;
-        _user = UserService.GetUser(claimsPrincipal, unitOfWork);
+        this.unitOfWork = unitOfWork;
+        this.user = UserService.GetUser(claimsPrincipal, unitOfWork);
         
-        if (_user == null)
+        if (this.user == null)
         {
             throw new UnauthorizedAccessException("User not authorized");
         }
@@ -154,17 +154,17 @@ public class ProjectService
         // No need to pass firebaseUid or validate user here
         // User is already validated in constructor
         
-        var project = new Project(_unitOfWork)
+        var project = new Project(this.unitOfWork)
         {
             Name = projectDto.Name,
             Description = projectDto.Description,
-            User = _user, // Use the validated user
+            User = this.user, // Use the validated user
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
         
-        _unitOfWork.Save(project);
-        _unitOfWork.CommitTransaction();
+        this.unitOfWork.Save(project);
+        this.unitOfWork.CommitTransaction();
         
         return MapToDto(project);
     }
@@ -172,7 +172,7 @@ public class ProjectService
     public List<ProjectDto> GetUserProjects()
     {
         // Get projects for the validated user
-        return _user.Projects
+        return this.user.Projects
             .Where(p => p.IsActive)
             .Select(p => MapToDto(p))
             .ToList();
@@ -187,11 +187,11 @@ public class ProjectService
 [Route("api/[controller]")]
 public class ProjectsController : ControllerBase
 {
-    private readonly UnitOfWork _unitOfWork;
+    private readonly UnitOfWork unitOfWork;
     
     public ProjectsController(UnitOfWork unitOfWork)
     {
-        _unitOfWork = unitOfWork;
+        this.unitOfWork = unitOfWork;
     }
     
     [HttpPost]
@@ -201,7 +201,7 @@ public class ProjectsController : ControllerBase
         {
             // Pass User (ClaimsPrincipal) to service constructor
             // Service will validate user automatically
-            var service = new ProjectService(_unitOfWork, User);
+            var service = new ProjectService(this.unitOfWork, User);
             
             var project = service.CreateProject(projectDto);
             return Ok(project);
@@ -222,7 +222,7 @@ public class ProjectsController : ControllerBase
         try
         {
             // Service validates user in constructor
-            var service = new ProjectService(_unitOfWork, User);
+            var service = new ProjectService(this.unitOfWork, User);
             
             var projects = service.GetUserProjects();
             return Ok(projects);

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using NodPT.Data.Models;
+using NodPT.Data.Services;
 using DevExpress.Xpo;
 
 namespace NodPT.API.Controllers
@@ -50,21 +51,20 @@ namespace NodPT.API.Controllers
             if (user == null) 
                 return Unauthorized(new { error = "User not found or not authorized" });
             
-            var messages = new XPCollection<ChatMessage>(session, 
-                new DevExpress.Data.Filtering.BinaryOperator("User", user));
-            
-            var messageDtos = messages.Select(m => new
-            {
-                m.Oid,
-                m.Sender,
-                m.Message,
-                m.Timestamp,
-                m.MarkedAsSolution,
-                m.Liked,
-                m.Disliked,
-                NodeId = m.Node?.Id,
-                NodeName = m.Node?.Name
-            }).ToList();
+            var messageDtos = session.Query<ChatMessage>()
+                .Where(m => m.User == user)
+                .Select(m => new
+                {
+                    m.Oid,
+                    m.Sender,
+                    m.Message,
+                    m.Timestamp,
+                    m.MarkedAsSolution,
+                    m.Liked,
+                    m.Disliked,
+                    NodeId = m.Node != null ? m.Node.Id : null,
+                    NodeName = m.Node != null ? m.Node.Name : null
+                }).ToList();
             
             return Ok(messageDtos);
         }
