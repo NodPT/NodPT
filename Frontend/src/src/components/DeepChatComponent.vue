@@ -403,14 +403,10 @@ export default {
 				await chatApiService.markAsSolution(messageId, currentNodeId.value);
 				console.log('Message marked as solution:', messageId);
 				// Update the message UI to show it's marked as solution
-				if (deepChatRef.value) {
-					// Find and update the message
-					const messages = deepChatRef.value.getMessages?.() || [];
-					const message = messages.find(m => m._id === messageId);
-					if (message) {
-						message.markedAsSolution = true;
-					}
-				}
+				// Update the initialMessages array to trigger reactivity
+				initialMessages.value = initialMessages.value.map(msg =>
+					msg._id === messageId ? { ...msg, markedAsSolution: true } : msg
+				);
 			} catch (error) {
 				console.error('Error marking message as solution:', error);
 			}
