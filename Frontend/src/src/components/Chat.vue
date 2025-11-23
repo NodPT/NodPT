@@ -313,13 +313,6 @@ export default {
 			}
 		};
 
-		// Regenerate message handler (not implemented - will use Redis queue)
-		const regenerateMessage = async (message) => {
-			if (isLoading.value) return;
-
-			alert('Message regeneration is not yet implemented. This feature will queue a new AI request.');
-		};
-
 		// Copy message content to clipboard with transient UI feedback
 		const copyMessage = async (message) => {
 			if (!message || !message.content) return;
@@ -408,7 +401,6 @@ export default {
 			hasSolution,
 			likeMessage,
 			dislikeMessage,
-			regenerateMessage,
 			copyMessage,
 			triggerStartRequest,
 		};
