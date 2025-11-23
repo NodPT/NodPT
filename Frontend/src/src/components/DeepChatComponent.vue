@@ -1,7 +1,7 @@
 <template>
 	<div class="deepchat-container">
 		<deep-chat ref="deepChatRef" :request="requestConfig" :initialMessages="initialMessages"
-			:messageStyles="messageStyles" :style="chatStyle"></deep-chat>
+			:messageStyles="messageStyles" :auxiliaryStyle="auxiliaryStyle" :style="chatStyle"></deep-chat>
 	</div>
 </template>
 
@@ -10,12 +10,14 @@ import { ref, onMounted, onBeforeUnmount, inject, watch } from 'vue';
 import signalRService from '../service/signalRService';
 import { listenEvent, EVENT_TYPES } from '../rete/eventBus';
 import chatMessageApiService from '../service/chatMessageApiService';
+import chatApiService from '../service/chatApiService';
 
 export default {
 	name: 'DeepChatComponent',
 	setup() {
 		const api = inject('api');
 		chatMessageApiService.setApi(api);
+		chatApiService.setApi(api);
 
 		const deepChatRef = ref(null);
 		const eventListeners = [];
@@ -70,6 +72,39 @@ export default {
 				}
 			}
 		};
+
+		// Auxiliary style to add custom HTML for action buttons
+		const auxiliaryStyle = `
+			<style>
+				.deep-chat-button-panel {
+					display: flex;
+					gap: 8px;
+					margin-top: 8px;
+					padding-left: 4px;
+				}
+				.deep-chat-message-button {
+					background: none;
+					border: none;
+					padding: 4px 8px;
+					cursor: pointer;
+					font-size: 14px;
+					color: #666;
+					transition: all 0.2s ease;
+					border-radius: 4px;
+				}
+				.deep-chat-message-button:hover {
+					background-color: rgba(0, 0, 0, 0.05);
+					color: #333;
+				}
+				.deep-chat-message-button i {
+					font-size: 16px;
+				}
+				.btn-like:hover { color: #4caf50; }
+				.btn-dislike:hover { color: #f44336; }
+				.btn-solution:hover { color: #2196f3; }
+				.btn-copy:hover { color: #ff9800; }
+			</style>
+		`;
 
 		// Initial messages
 		const initialMessages = ref([
@@ -344,6 +379,160 @@ export default {
 			}
 		};
 
+		// Message action handlers
+		const handleLike = async (messageId) => {
+			try {
+				await chatApiService.likeMessage(messageId);
+				console.log('Message liked:', messageId);
+			} catch (error) {
+				console.error('Error liking message:', error);
+			}
+		};
+
+		const handleDislike = async (messageId) => {
+			try {
+				await chatApiService.dislikeMessage(messageId);
+				console.log('Message disliked:', messageId);
+			} catch (error) {
+				console.error('Error disliking message:', error);
+			}
+		};
+
+		const handleMarkAsSolution = async (messageId) => {
+			try {
+				await chatApiService.markAsSolution(messageId, currentNodeId.value);
+				console.log('Message marked as solution:', messageId);
+				// Update the message UI to show it's marked as solution
+				// Update the initialMessages array to trigger reactivity
+				initialMessages.value = initialMessages.value.map(msg =>
+					msg._id === messageId ? { ...msg, markedAsSolution: true } : msg
+				);
+			} catch (error) {
+				console.error('Error marking message as solution:', error);
+			}
+		};
+
+		const handleCopy = async (text) => {
+			try {
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					await navigator.clipboard.writeText(text);
+				} else {
+					const el = document.createElement('textarea');
+					el.value = text;
+					el.setAttribute('readonly', '');
+					el.style.position = 'absolute';
+					el.style.left = '-9999px';
+					document.body.appendChild(el);
+					el.select();
+					document.execCommand('copy');
+					document.body.removeChild(el);
+				}
+				console.log('Message copied to clipboard');
+			} catch (error) {
+				console.error('Error copying message:', error);
+			}
+		};
+
+		// Function to add action buttons to AI messages
+		const addActionButtonsToMessages = () => {
+			if (!deepChatRef.value) return;
+
+			// Use MutationObserver to watch for new messages
+			const observer = new MutationObserver((mutations) => {
+				mutations.forEach((mutation) => {
+					mutation.addedNodes.forEach((node) => {
+						if (node.nodeType === 1 && node.classList && node.classList.contains('ai-message')) {
+							addButtonsToMessage(node);
+						} else if (node.querySelectorAll) {
+							// Check children for AI messages
+							const aiMessages = node.querySelectorAll('.ai-message, [class*="ai"]');
+							aiMessages.forEach((msg) => {
+								addButtonsToMessage(msg);
+							});
+						}
+					});
+				});
+			});
+
+			// Observe the deep-chat component
+			if (deepChatRef.value.$el || deepChatRef.value) {
+				const targetNode = deepChatRef.value.$el || deepChatRef.value;
+				observer.observe(targetNode, {
+					childList: true,
+					subtree: true
+				});
+			}
+
+			// Also add buttons to existing messages
+			setTimeout(() => {
+				const container = deepChatRef.value.$el || deepChatRef.value;
+				if (container && container.shadowRoot) {
+					const messages = container.shadowRoot.querySelectorAll('[class*="ai"], [role="ai"]');
+					messages.forEach(addButtonsToMessage);
+				}
+			}, 500);
+		};
+
+		const addButtonsToMessage = (messageElement) => {
+			// Check if buttons already exist
+			if (messageElement.querySelector('.message-actions-panel')) {
+				return;
+			}
+
+			// Get message ID and text
+			const messageId = messageElement.getAttribute('data-id') || messageElement.id;
+			const messageText = messageElement.textContent || '';
+			if (!messageId) {
+				console.warn('DeepChatComponent: Could not find messageId for message element, skipping action buttons.', messageElement);
+				return;
+			}
+
+			// Create buttons container
+			const buttonsContainer = document.createElement('div');
+			buttonsContainer.className = 'message-actions-panel';
+			buttonsContainer.style.cssText = 'display: flex; gap: 8px; margin-top: 8px; padding-left: 4px;';
+
+			// Create buttons
+			const buttons = [
+				{
+					class: 'btn-like',
+					icon: 'bi-hand-thumbs-up',
+					title: 'Like',
+					handler: () => handleLike(messageId)
+				},
+				{
+					class: 'btn-dislike',
+					icon: 'bi-hand-thumbs-down',
+					title: 'Dislike',
+					handler: () => handleDislike(messageId)
+				},
+				{
+					class: 'btn-solution',
+					icon: 'bi-check2-square',
+					title: 'Mark as Solution',
+					handler: () => handleMarkAsSolution(messageId)
+				},
+				{
+					class: 'btn-copy',
+					icon: 'bi-clipboard',
+					title: 'Copy',
+					handler: () => handleCopy(messageText)
+				}
+			];
+
+			buttons.forEach(({ class: btnClass, icon, title, handler }) => {
+				const button = document.createElement('button');
+				button.className = `deep-chat-message-button ${btnClass}`;
+				button.title = title;
+				button.innerHTML = `<i class="bi ${icon}"></i>`;
+				button.onclick = handler;
+				buttonsContainer.appendChild(button);
+			});
+
+			// Append buttons to message
+			messageElement.appendChild(buttonsContainer);
+		};
+
 		onMounted(async () => {
 			// Import DeepChat component dynamically
 			await import('deep-chat');
@@ -358,6 +547,11 @@ export default {
 			eventListeners.push(
 				listenEvent(EVENT_TYPES.NODE_SELECTED, handleNodeSelection)
 			);
+
+			// Setup action buttons for messages
+			setTimeout(() => {
+				addActionButtonsToMessages();
+			}, 1000);
 		});
 
 		onBeforeUnmount(() => {
@@ -377,7 +571,8 @@ export default {
 			requestConfig,
 			initialMessages,
 			messageStyles,
-			chatStyle
+			chatStyle,
+			auxiliaryStyle
 		};
 	}
 };
@@ -389,5 +584,49 @@ export default {
 	height: calc(100% - 42px);
 	display: flex;
 	flex-direction: column;
+}
+
+/* Message action buttons */
+:deep(.message-actions-panel) {
+	display: flex;
+	gap: 8px;
+	margin-top: 8px;
+	padding-left: 4px;
+}
+
+:deep(.deep-chat-message-button) {
+	background: none;
+	border: none;
+	padding: 4px 8px;
+	cursor: pointer;
+	font-size: 14px;
+	color: #666;
+	transition: all 0.2s ease;
+	border-radius: 4px;
+}
+
+:deep(.deep-chat-message-button:hover) {
+	background-color: rgba(0, 0, 0, 0.05);
+	color: #333;
+}
+
+:deep(.deep-chat-message-button i) {
+	font-size: 16px;
+}
+
+:deep(.btn-like:hover) {
+	color: #4caf50;
+}
+
+:deep(.btn-dislike:hover) {
+	color: #f44336;
+}
+
+:deep(.btn-solution:hover) {
+	color: #2196f3;
+}
+
+:deep(.btn-copy:hover) {
+	color: #ff9800;
 }
 </style>

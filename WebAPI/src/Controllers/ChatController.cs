@@ -6,6 +6,7 @@ using NodPT.API.Services;
 using System.Text.Json;
 using NodPT.Data.Models;
 using DevExpress.Xpo;
+using DevExpress.Data.Filtering;
 
 namespace NodPT.API.Controllers
 {
@@ -17,41 +18,127 @@ namespace NodPT.API.Controllers
         private readonly ChatService _chatService = new();
         private readonly IRedisService _redisService;
         private readonly ILogger<ChatController> _logger;
+        private readonly UnitOfWork _session;
 
-        public ChatController(IRedisService redisService, ILogger<ChatController> logger)
+        public ChatController(IRedisService redisService, ILogger<ChatController> logger, UnitOfWork session)
         {
             _redisService = redisService;
             _logger = logger;
+            _session = session;
         }
 
-        [HttpGet]
-        public IActionResult GetMessages() => Ok(_chatService.GetMessages());
-
         [HttpGet("node/{nodeId}")]
-        public IActionResult GetMessagesByNodeId(string nodeId) =>
-            Ok(_chatService.GetMessagesByNodeId(nodeId));
-
-        [HttpPost]
-        public IActionResult PostMessage([FromBody] ChatMessageDto message)
+        public IActionResult GetMessagesByNodeId(string nodeId)
         {
-            if (message == null) return BadRequest();
+            try
+            {
+                var user = UserService.GetUser(User, _session);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not found or not authorized" });
+                }
 
-            _chatService.AddMessage(message);
-            return Ok(message);
+                var messages = _chatService.GetMessagesByNodeId(nodeId, user, _session);
+                return Ok(messages);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, $"Node not found: {nodeId}");
+                return NotFound(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, $"Unauthorized access to node: {nodeId}");
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting messages for node: {nodeId}");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
         }
 
         [HttpPost("send")]
-        public IActionResult SendMessage([FromBody] ChatMessageDto userMessage)
+        public async Task<IActionResult> SendMessage([FromBody] ChatMessageDto userMessage)
         {
             if (userMessage == null) return BadRequest("Message cannot be null");
+            if (string.IsNullOrEmpty(userMessage.NodeId)) return BadRequest("NodeId is required");
 
-            // Add user message
-            _chatService.AddMessage(userMessage);
+            try
+            {
+                var user = UserService.GetUser(User, _session);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not found or not authorized" });
+                }
 
-            // Generate AI response
-            var aiResponse = _chatService.GenerateAiResponse(userMessage);
-            
-            return Ok(new { userMessage, aiResponse });
+                // Get the connectionId from request headers (should be sent by frontend)
+                var connectionId = Request.Headers["X-SignalR-ConnectionId"].FirstOrDefault();
+                if (string.IsNullOrEmpty(connectionId))
+                {
+                    _logger.LogWarning("Missing SignalR ConnectionId in request");
+                }
+
+                // Add user message to database
+                userMessage.Sender = "user";
+                var savedMessage = _chatService.AddMessage(userMessage, user, _session);
+
+                // Get node and project details for Redis payload
+                var node = _session.FindObject<Node>(CriteriaOperator.Parse("Id = ?", userMessage.NodeId));
+                if (node == null)
+                {
+                    return NotFound(new { error = "Node not found" });
+                }
+
+                // Prepare data for Redis queue with all required fields for SignalR
+                var redisPayload = new
+                {
+                    UserId = user.FirebaseUid,
+                    ConnectionId = connectionId,
+                    NodeId = userMessage.NodeId,
+                    ProjectId = node.Project?.Oid.ToString(),
+                    Message = userMessage.Message,
+                    ChatMessageId = savedMessage.Oid.ToString(),
+                    Timestamp = DateTime.UtcNow
+                };
+
+                // Push to Redis queue for AI processing
+                var jobData = JsonSerializer.Serialize(redisPayload);
+                await _redisService.ListRightPushAsync("chat.jobs", jobData);
+
+                _logger.LogInformation($"Chat message queued for processing: UserId={user.FirebaseUid}, NodeId={userMessage.NodeId}, MessageId={savedMessage.Oid}");
+
+                return Ok(new 
+                { 
+                    userMessage = new ChatMessageDto
+                    {
+                        Id = savedMessage.Oid,
+                        Sender = savedMessage.Sender,
+                        Message = savedMessage.Message,
+                        Timestamp = savedMessage.Timestamp,
+                        NodeId = savedMessage.Node?.Id,
+                        MarkedAsSolution = savedMessage.MarkedAsSolution,
+                        Liked = savedMessage.Liked,
+                        Disliked = savedMessage.Disliked
+                    },
+                    status = "queued"
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Invalid argument in SendMessage");
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access in SendMessage");
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in SendMessage");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
         }
 
         [HttpPost("mark-solution")]
@@ -59,27 +146,52 @@ namespace NodPT.API.Controllers
         {
             if (request == null) return BadRequest("Request cannot be null");
 
-            // Mark the latest message as solution and generate comprehensive response
-            var solutionResponse = _chatService.MarkAsSolutionAndRespond(request.NodeId);
-            
-            return Ok(solutionResponse);
-        }
+            try
+            {
+                var user = UserService.GetUser(User, _session);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not found or not authorized" });
+                }
 
-        [HttpPut("{id}")]
-        public IActionResult UpdateMessage(Guid id, [FromBody] ChatMessageDto message)
-        {
-            if (message == null) return BadRequest();
+                if (request.MessageId == null || request.MessageId == 0)
+                {
+                    return BadRequest(new { error = "MessageId is required" });
+                }
 
-            message.Id = id;
-            _chatService.UpdateMessage(message);
-            return Ok(message);
-        }
+                var message = _chatService.MarkAsSolution(request.MessageId.Value, user, _session);
+                if (message == null)
+                {
+                    return NotFound(new { error = "Message not found" });
+                }
 
-        [HttpDelete("{id}")]
-        public IActionResult DeleteMessage(Guid id)
-        {
-            _chatService.DeleteMessage(id);
-            return NoContent();
+                return Ok(new ChatMessageDto
+                {
+                    Id = message.Oid,
+                    Sender = message.Sender,
+                    Message = message.Message,
+                    Timestamp = message.Timestamp,
+                    NodeId = message.Node?.Id,
+                    MarkedAsSolution = message.MarkedAsSolution,
+                    Liked = message.Liked,
+                    Disliked = message.Disliked
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Invalid argument in MarkAsSolution");
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access in MarkAsSolution");
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in MarkAsSolution");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
         }
 
         [HttpPost("like")]
@@ -87,9 +199,37 @@ namespace NodPT.API.Controllers
         {
             if (chatResponse == null) return BadRequest("ChatResponse cannot be null");
             
-            chatResponse.Action = "like";
-            var response = _chatService.AddChatResponse(chatResponse);
-            return Ok(response);
+            try
+            {
+                var user = UserService.GetUser(User, _session);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not found or not authorized" });
+                }
+
+                var message = _chatService.UpdateMessageReaction(chatResponse.ChatMessageId, "like", user, _session);
+                if (message == null)
+                {
+                    return NotFound(new { error = "Message not found" });
+                }
+
+                return Ok(new ChatMessageDto
+                {
+                    Id = message.Oid,
+                    Sender = message.Sender,
+                    Message = message.Message,
+                    Timestamp = message.Timestamp,
+                    NodeId = message.Node?.Id,
+                    MarkedAsSolution = message.MarkedAsSolution,
+                    Liked = message.Liked,
+                    Disliked = message.Disliked
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in LikeMessage");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
         }
 
         [HttpPost("dislike")]
@@ -97,22 +237,37 @@ namespace NodPT.API.Controllers
         {
             if (chatResponse == null) return BadRequest("ChatResponse cannot be null");
             
-            chatResponse.Action = "dislike";
-            var response = _chatService.AddChatResponse(chatResponse);
-            return Ok(response);
-        }
+            try
+            {
+                var user = UserService.GetUser(User, _session);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not found or not authorized" });
+                }
 
-        [HttpPost("regenerate")]
-        public IActionResult RegenerateMessage([FromBody] ChatResponseDto chatResponse)
-        {
-            if (chatResponse == null) return BadRequest("ChatResponse cannot be null");
-            
-            chatResponse.Action = "regenerate";
-            _chatService.AddChatResponse(chatResponse);
-            
-            // Generate new response
-            var newMessage = _chatService.RegenerateResponse(chatResponse.ChatMessageId, null);
-            return Ok(newMessage);
+                var message = _chatService.UpdateMessageReaction(chatResponse.ChatMessageId, "dislike", user, _session);
+                if (message == null)
+                {
+                    return NotFound(new { error = "Message not found" });
+                }
+
+                return Ok(new ChatMessageDto
+                {
+                    Id = message.Oid,
+                    Sender = message.Sender,
+                    Message = message.Message,
+                    Timestamp = message.Timestamp,
+                    NodeId = message.Node?.Id,
+                    MarkedAsSolution = message.MarkedAsSolution,
+                    Liked = message.Liked,
+                    Disliked = message.Disliked
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in DislikeMessage");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
         }
 
         [HttpPost("submit")]
@@ -125,12 +280,17 @@ namespace NodPT.API.Controllers
 
             try
             {
+                var user = UserService.GetUser(User, _session);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not found or not authorized" });
+                }
+
                 // Determine model name from node or template
                 string? modelName = null;
                 if (!string.IsNullOrEmpty(dto.NodeLevel))
                 {
-                    using var session = new Session();
-                    var node = session.FindObject<Node>(new DevExpress.Data.Filtering.BinaryOperator("Id", dto.NodeLevel));
+                    var node = _session.FindObject<Node>(CriteriaOperator.Parse("Id = ?", dto.NodeLevel));
                     
                     if (node != null)
                     {
@@ -152,17 +312,15 @@ namespace NodPT.API.Controllers
                 // Set the model in the DTO
                 dto.Model = modelName;
 
-                // Save to DB (using in-memory ChatService for now)
-                var chatMessage = new ChatMessageDto
+                // Save to DB
+                var chatMessageDto = new ChatMessageDto
                 {
-                    Id = Guid.NewGuid(),
                     Sender = "user",
                     Message = dto.Message,
-                    Timestamp = DateTime.UtcNow,
                     NodeId = dto.NodeLevel,
                     MarkedAsSolution = false
                 };
-                _chatService.AddMessage(chatMessage);
+                var chatMessage = _chatService.AddMessage(chatMessageDto, user, _session);
 
                 // Push to Redis queue for executor
                 var jobData = JsonSerializer.Serialize(dto);
@@ -170,7 +328,7 @@ namespace NodPT.API.Controllers
 
                 _logger.LogInformation($"Chat message queued for processing: UserId={dto.UserId}, ConnectionId={dto.ConnectionId}, Model={modelName}");
 
-                return Ok(new { status = "queued", messageId = chatMessage.Id });
+                return Ok(new { status = "queued", messageId = chatMessage.Oid });
             }
             catch (ArgumentNullException ex)
             {
@@ -181,6 +339,11 @@ namespace NodPT.API.Controllers
             {
                 _logger.LogError(ex, "InvalidOperationException submitting chat message");
                 return StatusCode(500, new { error = "Operation failed: " + ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access in Submit");
+                return Forbid();
             }
         }
     }
