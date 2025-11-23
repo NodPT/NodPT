@@ -320,13 +320,6 @@ export default {
 			alert('Message regeneration is not yet implemented. This feature will queue a new AI request.');
 		};
 
-		// Regenerate message handler (not implemented - will use Redis queue)
-		const regenerateMessage = async (message) => {
-			if (isLoading.value) return;
-
-			alert('Message regeneration is not yet implemented. This feature will queue a new AI request.');
-		};
-
 		// Copy message content to clipboard with transient UI feedback
 		const copyMessage = async (message) => {
 			if (!message || !message.content) return;
@@ -352,22 +345,6 @@ export default {
 			} catch (err) {
 				console.error('Copy failed', err);
 			}
-		};
-
-		// Function to trigger START_Request event
-		const triggerStartRequest = () => {
-			const sampleData = JSON.stringify({
-				type: 'START_Request',
-				timestamp: new Date().toISOString(),
-				data: {
-					message: 'AI processing request initiated',
-					context: 'chat_interface',
-					requestId: Date.now()
-				}
-			});
-
-			eventBus.emit('START_Request', sampleData);
-			console.log('START_Request event triggered with data:', sampleData);
 		};
 
 		// Function to trigger START_Request event
