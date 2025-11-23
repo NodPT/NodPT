@@ -97,8 +97,7 @@ class ProjectApiService {
 	 * @returns {Promise<Array>} Array of projects
 	 */
 	async getProjectsByUser(userId) {
-		console.warn('getProjectsByUser() is deprecated. Use getUserProjects() instead.');
-		return this.getUserProjects();
+		throw new Error('getProjectsByUser() is deprecated and removed. Use getUserProjects() instead. Note: Backend now only returns projects for the authenticated user.');
 	}
 
 	/**
