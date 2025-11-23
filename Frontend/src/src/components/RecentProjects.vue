@@ -108,16 +108,16 @@ export default {
 
     const loadProjects = async () => {
       try {
-        // Get user data from authentication service
+        // Get user data from authentication service (for display purposes only)
         const userData = authApiService.getUserData()
 
-        if (!userData || !userData.FirebaseUid) {
+        if (!userData) {
           console.warn('No user data found, cannot load projects')
           return
         }
 
-        // Fetch projects from API
-        const projects = await projectApiService.getProjectsByUser(userData.FirebaseUid)
+        // Fetch projects from API - backend extracts user from JWT token
+        const projects = await projectApiService.getUserProjects()
 
         // Filter active projects and sort by UpdatedAt (most recent first)
         recentProjects.value = projects

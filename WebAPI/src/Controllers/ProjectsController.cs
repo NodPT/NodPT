@@ -22,13 +22,17 @@ namespace NodPT.API.Controllers
         }
 
         [HttpGet]
-        [CustomAuthorized("Admin")]
         public IActionResult GetProjects()
         {
             try
             {
-                var projectService = new ProjectService(unitOfWork);
-                return Ok(projectService.GetAllProjects());
+                // Service validates user and returns their projects
+                var projectService = new ProjectService(unitOfWork, User);
+                return Ok(projectService.GetUserProjects());
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { error = ex.Message });
             }
             catch (Exception ex)
             {
@@ -42,6 +46,7 @@ namespace NodPT.API.Controllers
         {
             try
             {
+                // Use the original method that doesn't require user validation
                 var projectService = new ProjectService(unitOfWork);
                 var project = projectService.GetProject(id);
                 return project == null ? NotFound() : Ok(project);
@@ -53,36 +58,21 @@ namespace NodPT.API.Controllers
             }
         }
 
-        [HttpGet("user/{firebaseUid}")]
-        public IActionResult GetProjectsByUser(string firebaseUid)
-        {
-            try
-            {
-                var projectService = new ProjectService(unitOfWork);
-                var projects = projectService.GetProjectsByUser(firebaseUid);
-                return Ok(projects);
-            }
-            catch (Exception ex)
-            {
-                LogService.LogError(ex.Message, ex.StackTrace, User?.Identity?.Name, "ProjectsController", "GetProjectsByUser");
-                return StatusCode(500, new { error = "An error occurred while retrieving user projects." });
-            }
-        }
-
         [HttpPost]
         public IActionResult CreateProject([FromBody] ProjectDto project)
         {
             try
             {
                 if (project == null) return BadRequest();
-                string? firebaseUid = UserService.GetFirebaseUIDFromContent(User);
-                if (string.IsNullOrEmpty(firebaseUid))
-                {
-                    return Unauthorized(new { error = "Invalid user token." });
-                }
-                var projectService = new ProjectService(unitOfWork);
-                var createdProject = projectService.CreateProject(project, firebaseUid);
+                
+                // Service validates user in constructor
+                var projectService = new ProjectService(unitOfWork, User);
+                var createdProject = projectService.CreateProject(project);
                 return CreatedAtAction(nameof(GetProject), new { id = createdProject.Id }, createdProject);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { error = ex.Message });
             }
             catch (Exception ex)
             {
@@ -119,15 +109,14 @@ namespace NodPT.API.Controllers
                     return BadRequest(new { error = "Project name is required." });
                 }
 
-                string? firebaseUid = UserService.GetFirebaseUIDFromContent(User);
-                if (string.IsNullOrEmpty(firebaseUid))
-                {
-                    return Unauthorized(new { error = "Invalid user token." });
-                }
-
-                var projectService = new ProjectService(unitOfWork);
-                var updatedProject = projectService.UpdateProjectName(id, request.Name, firebaseUid);
+                // Service validates user in constructor
+                var projectService = new ProjectService(unitOfWork, User);
+                var updatedProject = projectService.UpdateProjectName(id, request.Name);
                 return updatedProject == null ? NotFound() : Ok(updatedProject);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { error = ex.Message });
             }
             catch (Exception ex)
             {
@@ -142,14 +131,15 @@ namespace NodPT.API.Controllers
             try
             {
                 if (id <= 0) return BadRequest();
-                string? firebaseUid = UserService.GetFirebaseUIDFromContent(User);
-                if (string.IsNullOrEmpty(firebaseUid))
-                {
-                    return Unauthorized(new { error = "Invalid user token." });
-                }
-                var projectService = new ProjectService(unitOfWork);
-                var deleted = projectService.DeleteProject(id, firebaseUid);
+                
+                // Service validates user in constructor
+                var projectService = new ProjectService(unitOfWork, User);
+                var deleted = projectService.DeleteProject(id);
                 return deleted ? NoContent() : NotFound();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { error = ex.Message });
             }
             catch (Exception ex)
             {

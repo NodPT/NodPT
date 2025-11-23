@@ -26,6 +26,31 @@ public class UserService
     }
 
     /// <summary>
+    /// Get user from ClaimsPrincipal (Context.User) if active, approved, and not banned
+    /// </summary>
+    /// <param name="claimsPrincipal">The ClaimsPrincipal from Context.User</param>
+    /// <param name="session">The UnitOfWork session</param>
+    /// <returns>User entity if valid, otherwise null</returns>
+    public static User? GetUser(ClaimsPrincipal claimsPrincipal, UnitOfWork session)
+    {
+        try
+        {
+            string? firebaseUid = GetFirebaseUIDFromContent(claimsPrincipal);
+            if (string.IsNullOrEmpty(firebaseUid))
+            {
+                return null;
+            }
+
+            return GetUser(firebaseUid, session);
+        }
+        catch (Exception ex)
+        {
+            LogService.LogError(ex, claimsPrincipal?.Identity?.Name ?? "unknown", "GetUser");
+            return null;
+        }
+    }
+
+    /// <summary>
     /// get user by firebaseUId if active, approved, and not banned
     /// </summary>
     /// <param name="firebaseUId"></param>

@@ -60,6 +60,7 @@ Setup Vue Router if needed for additional pages.
 ## useful components can be used during coding
 
 ■ api-plugin already has all functions of crud by using axios and bearer token. Use this plugin by calling const api=inject('api'). The available functions are get, put, delete, post. Pass the parameters as same with axios function. Important: don't use axios directly in the component.
+■ **IMPORTANT: Never send firebaseUid to backend**. The backend extracts user identity from the JWT token in the Authorization header automatically. The api-plugin handles authentication headers, so you don't need to manage firebaseUid manually.
 
 📝 Keep It Simple
 Each Vue component should be self-contained.
