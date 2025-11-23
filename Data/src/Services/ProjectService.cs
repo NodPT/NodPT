@@ -519,7 +519,16 @@ namespace NodPT.Data.Services
                 var project = session.Query<Project>()
                     .FirstOrDefault(p => p.Oid == id && p.User != null && p.User.Oid == this.user.Oid);
 
-                if (project == null) return null;
+                if (project == null)
+                {
+                    // Check if project exists but user is unauthorized
+                    var existingProject = session.GetObjectByKey<Project>(id);
+                    if (existingProject != null)
+                    {
+                        throw new UnauthorizedAccessException("You don't have permission to update this project");
+                    }
+                    return null; // Project doesn't exist
+                }
 
                 project.Name = name;
                 project.UpdatedAt = DateTime.UtcNow;
