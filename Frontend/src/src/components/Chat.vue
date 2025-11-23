@@ -119,6 +119,20 @@ export default {
 				ALLOWED_ATTR: {
 					'a': ['href', 'target', 'rel']
 				},
+				ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):)/i,
+				ADD_ATTR: ['target', 'rel'],
+				FORBID_ATTR: ['style', 'onerror', 'onload'],
+				transformTags: {
+					'a': (el) => {
+						const href = el.getAttribute('href') || '';
+						// Only set target/rel for external links (http/https)
+						if (/^https?:\/\//i.test(href)) {
+							el.setAttribute('target', '_blank');
+							el.setAttribute('rel', 'noopener noreferrer');
+						}
+						return el;
+					}
+				}
 			});
 		};
 
