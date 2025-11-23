@@ -170,6 +170,48 @@ namespace NodPT.API.Controllers
         }
 
         /// <summary>
+        /// Update profile for the authenticated user
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [HttpPut("me")]
+        public IActionResult UpdateMyProfile([FromBody] UpdateUserRequest request)
+        {
+            try
+            {
+                // Get current user from Context.User
+                var user = UserService.GetUser(User, session);
+
+                if (user == null)
+                {
+                    return Unauthorized(new { message = "User not found or not authorized" });
+                }
+
+                session.BeginTransaction();
+
+                // Update allowed fields
+                if (!string.IsNullOrEmpty(request.DisplayName))
+                    user.DisplayName = request.DisplayName;
+
+                if (!string.IsNullOrEmpty(request.PhotoUrl))
+                    user.PhotoUrl = request.PhotoUrl;
+
+                // Email change not allowed through this endpoint for security
+                // Users should use a separate email change flow with verification
+
+                session.Save(user);
+                session.CommitTransaction();
+
+                return Ok(new { message = "Profile updated successfully", user });
+            }
+            catch (Exception ex)
+            {
+                session.RollbackTransaction();
+                return StatusCode(500, new { message = "An error occurred while updating profile", error = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// allowed user to update user
         /// </summary>
         /// <param name="firebaseUid"></param>

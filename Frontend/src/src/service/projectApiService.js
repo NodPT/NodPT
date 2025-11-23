@@ -75,14 +75,30 @@ class ProjectApiService {
 		}
 	}
 
-	async getProjectsByUser(userId) {
+	/**
+	 * Get all projects for the authenticated user
+	 * No need to pass userId - backend extracts it from JWT token
+	 * @returns {Promise<Array>} Array of projects
+	 */
+	async getUserProjects() {
 		try {
-			const data = await this.api.get(`/projects/user/${userId}`)
+			const data = await this.api.get('/projects')
 			return data
 		} catch (err) {
-			console.error('Failed to get projects by user:', err)
+			console.error('Failed to get user projects:', err)
 			throw err
 		}
+	}
+
+	/**
+	 * @deprecated Use getUserProjects() instead
+	 * Get projects by user ID (legacy method for backward compatibility)
+	 * @param {string} userId - User ID (firebaseUid)
+	 * @returns {Promise<Array>} Array of projects
+	 */
+	async getProjectsByUser(userId) {
+		console.warn('getProjectsByUser() is deprecated. Use getUserProjects() instead.');
+		return this.getUserProjects();
 	}
 
 	/**

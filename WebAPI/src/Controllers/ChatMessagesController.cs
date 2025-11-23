@@ -42,8 +42,35 @@ namespace NodPT.API.Controllers
             return Ok(messageDtos);
         }
 
+        [HttpGet("user/me")]
+        public IActionResult GetMyChatMessages()
+        {
+            var user = UserService.GetUser(User, session);
+            
+            if (user == null) 
+                return Unauthorized(new { error = "User not found or not authorized" });
+            
+            var messages = new XPCollection<ChatMessage>(session, 
+                new DevExpress.Data.Filtering.BinaryOperator("User", user));
+            
+            var messageDtos = messages.Select(m => new
+            {
+                m.Oid,
+                m.Sender,
+                m.Message,
+                m.Timestamp,
+                m.MarkedAsSolution,
+                m.Liked,
+                m.Disliked,
+                NodeId = m.Node?.Id,
+                NodeName = m.Node?.Name
+            }).ToList();
+            
+            return Ok(messageDtos);
+        }
+
         [HttpGet("user/{firebaseUid}")]
-        
+        [CustomAuthorized("Admin")]
         public IActionResult GetChatMessagesByUser(string firebaseUid)
         {
             var user = session.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("FirebaseUid", firebaseUid));
