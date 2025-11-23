@@ -101,21 +101,6 @@ class ChatApiService {
     }
 
     /**
-     * Get persisted chat messages for a specific node from the database
-     * @param {string} nodeId - Node ID
-     * @returns {Promise<Array>} Array of chat messages
-     */
-    async getPersistedMessagesByNodeId(nodeId) {
-        try {
-            const response = await this.api.get(`/chatmessages/node/${nodeId}`);
-            return response;
-        } catch (error) {
-            console.error('Failed to get persisted messages by node ID:', error);
-            throw error;
-        }
-    }
-
-    /**
      * Like a chat message
      * @param {string} messageId - Message ID to like
      * @returns {Promise<Object>} API response
@@ -156,7 +141,6 @@ class ChatApiService {
             throw error;
         }
     }
-}
 }
 
 export default new ChatApiService();

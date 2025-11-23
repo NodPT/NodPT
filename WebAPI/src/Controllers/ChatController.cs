@@ -27,10 +27,6 @@ namespace NodPT.API.Controllers
             _session = session;
         }
 
-        [HttpGet]
-        [Obsolete("Use GetMessagesByNodeId instead")]
-        public IActionResult GetMessages() => Ok(new List<ChatMessageDto>());
-
         [HttpGet("node/{nodeId}")]
         public IActionResult GetMessagesByNodeId(string nodeId)
         {
@@ -60,13 +56,6 @@ namespace NodPT.API.Controllers
                 _logger.LogError(ex, $"Error getting messages for node: {nodeId}");
                 return StatusCode(500, new { error = "Internal server error" });
             }
-        }
-
-        [HttpPost]
-        [Obsolete("Use SendMessage instead")]
-        public IActionResult PostMessage([FromBody] ChatMessageDto message)
-        {
-            return BadRequest(new { error = "Use SendMessage endpoint instead" });
         }
 
         [HttpPost("send")]
@@ -205,20 +194,6 @@ namespace NodPT.API.Controllers
             }
         }
 
-        [HttpPut("{id}")]
-        [Obsolete("Use specific endpoints like MarkAsSolution instead")]
-        public IActionResult UpdateMessage(Guid id, [FromBody] ChatMessageDto message)
-        {
-            return BadRequest(new { error = "Use specific endpoints instead" });
-        }
-
-        [HttpDelete("{id}")]
-        [Obsolete("Deletion not supported")]
-        public IActionResult DeleteMessage(Guid id)
-        {
-            return BadRequest(new { error = "Message deletion not supported" });
-        }
-
         [HttpPost("like")]
         public IActionResult LikeMessage([FromBody] ChatResponseDto chatResponse)
         {
@@ -293,13 +268,6 @@ namespace NodPT.API.Controllers
                 _logger.LogError(ex, "Error in DislikeMessage");
                 return StatusCode(500, new { error = "Internal server error" });
             }
-        }
-
-        [HttpPost("regenerate")]
-        [Obsolete("Regeneration will be handled through Redis queue")]
-        public IActionResult RegenerateMessage([FromBody] ChatResponseDto chatResponse)
-        {
-            return BadRequest(new { error = "Regeneration not supported in this endpoint" });
         }
 
         [HttpPost("submit")]
