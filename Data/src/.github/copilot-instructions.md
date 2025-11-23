@@ -189,6 +189,10 @@ var activeProjects = user.Projects
     .Where(p => p.IsActive)
     .ToList();
 
+// get a specific project
+var project = user.Projects
+    .FirstOrDefault(p => p.Id == projectId);
+
 // or create new Project
 var newProject = new Project(unitOfWork)
 {
