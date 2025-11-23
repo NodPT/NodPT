@@ -59,7 +59,7 @@
 					:disabled="isLoading"
 					rows="1"
 				></textarea>
-				<button @click="sendMessage" class="btn btn-primary send-btn" :disabled="isLoading || !newMessage.trim()">
+				<button @click="sendMessage" class="btn btn-primary send-btn" :disabled="isSendDisabled">
 					<span v-if="isLoading" class="spinner-border spinner-border-sm"></span>
 					<i v-else class="bi bi-send fw-bold"></i>
 				</button>
@@ -69,7 +69,7 @@
 </template>
 
 <script>
-import { ref, reactive, inject, onMounted, nextTick, onBeforeUnmount, watch } from 'vue';
+import { ref, reactive, inject, onMounted, nextTick, onBeforeUnmount, watch, computed } from 'vue';
 import { eventBus, listenEvent, EVENT_TYPES } from '../rete/eventBus.js';
 import chatApiService from '../service/chatApiService.js';
 import { marked } from 'marked';
@@ -86,6 +86,9 @@ export default {
 		const chatData = reactive({ messages: [] });
 		const newMessage = ref('');
 		const isLoading = ref(false);
+
+		// Computed properties
+		const isSendDisabled = computed(() => isLoading.value || !newMessage.value.trim());
 
 		// Refs for DOM elements
 		const chatMessages = ref(null);
@@ -110,9 +113,12 @@ export default {
 			if (!content) return '';
 			const rawHtml = marked(content);
 			// DOMPurify removes all potentially dangerous HTML/JS
+			// Only allow safe tags and attributes on specific elements
 			return DOMPurify.sanitize(rawHtml, {
 				ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'code', 'pre', 'a', 'ul', 'ol', 'li', 'blockquote'],
-				ALLOWED_ATTR: ['href', 'target', 'rel'],
+				ALLOWED_ATTR: {
+					'a': ['href', 'target', 'rel']
+				},
 			});
 		};
 
@@ -454,6 +460,9 @@ export default {
 			// Refs
 			chatMessages,
 			messageTextarea,
+
+			// Computed
+			isSendDisabled,
 
 			// Methods
 			formatTime,
