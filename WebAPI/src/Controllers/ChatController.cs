@@ -6,6 +6,7 @@ using NodPT.API.Services;
 using System.Text.Json;
 using NodPT.Data.Models;
 using DevExpress.Xpo;
+using DevExpress.Data.Filtering;
 
 namespace NodPT.API.Controllers
 {
@@ -94,7 +95,7 @@ namespace NodPT.API.Controllers
                 var savedMessage = _chatService.AddMessage(userMessage, user, _session);
 
                 // Get node and project details for Redis payload
-                var node = _session.FindObject<Node>(new DevExpress.Data.Filtering.BinaryOperator("Id", userMessage.NodeId));
+                var node = _session.FindObject<Node>(CriteriaOperator.Parse("Id = ?", userMessage.NodeId));
                 if (node == null)
                 {
                     return NotFound(new { error = "Node not found" });
@@ -321,7 +322,7 @@ namespace NodPT.API.Controllers
                 string? modelName = null;
                 if (!string.IsNullOrEmpty(dto.NodeLevel))
                 {
-                    var node = _session.FindObject<Node>(new DevExpress.Data.Filtering.BinaryOperator("Id", dto.NodeLevel));
+                    var node = _session.FindObject<Node>(CriteriaOperator.Parse("Id = ?", dto.NodeLevel));
                     
                     if (node != null)
                     {
