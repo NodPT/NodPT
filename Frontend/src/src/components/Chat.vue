@@ -93,17 +93,27 @@ export default {
 
 		const eventListeners = [];
 
-		// Configure marked for markdown rendering
+		// Constants
+		const MAX_TEXTAREA_HEIGHT = 150; // pixels - matches CSS --chat-input-max-height
+
+		// Configure marked for markdown rendering with security options
 		marked.setOptions({
 			breaks: true,
 			gfm: true,
+			headerIds: false,
+			mangle: false,
 		});
 
 		// Render markdown content with sanitization
+		// All content (user and AI) goes through DOMPurify to prevent XSS
 		const renderMarkdown = (content) => {
 			if (!content) return '';
 			const rawHtml = marked(content);
-			return DOMPurify.sanitize(rawHtml);
+			// DOMPurify removes all potentially dangerous HTML/JS
+			return DOMPurify.sanitize(rawHtml, {
+				ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'code', 'pre', 'a', 'ul', 'ol', 'li', 'blockquote'],
+				ALLOWED_ATTR: ['href', 'target', 'rel'],
+			});
 		};
 
 		const createDefaultAiMessage = () => ({
@@ -222,8 +232,8 @@ export default {
 			// Reset height to auto to get the correct scrollHeight
 			messageTextarea.value.style.height = 'auto';
 			
-			// Set height based on scrollHeight, with a max of 150px
-			const newHeight = Math.min(messageTextarea.value.scrollHeight, 150);
+			// Set height based on scrollHeight, with max height constant
+			const newHeight = Math.min(messageTextarea.value.scrollHeight, MAX_TEXTAREA_HEIGHT);
 			messageTextarea.value.style.height = `${newHeight}px`;
 		};
 
