@@ -4,10 +4,10 @@ Shared data access layer using DevExpress XPO (eXpress Persistent Objects) for o
 
 ## 🛠️ Technology Stack
 
-- **DevExpress XPO 25.1.3**: Object-Relational Mapping framework
-- **.NET 8.0**: Target framework
-- **MySQL/MariaDB**: Primary database
-- **Unit of Work Pattern**: Transaction management
+-  **DevExpress XPO 25.1.3**: Object-Relational Mapping framework
+-  **.NET 8.0**: Target framework
+-  **MySQL/MariaDB**: Primary database
+-  **Unit of Work Pattern**: Transaction management
 
 ## 🏗️ Architecture
 
@@ -43,51 +43,51 @@ public class YourService
 {
     private readonly UnitOfWork _unitOfWork;
     private User _user;
-    
+
     // pass the UnitOfWork via DI
     public YourService(UnitOfWork unitOfWork)
     {
         _unitOfWork = unitOfWork;
     }
-    
+
     // RECOMMENDED: Accept ClaimsPrincipal or User in constructor for automatic user validation
     public YourService(UnitOfWork unitOfWork, ClaimsPrincipal claimsPrincipal)
     {
         _unitOfWork = unitOfWork;
         _user = UserService.GetUser(claimsPrincipal, unitOfWork);
-        
+
         // Validate user at constructor level
         if (_user == null)
         {
             throw new UnauthorizedAccessException("User is not authorized or not found");
         }
     }
-    
+
     // Alternative: Accept User directly
     public YourService(UnitOfWork unitOfWork, User user)
     {
         _unitOfWork = unitOfWork;
         _user = user;
-        
+
         if (_user == null)
         {
             throw new ArgumentNullException(nameof(user));
         }
     }
-    
+
     public async Task<DataClass> UpdateData(int id, DataDto dto)
     {
         // User is already validated in constructor, so you can use it directly
         var data = await _unitOfWork.FindObject<DataClass>(id);
         if (data == null)
             throw new KeyNotFoundException("Data not found");
-        
+
         data.DisplayName = dto.DisplayName;
         data.UpdatedAt = DateTime.UtcNow;
-        
+
         data.Save();
         await _unitOfWork.CommitAsync();
-        
+
         return data;
     }
 }
@@ -137,23 +137,23 @@ public class ProjectService
 {
     private readonly UnitOfWork _unitOfWork;
     private readonly User _user;
-    
+
     public ProjectService(UnitOfWork unitOfWork, ClaimsPrincipal claimsPrincipal)
     {
         _unitOfWork = unitOfWork;
         _user = UserService.GetUser(claimsPrincipal, unitOfWork);
-        
+
         if (_user == null)
         {
             throw new UnauthorizedAccessException("User not authorized");
         }
     }
-    
+
     public ProjectDto CreateProject(ProjectDto projectDto)
     {
         // No need to pass firebaseUid or validate user here
         // User is already validated in constructor
-        
+
         var project = new Project(_unitOfWork)
         {
             Name = projectDto.Name,
@@ -162,13 +162,13 @@ public class ProjectService
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
-        
+
         _unitOfWork.Save(project);
         _unitOfWork.CommitTransaction();
-        
+
         return MapToDto(project);
     }
-    
+
     public List<ProjectDto> GetUserProjects()
     {
         // Get projects for the validated user
@@ -180,62 +180,38 @@ public class ProjectService
 }
 ```
 
-### Controller Usage
+### use the benefits of DevExpress XPO from User data model
 
 ```csharp
-[ApiController]
-[Route("api/[controller]")]
-public class ProjectsController : ControllerBase
+// Access related Projects directly from User entity
+var user = UserService.GetUser(User, unitOfWork);
+var activeProjects = user.Projects
+    .Where(p => p.IsActive)
+    .ToList();
+
+// or create new Project
+var newProject = new Project(unitOfWork)
 {
-    private readonly UnitOfWork _unitOfWork;
-    
-    public ProjectsController(UnitOfWork unitOfWork)
-    {
-        _unitOfWork = unitOfWork;
-    }
-    
-    [HttpPost]
-    public IActionResult CreateProject([FromBody] ProjectDto projectDto)
-    {
-        try
-        {
-            // Pass User (ClaimsPrincipal) to service constructor
-            // Service will validate user automatically
-            var service = new ProjectService(_unitOfWork, User);
-            
-            var project = service.CreateProject(projectDto);
-            return Ok(project);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized(new { error = "User not authorized" });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { error = ex.Message });
-        }
-    }
-    
-    [HttpGet]
-    public IActionResult GetProjects()
-    {
-        try
-        {
-            // Service validates user in constructor
-            var service = new ProjectService(_unitOfWork, User);
-            
-            var projects = service.GetUserProjects();
-            return Ok(projects);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized(new { error = "User not authorized" });
-        }
-    }
+    Name = "New Project",
+    User = user, // set the owner
+    CreatedAt = DateTime.UtcNow,
+    UpdatedAt = DateTime.UtcNow
+};
+user.Projects.Add(newProject);
+unitOfWork.Save(newProject);
+unitOfWork.CommitTransaction();
+
+// get nodes from a project
+var nodes = user.Projects
+    .FirstOrDefault(p => p.Id == projectId)?
+    .Nodes
+    .Where(n => n.IsActive)
+    .ToList();
 }
+
 ```
 
-## 🛠️ Development Guidelines
+### 🛠️ Development Guidelines
 
 ### Best Practices
 
@@ -250,10 +226,10 @@ public class ProjectsController : ControllerBase
 
 ### Naming Conventions
 
-- **Tables**: PascalCase, plural (Users, Projects, Workflows)
-- **Columns**: PascalCase (DisplayName, CreatedAt)
-- **Properties**: PascalCase (user.DisplayName)
-- **Foreign Keys**: Singular + Id (OwnerId, ProjectId)
+-  **Tables**: PascalCase, plural (Users, Projects, Workflows)
+-  **Columns**: PascalCase (DisplayName, CreatedAt)
+-  **Properties**: PascalCase (user.DisplayName)
+-  **Foreign Keys**: Singular + Id (OwnerId, ProjectId)
 
 ## 🔒 Security
 
@@ -289,6 +265,6 @@ if (resource.User.Oid != currentUser.Oid && !currentUser.IsAdmin)
 
 ## 📚 Resources
 
-- [DevExpress XPO Documentation](https://docs.devexpress.com/XPO/1998/express-persistent-objects)
-- [XPO Best Practices](https://docs.devexpress.com/XPO/2034/best-practices)
-- [MySQL Documentation](https://dev.mysql.com/doc/)
+-  [DevExpress XPO Documentation](https://docs.devexpress.com/XPO/1998/express-persistent-objects)
+-  [XPO Best Practices](https://docs.devexpress.com/XPO/2034/best-practices)
+-  [MySQL Documentation](https://dev.mysql.com/doc/)
