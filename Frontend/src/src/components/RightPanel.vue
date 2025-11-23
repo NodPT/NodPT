@@ -1,5 +1,5 @@
 ﻿<template>
-	<div class="right-panel">
+	<div class="right-panel" :data-theme="isDarkTheme ? 'dark' : 'light'">
 		<button type="button" class="btn btn-sm close-panel-btn" @click="handleClose" aria-label="Close panel">
 			<i class="bi bi-x-lg"></i>
 		</button>
@@ -53,12 +53,6 @@
 			<div class="tab-pane fade show active" id="chat" role="tabpanel" aria-labelledby="chat-tab">
 				<DeepChatComponent />
 			</div>
-
-			<!-- Review Tab -->
-			<!-- <div class="tab-pane fade" id="review" role="tabpanel" aria-labelledby="review-tab">
-				<Review />
-			</div> -->
-
 
 			<!-- Properties Tab -->
 			<div class="tab-pane fade" id="properties" role="tabpanel" aria-labelledby="properties-tab">
@@ -134,10 +128,6 @@
 				<FileExplorer />
 			</div>
 
-
-
-
-
 			<!-- Logs Tab -->
 			<div class="tab-pane fade" id="logs" role="tabpanel" aria-labelledby="logs-tab">
 				<div class="logs-container">
@@ -184,12 +174,16 @@ export default {
 			type: Object,
 			default: null,
 		},
+		isDarkTheme: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	setup(props) {
 		// Inject api
 		const api = inject('api');
 		nodeApiService.setApi(api);
-		
+
 		// Reactive data for each tab (excluding chat which is now a separate component)
 		const logsData = ref([]);
 		const propertiesData = reactive({
@@ -426,36 +420,33 @@ export default {
 <style scoped>
 /* Ensure tab buttons have proper default text color */
 .right-panel .nav-tabs .nav-link {
-	color: var(--bs-body-color, #212529);
+	/* color: var(--bs-body-color, #212529); */
 	background-color: transparent;
 }
 
 /* Active tab styling */
 .right-panel .nav-tabs .nav-link.active {
-	color: var(--bs-primary, #0d6efd);
-	background-color: var(--bs-body-bg, #ffffff);
+	color: #ffffff !important;
+	/* background-color: var(--bs-body-bg, #ffffff); */
 	border-color: var(--bs-border-color, #dee2e6);
 }
 
 /* Hover state for inactive tabs */
 .right-panel .nav-tabs .nav-link:hover:not(.active) {
-	color: var(--bs-primary, #0d6efd);
+	color: var(--bs-primary, #ffffff);
 	border-color: transparent;
 }
 
 /* Close button styling */
 .close-panel-btn {
 	position: absolute;
-	top: 0.5rem;
-	right: 0.5rem;
 	z-index: 10;
 	background: transparent;
 	border: none;
-	padding: 0.25rem 0.5rem;
+	background-color: transparent;
 }
 
 .close-panel-btn:hover {
-	background-color: rgba(0, 0, 0, 0.05);
 	border-radius: 0.25rem;
 }
 </style>

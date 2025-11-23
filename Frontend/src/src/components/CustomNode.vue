@@ -95,21 +95,21 @@ export default {
 	methods: {
 		nodeStyles() {
 			// Determine background color based on node type
-                        const nodeTypeColors = {
-                                panel: '#4d4d4d', // panelNode
-                                director: '#333333',
+			const nodeTypeColors = {
+				panel: '#4d4d4d', // panelNode
+				director: '#333333',
 				manager: '#272727',
 				inspector: '#1b1b1b',
 				agent: '#010101',
 			};
 
 			// Create darker border colors (30% darker)
-                        const nodeBorderColors = {
-                                panel: '#100202', // darker panelNode
-                                director: '#150626',
-				manager: '#230c3b',
-				inspector: '#321751',
-				agent: '#402066',
+			const nodeBorderColors = {
+				// panel: '#100202', // darker panelNode
+				// director: '#150626',
+				// manager: '#230c3b',
+				// inspector: '#321751',
+				// agent: '#402066',
 			};
 
 			// Get the node type
@@ -123,7 +123,7 @@ export default {
 				// Apply background color based on node type
 				background: nodeTypeColors[nodeType] || 'rgba(15, 15, 15, 0.55)',
 				// Apply border color based on node type
-				border: `1px solid #555 !important`,
+				// border: `1px solid #555 !important`,
 			};
 		},
 		inputs() {
@@ -146,8 +146,8 @@ export default {
 				const id = this.data.id.toLowerCase();
 				if (id.includes('panel')) {
 					return 'panel';
-                                } else if (id.includes('director')) {
-                                        return 'director';
+				} else if (id.includes('director')) {
+					return 'director';
 				} else if (id.includes('manager')) {
 					return 'manager';
 				} else if (id.includes('inspector')) {

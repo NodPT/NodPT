@@ -23,26 +23,22 @@
 			</div>
 
 			<!-- Zoom Fit Button -->
-			<button class="btn btn-outline-secondary btn-sm ms-2 shadow-none" @click="handleZoomFit"
-				title="Zoom to Fit All Nodes">
+			<button class="btn  btn-sm ms-2 shadow-none" @click="handleZoomFit" title="Zoom to Fit All Nodes">
 				<i class="bi bi-arrows-fullscreen"></i>
 			</button>
 
 			<!-- Arrange Nodes Button -->
-			<button class="btn btn-outline-secondary btn-sm ms-2 shadow-none" @click="handleArrangeNodes"
-				title="Auto Arrange Nodes">
+			<button class="btn  btn-sm ms-2 shadow-none" @click="handleArrangeNodes" title="Auto Arrange Nodes">
 				<i class="bi bi-grid-3x3"></i>
 			</button>
 
 			<!-- Minimap Toggle -->
-			<button class="btn btn-outline-secondary btn-sm ms-2 shadow-none" @click="handleToggleMinimap"
-				title="Toggle Minimap">
+			<button class="btn  btn-sm ms-2 shadow-none" @click="handleToggleMinimap" title="Toggle Minimap">
 				<i class="bi" :class="minimapVisible ? 'bi-eye-slash' : 'bi-eye'"></i>
 			</button>
 
 			<!-- Right Panel Toggle -->
-			<button class="btn btn-outline-secondary btn-sm ms-2 shadow-none" @click="handleToggleRightPanel"
-				title="Toggle Right Panel">
+			<button class="btn  btn-sm ms-2 shadow-none" @click="handleToggleRightPanel" title="Toggle Right Panel">
 				<i class="bi bi-layout-sidebar-reverse"></i>
 			</button>
 		</div>

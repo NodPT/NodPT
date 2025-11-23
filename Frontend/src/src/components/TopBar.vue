@@ -1,5 +1,5 @@
 <template>
-  <nav class="navbar studio-navbar fixed-top p-0" ref="topBar">
+  <nav class="navbar studio-navbar fixed-top p-0" ref="topBar" :data-theme="isDarkTheme ? 'dark' : 'light'">
     <div class="container-fluid d-flex align-items-center justify-content-start">
 
       <!-- User Menu -->
@@ -96,7 +96,7 @@
 
   <!-- Search Popup -->
   <div v-if="searchPopupVisible" class="search-popup position-fixed w-50 shadow-lg align-self-end rounded-3"
-    role="dialog" aria-label="Search nodes" style="top: var(--navbar-height, 56px); z-index: 1050; right:10px;">
+    role="dialog" aria-label="Search nodes" style="top: var(--navbar-height, 40px); z-index: 1050; right:10px;">
     <div class="container-fluid bg-white border-bottom p-2 rounded-3">
       <div class="d-flex align-items-center">
         <div class="input-group me-2">
@@ -149,6 +149,10 @@ export default {
     show_menu: {
       type: Boolean,
       default: true
+    },
+    isDarkTheme: {
+      type: Boolean,
+      default: false
     }
   },
   setup() {

@@ -3,8 +3,8 @@
   flex-direction: column;
   min-height: 100vh;
   width: 100%;
-  padding-top: var(--navbar-height, 56px); /* Account for fixed navbar height */
-  padding-bottom: var(--footer-height, 42px); /* Account for fixed footer height */
+  padding-top: var(--navbar-height, 40px); /* Account for fixed navbar height */
+  padding-bottom: var(--footer-height, 40px); /* Account for fixed footer height */
 }
 
 .main-editor-content {

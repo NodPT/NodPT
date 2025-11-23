@@ -105,7 +105,7 @@ export class EditorManager {
 			area.use(render);
 			area.use(connectionPlugin);
 			area.use(minimapPlugin);
-			area.use(contextMenuPlugin);
+			// area.use(contextMenuPlugin);
 			area.use(scopes);
 
 			render.addPreset(Presets.minimap.setup({ size: 200 }));
@@ -256,8 +256,8 @@ export class EditorManager {
 
 	/**
 	 * Arrange nodes with animation based on the hierarchy: Director > Managers > Inspectors > Agents
- * Each level follows specific positioning rules
- */
+	 * Each level follows specific positioning rules
+	 */
 	async arrangeNodes() {
 		if (!this.nodes.length) return;
 
@@ -444,7 +444,7 @@ export class EditorManager {
 	/**
 	 * Add a new node to the editor (this is the main method to use)
 	 * @param {string} nodeType - Type of the node
-		 * @param {string} name - Name of the node (default: 'Director')
+	 * @param {string} name - Name of the node (default: 'Director')
 	 * @param {number} inputsCount - Number of inputs (default: 0)
 	 * @param {number} outputsCount - Number of outputs (default: 0)
 	 * @returns {Object} The created and added node
@@ -1151,6 +1151,4 @@ export class EditorManager {
 		this.historyPlugin = null;
 		this.minimapPlugin = null;
 	}
-
-
 }

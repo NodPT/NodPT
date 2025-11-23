@@ -8,11 +8,11 @@
     --rete-accent-hover: #2a2e33;
     --rete-node-background: #b6b5b5;
     --rete-node-header: #03142e;
-    --rete-node-selected: #84c0ff;
+    --rete-node-selected: #feed00;
     --rete-connection: #c4abff;
     --rete-socket-fill: #0d6efd;
     --rete-socket-input-fill: #dc3545;
-    --navbar-height: 56px;
+    --navbar-height: 42px;
     --footer-height: 42px;
 }
 
@@ -21,11 +21,11 @@
     color: var(--rete-text);
 }
 
-.navbar.studio-navbar,
+/* .navbar.studio-navbar,
 .navbar.studio-footer {
     background-color: var(--rete-panel) !important;
     border-color: var(--rete-border);
-}
+} */
 
 .navbar.studio-navbar {
     z-index: 51;
@@ -105,10 +105,9 @@
 /* Close button in the top-right of the overlay */
 .main-editor-right-panel .close-panel-btn {
     position: absolute;
-    top: 0.5rem;
+    top: 0.25rem;
     right: 0.5rem;
     z-index: 40;
-    padding: 0.25rem 0.45rem;
 }
 
 .socket {
@@ -139,7 +138,7 @@
 }
 
 .node.selected {
-    border: 2px solid var(--rete-node-selected) !important;
+    border: 3px solid var(--rete-node-selected) !important;
     box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
 }
 

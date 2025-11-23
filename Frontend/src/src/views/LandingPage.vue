@@ -18,12 +18,8 @@
               <i class="bi bi-heart-fill me-2"></i>Support
             </a>
             <router-link to="/login" class="btn btn-success btn-sm px-3">Login</router-link>
-            <button 
-              @click="toggleTheme" 
-              class="btn btn-secondary rounded-circle"
-              style="width: 38px; height: 38px; padding: 0; display: flex; align-items: center; justify-content: center;"
-              :title="isDarkTheme ? 'Switch to Light Theme' : 'Switch to Dark Theme'"
-            >
+            <button @click="toggleTheme" class="btn btn-sm text-white"
+              :title="isDarkTheme ? 'Switch to Light Theme' : 'Switch to Dark Theme'">
               <i :class="isDarkTheme ? 'bi bi-sun-fill' : 'bi bi-moon-fill'"></i>
             </button>
           </nav>
@@ -53,8 +49,7 @@
               <button class="btn btn-sm px-4 btn-info" @click="scrollToUseCases">
                 Explore Use Cases
               </button>
-              <button class="btn btn-outline-light btn-sm px-4 py-3 position-relative overflow-hidden"
-                @click="scrollToVideo">
+              <button class="btn text-white btn-sm px-4 py-3 position-relative overflow-hidden" @click="scrollToVideo">
                 <span class="position-relative z-1">
                   <i class="bi bi-play-circle-fill me-2"></i>
                   See how it works
@@ -411,7 +406,7 @@
                 <h5 class="fw-semibold text-white mb-1">{{ useCase.title }}</h5>
                 <p class="text-white-50 mb-0">{{ useCase.description }}</p>
                 <div class="mt-auto">
-                  <button class="btn btn-outline-light btn-sm px-3" @click="tryScenario(useCase)">
+                  <button class="btn btn-light btn-sm px-3" @click="tryScenario(useCase)">
                     Try Scenario
                   </button>
                 </div>
@@ -432,7 +427,7 @@
           </p>
           <p class="text-white mb-0 fw-semibold">Need to talk to the team?</p>
           <p class="text-white-50 mb-4">Drop us a note and we will assemble the right agents for you.</p>
-          <button class="btn btn-outline-light px-4" @click="navigateToProject">
+          <button class="btn btn-light px-4" @click="navigateToProject">
             Talk to Solutions
           </button>
         </div>

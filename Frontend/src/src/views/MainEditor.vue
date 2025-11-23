@@ -1,17 +1,18 @@
 <template>
-	<div class="app-container main-editor" :data-theme="isDarkTheme ? 'dark' : 'light'">
-		<TopBar />
+        <div class="app-container main-editor" :data-theme="isDarkTheme ? 'dark' : 'light'">
+                <TopBar :is-dark-theme="isDarkTheme" />
 
-		<div class="main-content main-editor-content position-relative">
-			<LeftPanel ref="leftPanelRef" :minimap-visible="minimapVisible"
-				:class="['main-editor-left-panel', { 'is-hidden': !isLeftPanelVisible }]" />
-			<RightPanel :selected-node="selectedNode"
-				:class="['main-editor-right-panel', { 'is-hidden': !isRightPanelVisible }]" />
-		</div>
+                <div class="main-content main-editor-content position-relative">
+                        <LeftPanel ref="leftPanelRef" :minimap-visible="minimapVisible" :is-dark-theme="isDarkTheme"
+                                :class="['main-editor-left-panel', { 'is-hidden': !isLeftPanelVisible }]" />
+                        <RightPanel :selected-node="selectedNode" :is-dark-theme="isDarkTheme"
+                                :class="['main-editor-right-panel', { 'is-hidden': !isRightPanelVisible }]" />
+                </div>
 
-		<Footer :selected-node="selectedNode" :total-nodes="totalNodes" :progress="buildProgress"
-			:minimap-visible="minimapVisible" :connection-status="connectionStatus" />
-	</div>
+                <Footer :selected-node="selectedNode" :total-nodes="totalNodes" :progress="buildProgress"
+                        :minimap-visible="minimapVisible" :connection-status="connectionStatus"
+                        :is-dark-theme="isDarkTheme" />
+        </div>
 </template>
 
 <script setup>
@@ -47,11 +48,11 @@ const editorReady = ref(false);
 const currentProjectId = ref(null);
 
 const toggleMinimap = () => {
-	minimapVisible.value = !minimapVisible.value;
+        minimapVisible.value = !minimapVisible.value;
 };
 
 const toggleRightPanel = () => {
-	isRightPanelVisible.value = !isRightPanelVisible.value;
+        isRightPanelVisible.value = !isRightPanelVisible.value;
 };
 
 const updateProjectInfo = () => {
@@ -83,9 +84,9 @@ const initializeProjectContext = async () => {
         try {
                 // Load project data from backend
                 const projectData = await projectApiService.getProject(projectId);
-                
+
                 let initialNodes = [];
-                
+
                 // Use nodes from the project if available
                 if (projectData && projectData.Nodes && projectData.Nodes.length > 0) {
                         // Map backend nodes to frontend node format
@@ -188,55 +189,55 @@ const handleEditorReady = async (editorInfo) => {
 };
 
 const handleKeydown = (event) => {
-	if (event.ctrlKey && event.key === 'z' && !event.shiftKey) {
-		event.preventDefault();
-		triggerEvent(EVENT_TYPES.UNDO);
-	} else if ((event.ctrlKey && event.key === 'y') || (event.ctrlKey && event.shiftKey && event.key === 'Z')) {
-		event.preventDefault();
-		triggerEvent(EVENT_TYPES.REDO);
-	}
+        if (event.ctrlKey && event.key === 'z' && !event.shiftKey) {
+                event.preventDefault();
+                triggerEvent(EVENT_TYPES.UNDO);
+        } else if ((event.ctrlKey && event.key === 'y') || (event.ctrlKey && event.shiftKey && event.key === 'Z')) {
+                event.preventDefault();
+                triggerEvent(EVENT_TYPES.REDO);
+        }
 };
 
 const handleSignalRStatusChange = (status) => {
-	connectionStatus.value = status;
+        connectionStatus.value = status;
 };
 
 const handleSignalRToggle = async () => {
-	try {
-		if (connectionStatus.value === 'connected' || connectionStatus.value === 'connecting') {
-			// Stop the connection
-			await signalRService.stop();
-		} else {
-			// Start the connection
-			await signalRService.initialize();
-		}
-		connectionStatus.value = signalRService.getConnectionStatus();
-	} catch (error) {
-		console.error('Error toggling SignalR connection:', error);
-	}
+        try {
+                if (connectionStatus.value === 'connected' || connectionStatus.value === 'connecting') {
+                        // Stop the connection
+                        await signalRService.stop();
+                } else {
+                        // Start the connection
+                        await signalRService.initialize();
+                }
+                connectionStatus.value = signalRService.getConnectionStatus();
+        } catch (error) {
+                console.error('Error toggling SignalR connection:', error);
+        }
 };
 
 const handleNodeSelected = (nodeData) => {
-	selectedNode.value = nodeData;
+        selectedNode.value = nodeData;
 };
 
 const handleDeleteNode = () => {
-	// Check if there's a selected node
-	if (!selectedNode.value || !selectedNode.value.id) {
-		console.warn('No node selected to delete');
-		return;
-	}
+        // Check if there's a selected node
+        if (!selectedNode.value || !selectedNode.value.id) {
+                console.warn('No node selected to delete');
+                return;
+        }
 
-	// Get the editor manager from LeftPanel
-	if (leftPanelRef.value && typeof leftPanelRef.value.getNodeManager === 'function') {
-		const nodeManager = leftPanelRef.value.getNodeManager();
-		if (nodeManager) {
-			// Delete the selected node
-			nodeManager.deleteNode(selectedNode.value.id);
-			// Clear the selected node
-			selectedNode.value = null;
-		}
-	}
+        // Get the editor manager from LeftPanel
+        if (leftPanelRef.value && typeof leftPanelRef.value.getNodeManager === 'function') {
+                const nodeManager = leftPanelRef.value.getNodeManager();
+                if (nodeManager) {
+                        // Delete the selected node
+                        nodeManager.deleteNode(selectedNode.value.id);
+                        // Clear the selected node
+                        selectedNode.value = null;
+                }
+        }
 };
 
 // Watch for route query changes to update project info
@@ -250,37 +251,37 @@ watch(
 );
 
 onMounted(async () => {
-	// Load theme
-	loadTheme();
+        // Load theme
+        loadTheme();
 
-	cleanupFns.push(listenEvent(EVENT_TYPES.EDITOR_READY, handleEditorReady));
-	cleanupFns.push(listenEvent(EVENT_TYPES.TOGGLE_MINIMAP, toggleMinimap));
-	cleanupFns.push(listenEvent(EVENT_TYPES.TOGGLE_RIGHT_PANEL, toggleRightPanel));
-	cleanupFns.push(listenEvent(EVENT_TYPES.SIGNALR_STATUS_CHANGED, handleSignalRStatusChange));
-	cleanupFns.push(listenEvent(EVENT_TYPES.SIGNALR_TOGGLE_CONNECTION, handleSignalRToggle));
-	cleanupFns.push(listenEvent(EVENT_TYPES.NODE_SELECTED, handleNodeSelected));
-	cleanupFns.push(listenEvent(EVENT_TYPES.DELETE_NODE, handleDeleteNode));
-	window.addEventListener('keydown', handleKeydown);
+        cleanupFns.push(listenEvent(EVENT_TYPES.EDITOR_READY, handleEditorReady));
+        cleanupFns.push(listenEvent(EVENT_TYPES.TOGGLE_MINIMAP, toggleMinimap));
+        cleanupFns.push(listenEvent(EVENT_TYPES.TOGGLE_RIGHT_PANEL, toggleRightPanel));
+        cleanupFns.push(listenEvent(EVENT_TYPES.SIGNALR_STATUS_CHANGED, handleSignalRStatusChange));
+        cleanupFns.push(listenEvent(EVENT_TYPES.SIGNALR_TOGGLE_CONNECTION, handleSignalRToggle));
+        cleanupFns.push(listenEvent(EVENT_TYPES.NODE_SELECTED, handleNodeSelected));
+        cleanupFns.push(listenEvent(EVENT_TYPES.DELETE_NODE, handleDeleteNode));
+        window.addEventListener('keydown', handleKeydown);
 
-	// Start SignalR connection when entering the editor
-	try {
-		await signalRService.initialize();
-		connectionStatus.value = signalRService.getConnectionStatus();
-	} catch (error) {
-		console.error('Failed to initialize SignalR:', error);
-	}
+        // Start SignalR connection when entering the editor
+        try {
+                await signalRService.initialize();
+                connectionStatus.value = signalRService.getConnectionStatus();
+        } catch (error) {
+                console.error('Failed to initialize SignalR:', error);
+        }
 
-	// Add beforeunload confirmation to prevent accidental page refresh
-	const handleBeforeUnload = (event) => {
-		// Stop SignalR connection gracefully
-		signalRService.stop().catch(err => console.error('Error stopping SignalR:', err));
-		
-		// Show confirmation dialog
-		event.preventDefault();
-		event.returnValue = ''; // Chrome requires returnValue to be set
-	};
-	window.addEventListener('beforeunload', handleBeforeUnload);
-	cleanupFns.push(() => window.removeEventListener('beforeunload', handleBeforeUnload));
+        // Add beforeunload confirmation to prevent accidental page refresh
+        const handleBeforeUnload = (event) => {
+                // Stop SignalR connection gracefully
+                signalRService.stop().catch(err => console.error('Error stopping SignalR:', err));
+
+                // Show confirmation dialog
+                event.preventDefault();
+                event.returnValue = ''; // Chrome requires returnValue to be set
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        cleanupFns.push(() => window.removeEventListener('beforeunload', handleBeforeUnload));
 
         // Update project info on initial mount
         updateProjectInfo();
@@ -288,19 +289,19 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(async () => {
-	window.removeEventListener('keydown', handleKeydown);
-	cleanupFns.forEach((unsubscribe) => {
-		if (typeof unsubscribe === 'function') {
-			unsubscribe();
-		}
-	});
-	cleanupFns.length = 0;
+        window.removeEventListener('keydown', handleKeydown);
+        cleanupFns.forEach((unsubscribe) => {
+                if (typeof unsubscribe === 'function') {
+                        unsubscribe();
+                }
+        });
+        cleanupFns.length = 0;
 
-	// Stop SignalR connection when leaving the editor
-	try {
-		await signalRService.stop();
-	} catch (error) {
-		console.error('Error stopping SignalR:', error);
-	}
+        // Stop SignalR connection when leaving the editor
+        try {
+                await signalRService.stop();
+        } catch (error) {
+                console.error('Error stopping SignalR:', error);
+        }
 });
 </script>

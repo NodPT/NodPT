@@ -38,7 +38,6 @@
 }
 
 [data-theme="dark"] .main-editor-right-panel .nav-link.active {
-  color: #ffffff;
   background-color: rgba(102, 126, 234, 0.3);
   border-color: rgba(102, 126, 234, 0.3);
 }

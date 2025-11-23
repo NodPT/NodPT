@@ -1,12 +1,7 @@
 <template>
 	<div class="deepchat-container">
-		<deep-chat
-			ref="deepChatRef"
-			:request="requestConfig"
-			:initialMessages="initialMessages"
-			:messageStyles="messageStyles"
-			:style="chatStyle"
-		></deep-chat>
+		<deep-chat ref="deepChatRef" :request="requestConfig" :initialMessages="initialMessages"
+			:messageStyles="messageStyles" :style="chatStyle"></deep-chat>
 	</div>
 </template>
 
@@ -21,31 +16,33 @@ export default {
 	setup() {
 		const api = inject('api');
 		chatMessageApiService.setApi(api);
-		
+
 		const deepChatRef = ref(null);
 		const eventListeners = [];
-		
+
 		// SignalR connection ID
 		const connectionId = ref('');
-		
+
 		// Current project and node context
 		const currentProjectId = ref('');
 		const currentNodeId = ref('');
 		const currentNodeLevel = ref('manager');
-		
+
 		// Get user ID from localStorage or context
 		const userId = ref(localStorage.getItem('userId') || 'anonymous');
-		
+
 		// Track if messages are being loaded
 		const isLoadingMessages = ref(false);
 
 		// Chat style configuration
 		const chatStyle = {
 			width: '100%',
-			height: '600px',
-			borderRadius: '8px',
-			backgroundColor: '#1a1a2e',
-			color: '#e8eaf6'
+			height: window.innerHeight - 136 + 'px',
+			// borderRadius: '8px',
+			border: '0',
+			padding: '0',
+			// backgroundColor: '#1a1a2e',
+			// color: '#e8eaf6'
 		};
 
 		// Message styles for dark theme
@@ -100,7 +97,7 @@ export default {
 				try {
 					// Add thinking message immediately
 					const thinkingMessageId = `thinking_${Date.now()}`;
-					
+
 					if (deepChatRef.value) {
 						deepChatRef.value.addMessage({
 							role: 'ai',
@@ -121,7 +118,7 @@ export default {
 					});
 
 					const data = await response.json();
-					
+
 					// Store the chat ID for SignalR response matching
 					if (data && data.messageId) {
 						// The actual AI response will come via SignalR
@@ -148,7 +145,7 @@ export default {
 
 				// Get connection ID
 				connectionId.value = signalRService.connection?.connectionId || '';
-				
+
 				// Update request config with connection ID
 				if (requestConfig.value.additionalBodyProps) {
 					requestConfig.value.additionalBodyProps.ConnectionId = connectionId.value;
@@ -157,7 +154,7 @@ export default {
 				// Listen for AI responses from SignalR
 				signalRService.on('ReceiveAIResponse', (response) => {
 					console.log('Received AI response:', response);
-					
+
 					// Check if this is a streaming response
 					if (response && response.chatId && response.content) {
 						// Find the message bubble with thinking icon and update it
@@ -263,14 +260,14 @@ export default {
 		const handleNodeSelection = async (nodeData) => {
 			if (nodeData && nodeData.id) {
 				currentNodeId.value = nodeData.id;
-				
+
 				if (nodeData.level) {
 					currentNodeLevel.value = nodeData.level;
 					if (requestConfig.value.additionalBodyProps) {
 						requestConfig.value.additionalBodyProps.NodeLevel = nodeData.level;
 					}
 				}
-				
+
 				// Load chat messages for this node
 				await loadChatMessages(nodeData.id);
 			}
@@ -350,7 +347,7 @@ export default {
 		onMounted(async () => {
 			// Import DeepChat component dynamically
 			await import('deep-chat');
-			
+
 			// Setup SignalR
 			await setupSignalR();
 
@@ -366,7 +363,7 @@ export default {
 		onBeforeUnmount(() => {
 			// Clean up SignalR listeners
 			signalRService.off('ReceiveAIResponse');
-			
+
 			// Clean up event listeners
 			eventListeners.forEach((unsubscribe) => {
 				if (typeof unsubscribe === 'function') {
@@ -389,7 +386,7 @@ export default {
 <style scoped>
 .deepchat-container {
 	width: 100%;
-	height: 100%;
+	height: calc(100% - 42px);
 	display: flex;
 	flex-direction: column;
 }

@@ -5,7 +5,6 @@ This project builds a visual AI-assisted workflow editor frontend using Vue 3, R
 ■ Left Panel: Rete.js canvas for visual node editing (resizable).
 ■ Right Panel: Tab container for AI chat, notebook, logs, timeline, and properties (resizable).
 
-
 📚 Libraries To Use
 Vue 3 (Composition API)
 Rete.js (https://retejs.org/)
@@ -13,7 +12,6 @@ Bootstrap 5 (https://getbootstrap.com/)
 Vue Router (for navigation)
 Vuex / Tiny Emitter (eventBus) (for state management if needed)
 FontAwesome (for icons)
-
 
 📁 Folder structure for frontend:
 /src
@@ -24,7 +22,7 @@ App.vue
 main.js
 
 🖱️ 2. Top Bar (Fixed Header)
-User menu 
+User menu
 File: components/TopBar.vue buttons:
 Project Controls: New, Open, Save, Export, Build, Run, Publish.
 Node Controls: Add Node, Clear, Group, Ungroup, Lock, Unlock.
@@ -60,6 +58,7 @@ Load MainEditor.vue.
 Setup Vue Router if needed for additional pages.
 
 ## useful components can be used during coding
+
 ■ api-plugin already has all functions of crud by using axios and bearer token. Use this plugin by calling const api=inject('api'). The available functions are get, put, delete, post. Pass the parameters as same with axios function. Important: don't use axios directly in the component.
 
 📝 Keep It Simple
@@ -77,3 +76,4 @@ Use eventBus instead of watch
 -  Strictly use only bootstrap 5 for styling and layout. do not introduce other CSS frameworks. do not use custom CSS.
 -  Ensure all components are responsive and work well on different screen sizes.
 -  Do not use camelCase for data from backend, keep it as it is, properly data from backend uses PascalCase.
+-  I don't like outlines on buttons or any components if it's not necessary. i prefer shadow effects.

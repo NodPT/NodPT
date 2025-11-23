@@ -1,5 +1,5 @@
 ﻿<template>
-	<div class="left-panel w-100 h-100">
+	<div class="left-panel w-100 h-100" :data-theme="isDarkTheme ? 'dark' : 'light'">
 		<div class="rete-container w-100 h-100">
 			<div ref="reteCanvas" class="rete-canvas background w-100 h-100"></div>
 			<!-- Minimap is rendered by the plugin, not by a Vue component -->
@@ -20,6 +20,10 @@ export default {
 	},
 	props: {
 		minimapVisible: {
+			type: Boolean,
+			default: false,
+		},
+		isDarkTheme: {
 			type: Boolean,
 			default: false,
 		},
@@ -102,29 +106,29 @@ export default {
 		};
 
 		// Expose method to unlock a node
-                const unlockNode = async (nodeId) => {
-                        return await editorManager.unlockNode(nodeId);
-                };
+		const unlockNode = async (nodeId) => {
+			return await editorManager.unlockNode(nodeId);
+		};
 
-                const resetNodes = async (initialNodes = []) => {
-                        if (typeof editorManager.resetNodes === 'function') {
-                                return await editorManager.resetNodes(initialNodes);
-                        }
+		const resetNodes = async (initialNodes = []) => {
+			if (typeof editorManager.resetNodes === 'function') {
+				return await editorManager.resetNodes(initialNodes);
+			}
 
-                        return [];
-                };
+			return [];
+		};
 
-                return {
-                        reteCanvas,
-                        addNode, // Expose the addNode method to parent component
-                        deleteNode, // Expose the deleteNode method to parent component
-                        groupNodes, // Expose the groupNodes method to parent component
-                        ungroupNodes, // Expose the ungroupNodes method to parent component
-                        getNodeManager, // Expose the getNodeManager method to parent component
-                        lockNode, // Expose the lockNode method to parent component
-                        unlockNode, // Expose the unlockNode method to parent component
-                        resetNodes,
-                };
-        },
+		return {
+			reteCanvas,
+			addNode, // Expose the addNode method to parent component
+			deleteNode, // Expose the deleteNode method to parent component
+			groupNodes, // Expose the groupNodes method to parent component
+			ungroupNodes, // Expose the ungroupNodes method to parent component
+			getNodeManager, // Expose the getNodeManager method to parent component
+			lockNode, // Expose the lockNode method to parent component
+			unlockNode, // Expose the unlockNode method to parent component
+			resetNodes,
+		};
+	},
 };
 </script>

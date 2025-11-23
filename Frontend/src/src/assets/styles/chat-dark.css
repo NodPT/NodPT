@@ -2,7 +2,6 @@
 
 [data-theme="dark"] .chat-container {
   background-color: #1a1a2e;
-  color: #e8eaf6;
 }
 
 [data-theme="dark"] .chat-messages {
@@ -17,7 +16,6 @@
 /* DeepChat component dark theme */
 [data-theme="dark"] deep-chat {
   background-color: #1a1a2e !important;
-  color: #e8eaf6 !important;
   border-radius: 8px;
 }
 
@@ -71,13 +69,11 @@
 [data-theme="dark"] .chat-input .form-control {
   background-color: rgba(15, 15, 35, 0.5);
   border-color: rgba(102, 126, 234, 0.3);
-  color: #e8eaf6;
 }
 
 [data-theme="dark"] .chat-input .form-control:focus {
   background-color: rgba(15, 15, 35, 0.7);
   border-color: rgba(102, 126, 234, 0.5);
-  color: #e8eaf6;
   box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
 }
 

@@ -1,5 +1,5 @@
 <template>
-	<footer class="navbar studio-footer p-0 fixed-bottom">
+	<footer class="navbar studio-footer p-0 fixed-bottom" :data-theme="isDarkTheme ? 'dark' : 'light'">
 		<div class="container-fluid d-flex align-items-center py-1">
 			<!-- Node Status -->
 			<div class="d-flex align-items-center me-3">
@@ -16,20 +16,19 @@
 
 			<!-- SignalR Connection Status -->
 			<div class="d-flex align-items-center ms-2">
-				<span class="badge" :class="connectionStatusClass" :title="connectionStatusTitle" 
+				<span class="badge" :class="connectionStatusClass" :title="connectionStatusTitle"
 					@click="handleSignalRClick" :style="isQAMode ? 'cursor: pointer;' : ''">
 					<i class="bi" :class="connectionStatusIcon"></i>
 				</span>
 			</div>
 
 			<!-- Arrange Nodes Button -->
-			<button class="btn btn-outline-secondary btn-sm ms-2" @click="handleArrangeNodes"
-				title="Auto Arrange Nodes">
+			<button class="btn  btn-sm ms-2" @click="handleArrangeNodes" title="Auto Arrange Nodes">
 				<i class="bi bi-grid-3x3"></i>
 			</button>
 
 			<!-- Minimap Toggle -->
-			<button class="btn btn-outline-secondary btn-sm ms-2" @click="handleToggleMinimap" title="Toggle Minimap">
+			<button class="btn  btn-sm ms-2" @click="handleToggleMinimap" title="Toggle Minimap">
 				<i class="bi" :class="minimapVisible ? 'bi-eye-slash' : 'bi-eye'"></i>
 			</button>
 		</div>
@@ -61,6 +60,10 @@ export default {
 		connectionStatus: {
 			type: String,
 			default: 'disconnected',
+		},
+		isDarkTheme: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	data() {

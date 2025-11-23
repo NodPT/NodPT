@@ -46,7 +46,7 @@
                     {{ isDeleting ? 'Deleting Account...' : 'Delete My Account' }}
                   </button>
 
-                  <button class="btn btn-outline-light btn-lg" type="button" @click="onCancel" :disabled="isDeleting">
+                  <button class="btn btn-secondary btn-lg" type="button" @click="onCancel" :disabled="isDeleting">
                     Cancel
                   </button>
                 </div>
@@ -103,5 +103,3 @@ function onCancel() {
   router.push({ name: 'Profile' });
 }
 </script>
-
-

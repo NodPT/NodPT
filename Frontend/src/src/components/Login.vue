@@ -55,8 +55,7 @@
                   </div>
 
                   <div class="d-grid gap-2 mb-3">
-                    <button
-                      class="btn btn-outline-primary btn-lg d-flex align-items-center justify-content-center gap-2"
+                    <button class="btn btn-primary d-flex align-items-center justify-content-center gap-2"
                       @click="onGoogle" :disabled="isLoading" aria-label="Sign in with Google">
                       <span v-if="!isLoading"><i class="fab fa-google"></i></span>
                       <span v-else class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -64,7 +63,7 @@
                     </button>
 
                     <!-- <button
-                      class="btn btn-outline-secondary btn-lg d-flex align-items-center justify-content-center gap-2"
+                      class="btn btn-primary d-flex align-items-center justify-content-center gap-2"
                       @click="onMicrosoft" :disabled="isLoading" aria-label="Sign in with Microsoft">
                       <span v-if="!isLoading"><i class="fab fa-microsoft"></i></span>
                       <span v-else class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -72,7 +71,7 @@
                     </button>
 
                     <button
-                      class="btn btn-outline-primary btn-lg d-flex align-items-center justify-content-center gap-2"
+                      class="btn btn-primary d-flex align-items-center justify-content-center gap-2"
                       @click="onFacebook" :disabled="isLoading" aria-label="Sign in with Facebook">
                       <span v-if="!isLoading"><i class="fab fa-facebook-f"></i></span>
                       <span v-else class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
