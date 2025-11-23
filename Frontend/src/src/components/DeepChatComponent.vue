@@ -484,8 +484,12 @@ export default {
 			}
 
 			// Get message ID and text
-			const messageId = messageElement.getAttribute('data-id') || messageElement.id || Date.now();
+			const messageId = messageElement.getAttribute('data-id') || messageElement.id;
 			const messageText = messageElement.textContent || '';
+			if (!messageId) {
+				console.warn('DeepChatComponent: Could not find messageId for message element, skipping action buttons.', messageElement);
+				return;
+			}
 
 			// Create buttons container
 			const buttonsContainer = document.createElement('div');
