@@ -9,11 +9,17 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using NodPT.Data.Services;
 using NodPT.API.Services;
+using NodPT.API.Hubs;
+using NodPT.API.BackgroundServices;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using StackExchange.Redis;
-using NodPT.Data.Services;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args); // 🔹 Create builder
+
+// If credentials are not available, log a warning but continue
+// This allows the server to run in development mode without Firebase
 
 // 🔹 Load environment variables
 #if DEBUG // 🔹 Load .env in development
@@ -66,10 +72,19 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
     }
 });
 
-builder.Services.AddSingleton<IRedisService, RedisService>();
+builder.Services.AddSingleton<IRedisService, NodPT.Data.Services.RedisService>();
 
 // 🔹 Log Services
 builder.Services.AddScoped<LogService>();
+
+// 🔹 Add SignalR services
+builder.Services.AddSignalR();
+
+// 🔹 Add Redis AI listener background service for chat workflow
+builder.Services.AddHostedService<RedisStreamListener>();
+
+// 🔹 Add Redis AI response listener for chat responses
+builder.Services.AddHostedService<RedisAIResponseListener>();
 
 // 🔹 Controllers and JSON options of XPO ORM
 builder.Services.AddControllers().AddJsonOptions(options =>
@@ -91,7 +106,10 @@ builder.Services.AddCors(options =>
         // get the allowed origins from configuration appsettings.json
         if (allowedOrigins != null && allowedOrigins.Length > 0)
         {
-            policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials(); // Required for SignalR
         }
     });
 });
@@ -108,40 +126,89 @@ if (string.IsNullOrWhiteSpace(firebaseProjectId))
     throw new InvalidOperationException("Firebase project id not configured");
 }
 
-// Add authentication using Firebase JWTs
-builder.Services.AddAuthorization();
+// Initialize Firebase Admin SDK
+// Note: For production, you should set GOOGLE_APPLICATION_CREDENTIALS environment variable
+try
+{
+    if (FirebaseApp.DefaultInstance == null)
+    {
+        var credentialJson = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
+        if (!string.IsNullOrWhiteSpace(credentialJson))
+        {
+            try
+            {
+                FirebaseApp.Create(new AppOptions
+                {
+                    Credential = GoogleCredential.FromJson(credentialJson)
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning($"Failed to initialize FirebaseApp: {ex.Message}");
+            }
+        }
+        else
+        {
+            logger.LogWarning("WARNING: GOOGLE_APPLICATION_CREDENTIALS env var not set (expects JSON content).");
+        }
+    }
+}
+catch (Exception ex)
+{
+    logger.LogWarning($"To enable Firebase authentication, set GOOGLE_APPLICATION_CREDENTIALS environment variable. Error: {ex.Message}");
+}
+
+// Add authentication using Firebase JWTs via JWT Bearer
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
- .AddJwtBearer(options =>
- {
-     string JwksUrl = $"https://securetoken.google.com/{firebaseProjectId}";
-     options.Authority = JwksUrl; // 🔹 Set the authority to Firebase JWKS URL
-     options.Audience = firebaseProjectId; // Audience must match project id
-     options.TokenValidationParameters = new TokenValidationParameters
-     {
-         ValidateIssuer = true, // 🔹 Validate the issuer of the token
-         ValidIssuer = JwksUrl,
-         ValidateAudience = true,
-         ValidAudience = firebaseProjectId,
-         ValidateLifetime = true,
-         // Provide signing keys from Google's JWKS (Firebase)
-         IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
-         {
-             var keys = FirebaseHelper.FirebaseKeysProvider.GetSigningKeys(); // Get signing keys from Firebase 
-             if (!string.IsNullOrEmpty(kid))
-             {
-                 // Match the key id (kid) with the keys from Firebase
-                 var matched = keys.Where(k => (k.KeyId?.Equals(kid, StringComparison.Ordinal)) == true).ToList<SecurityKey>();
-                 if (matched.Count > 0)
-                     return matched; // Return matched key(s)
-             }
-             return keys.ToList<SecurityKey>(); // Fallback to all keys if no key match
-         }
-     };
+    .AddJwtBearer(options =>
+    {
+        string JwksUrl = $"https://securetoken.google.com/{firebaseProjectId}";
+        options.Authority = JwksUrl; // 🔹 Set the authority to Firebase JWKS URL
+        options.Audience = firebaseProjectId; // Audience must match project id
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true, // 🔹 Validate the issuer of the token
+            ValidIssuer = JwksUrl,
+            ValidateAudience = true,
+            ValidAudience = firebaseProjectId,
+            ValidateLifetime = true,
+            // Provide signing keys from Google's JWKS (Firebase)
+            IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
+            {
+                var keys = FirebaseHelper.FirebaseKeysProvider.GetSigningKeys(); // Get signing keys from Firebase 
+                if (!string.IsNullOrEmpty(kid))
+                {
+                    // Match the key id (kid) with the keys from Firebase
+                    var matched = keys.Where(k => (k.KeyId?.Equals(kid, StringComparison.Ordinal)) == true).ToList<SecurityKey>();
+                    if (matched.Count > 0)
+                        return matched; // Return matched key(s)
+                }
+                return keys.ToList<SecurityKey>(); // Fallback to all keys if no key match
+            }
+        };
 
-     // Include error details in development
-     options.IncludeErrorDetails = builder.Environment.IsDevelopment();
- });
+        // Include error details in development
+        options.IncludeErrorDetails = builder.Environment.IsDevelopment();
+        
+        // Configure for SignalR to use query string token
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/signalr"))
+                {
+                    context.Token = accessToken;
+                }
+                
+                return Task.CompletedTask;
+            }
+        };
+    });
 
+builder.Services.AddAuthorization();
 
 // 🔹 Build and run app
 var app = builder.Build();
@@ -150,6 +217,10 @@ app.UseRouting(); // 🔹 Enable routing
 app.UseCors("AllowAll"); // 🔹 Enable CORS
 app.UseAuthentication(); // 🔹 Enable authentication
 app.UseAuthorization(); // 🔹 Enable authorization
+
+// 🔹 Map the SignalR hub
+app.MapHub<NodptHub>("/signalr").RequireAuthorization();
+
 app.MapControllers(); // 🔹 Map controllers
 
 app.Run();

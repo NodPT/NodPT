@@ -1,14 +1,15 @@
 # NodPT WebAPI
 
-RESTful API service built with ASP.NET Core and .NET 8. This service provides data management, authentication, and business logic for the NodPT platform.
+RESTful API service built with ASP.NET Core and .NET 8. This service provides data management, authentication, and business logic for the NodPT platform. **Now includes integrated SignalR hub** for real-time communication with frontend clients.
 
 ## 🛠️ Technology Stack
 
 - **.NET 8.0**: Modern .NET framework for high-performance web APIs
 - **ASP.NET Core**: Web framework for building APIs
+- **SignalR**: Real-time bidirectional communication
 - **DevExpress XPO**: Object-Relational Mapping (ORM) for database access
 - **MySQL/MariaDB**: Primary database
-- **Redis**: Caching and message streaming
+- **Redis**: Caching, message streaming, and pub/sub messaging
 - **Firebase Admin SDK**: Authentication and token validation
 - **JWT Bearer Authentication**: Secure API endpoints
 - **Swashbuckle**: OpenAPI/Swagger documentation
@@ -19,6 +20,7 @@ RESTful API service built with ASP.NET Core and .NET 8. This service provides da
 - `DevExpress.Data` (25.1.3): Data manipulation utilities
 - `FirebaseAdmin` (3.4.0): Firebase authentication
 - `Microsoft.AspNetCore.Authentication.JwtBearer` (8.0.0): JWT authentication
+- `Microsoft.AspNetCore.DataProtection.StackExchangeRedis` (10.0.0): Data protection with Redis
 - `StackExchange.Redis` (2.9.32): Redis client
 - `MySql.Data` (9.1.0): MySQL database provider
 - `Swashbuckle.AspNetCore` (6.5.0): API documentation
@@ -30,11 +32,12 @@ RESTful API service built with ASP.NET Core and .NET 8. This service provides da
 ```
 WebAPI/
 ├── src/
+│   ├── Authentication/    # Firebase authentication handlers
+│   ├── BackgroundServices/# Redis listeners for SignalR
 │   ├── Controllers/       # API endpoints
+│   ├── Hubs/             # SignalR hubs
+│   ├── Models/           # Data models for SignalR
 │   ├── Services/         # Business logic layer
-│   ├── Models/           # Data transfer objects
-│   ├── Middleware/       # Custom middleware
-│   ├── Authentication/   # Auth handlers
 │   ├── Program.cs        # Application entry point
 │   ├── appsettings.json  # Configuration
 │   └── NodPT.API.csproj  # Project file
@@ -50,6 +53,42 @@ The API uses the **Unit of Work** pattern with DevExpress XPO for data access:
 ```
 WebAPI → Controllers → UnitOfWork → Repositories → Database
 ```
+
+### SignalR Integration
+
+The WebAPI now includes **SignalR hub functionality** for real-time bidirectional communication:
+
+#### SignalR Hub Endpoint
+- **URL**: `/signalr`
+- **Authentication**: Required (Firebase authentication)
+- **Hub Name**: `NodptHub`
+
+#### Redis Communication Channels
+
+The service listens to two Redis channels for real-time updates:
+
+1. **AI.RESPONSE** (Pub/Sub Channel)
+   - Listens for AI responses from Executor
+   - Routes responses to specific SignalR client connections
+   - Used for chat AI responses
+
+2. **signalr:updates** (Redis Stream)
+   - Listens for workflow and node updates
+   - Routes messages based on:
+     - `ClientConnectionId` (specific client)
+     - `WorkflowGroup` (group of clients)
+     - `UserId` (all connections for a user)
+
+#### WebAPI Publishes to Redis
+
+- **AI.REQUEST** (via ChatController)
+  - Publishes chat requests to `chat.jobs` Redis list
+  - Executor consumes and processes these requests
+
+#### Background Services
+
+- **RedisAIResponseListener**: Monitors `AI.RESPONSE` channel and forwards to SignalR clients
+- **RedisStreamListener**: Monitors `signalr:updates` stream and routes to appropriate client groups
 
 ## 🚀 Getting Started
 
@@ -251,24 +290,51 @@ AnyService.ProcessData(user, data);
 
 ### Redis Integration
 
-Inject job data into Redis streams:
+The WebAPI uses Redis for multiple purposes:
+
+#### 1. Message Queuing (Lists)
+```csharp
+// Inject IRedisService from NodPT.Data
+private readonly IRedisService _redisService;
+
+// Push chat request to queue
+public async Task QueueChatRequest(ChatRequest request)
+{
+    var payload = JsonSerializer.Serialize(request);
+    await _redisService.ListRightPushAsync("chat.jobs", payload);
+}
+```
+
+#### 2. Pub/Sub Messaging (Channels)
+```csharp
+// Background services automatically listen to:
+// - AI.RESPONSE (for chat responses from Executor)
+// - signalr:updates (for workflow updates)
+
+// Publishing to a channel
+await _redisService.PublishAsync("AI.REQUEST", messageJson);
+```
+
+#### 3. Workflow Updates (Redis Streams)
+```csharp
+// The RedisStreamListener automatically consumes from signalr:updates stream
+// Messages are routed to SignalR clients based on:
+// - ClientConnectionId (specific connection)
+// - WorkflowGroup (group of clients)
+// - UserId (all user's connections)
+```
+
+### Using IRedisService
+
+The shared `IRedisService` from NodPT.Data project provides:
 
 ```csharp
-// Inject Redis connection
-private readonly IConnectionMultiplexer _redis;
-
-public async Task QueueJob(JobData job)
+public interface IRedisService
 {
-    var db = _redis.GetDatabase();
-    var streamKey = "jobs:manager"; // or jobs:inspector, jobs:agent
-    
-    await db.StreamAddAsync(streamKey, new NameValueEntry[]
-    {
-        new("jobId", job.JobId),
-        new("workflowId", job.WorkflowId),
-        new("task", job.Task),
-        new("payload", JsonSerializer.Serialize(job.Payload))
-    });
+    Task PublishAsync(string channel, string message);
+    Task ListRightPushAsync(string key, string value);
+    Task<RedisValue> ListLeftPopAsync(string key);
+    Task SubscribeAsync(string channel, Action<RedisChannel, RedisValue> handler);
 }
 ```
 
@@ -277,16 +343,36 @@ public async Task QueueJob(JobData job)
 ### Firebase Authentication
 
 1. Users authenticate via Firebase in the frontend
-2. Frontend sends Firebase ID token in Authorization header
+2. Frontend sends Firebase ID token in Authorization header or query parameter
 3. API validates token using Firebase Admin SDK
 4. User information is extracted and stored in HttpContext.User
 
-### JWT Bearer Tokens
+### Authentication System
 
-The API uses JWT Bearer authentication with Firebase ID tokens:
+The WebAPI uses a single JWT Bearer authentication scheme for both REST API endpoints and SignalR connections:
 
+- **JWT Bearer Authentication**: 
+   - Validates Firebase ID tokens using the Firebase Admin SDK and Google's JWKS.
+   - For REST API endpoints, tokens are sent in the standard `Authorization: Bearer <token>` header.
+   - For SignalR connections (including WebSocket upgrades), tokens are passed via the `access_token` query parameter.
+   - Special handling in the authentication middleware allows SignalR to authenticate using the query string token.
+   - Allows executor client connections with `?clientType=executor-client`.
+   - Falls back to development mode in non-production environments.
+### Authentication for Different Scenarios
+
+**REST API Calls:**
 ```http
+GET /api/users/me
 Authorization: Bearer <firebase-id-token>
+```
+
+**SignalR WebSocket Connection:**
+```javascript
+const connection = new signalR.HubConnectionBuilder()
+    .withUrl("/signalr", {
+        accessTokenFactory: () => firebaseIdToken
+    })
+    .build();
 ```
 
 ### User Approval System
@@ -330,13 +416,63 @@ dotnet test /p:CollectCoverage=true
 
 Access Swagger documentation at `/swagger` for complete API reference.
 
-### Common Endpoints
+### Common REST Endpoints
 
 - `GET /api/health`: Health check
 - `POST /api/auth/login`: User authentication
 - `GET /api/users/me`: Get current user info
 - `GET /api/projects`: List user projects
 - `POST /api/workflows`: Create workflow
+- `POST /api/chat/send`: Send chat message (queues to Redis for AI processing)
+
+### SignalR Hub Endpoint
+
+**WebSocket Connection**: `/signalr`
+
+#### Connecting to SignalR Hub
+
+**JavaScript/TypeScript Example:**
+```javascript
+import * as signalR from "@microsoft/signalr";
+
+// Get Firebase ID token
+const token = await firebase.auth().currentUser.getIdToken();
+
+// Create connection
+const connection = new signalR.HubConnectionBuilder()
+    .withUrl("http://localhost:8846/signalr", {
+        accessTokenFactory: () => token
+    })
+    .withAutomaticReconnect()
+    .build();
+
+// Listen for AI responses
+connection.on("ReceiveAIResponse", (response) => {
+    console.log("AI Response:", response.Content); // PascalCase
+});
+
+// Listen for node updates
+connection.on("ReceiveNodeUpdate", (update) => {
+    console.log("Node Update:", update.Payload); // PascalCase
+});
+
+// Start connection
+await connection.start();
+```
+
+#### SignalR Hub Methods
+
+**Client → Server Methods:**
+- `JoinGroup(groupName)`: Join a specific group
+- `LeaveGroup(groupName)`: Leave a group
+- `JoinMasterGroup()`: Join master monitoring group
+- `SendMessage(user, message, targetGroup?)`: Send message to all or specific group
+
+**Server → Client Events:**
+- `ReceiveAIResponse`: AI chat response from Executor
+- `ReceiveNodeUpdate`: Workflow/node update from Redis stream
+- `ReceiveMessage`: General message from hub
+- `JoinedGroup`: Confirmation of joining a group
 
 ## ⚡ Performance
 

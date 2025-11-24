@@ -1,34 +1,60 @@
 # NodPT Executor
 
-Background worker service built with .NET 8 that processes jobs from Redis streams and executes AI-powered tasks. The Executor is the core processing engine that orchestrates workflow execution and AI interactions.
+Background worker service built with .NET 8 that processes jobs from Redis streams and executes AI-powered tasks. The Executor is the core processing engine that orchestrates workflow execution and AI interactions. **Now uses shared RedisService from NodPT.Data project.**
 
 ## 🛠️ Technology Stack
 
 - **.NET 8.0**: Modern .NET framework for background services
 - **Worker Service**: Long-running background service template
-- **Redis Streams**: Job queue and message streaming
-- **StackExchange.Redis**: Redis client library
+- **Redis Pub/Sub & Lists**: Message queuing and pub/sub communication
+- **StackExchange.Redis**: Redis client library (v2.9.32)
+- **NodPT.Data**: Shared data layer with RedisService
 - **HTTP Client**: Communication with AI services (Ollama)
 - **System.Text.Json**: JSON serialization
 
 ### Key Features
 
 - Role-based job execution (Manager, Inspector, Agent)
-- Concurrent job processing with configurable limits
-- Redis Streams consumer groups
+- Chat job processing with AI integration
+- Redis pub/sub for AI request/response communication
+- Shared RedisService for consistent Redis operations
 - LLM chat integration
-- SignalR notifications (via Redis)
+- Real-time notifications to WebAPI via Redis channels
 - Docker ready
 
 ## 🏗️ Architecture
 
-### Job Processing Flow
+### Chat Job Processing Flow
+
+```
+WebAPI /api/chat/send
+     │
+     ▼
+Redis List (chat.jobs) ← AI.REQUEST
+     │
+     ▼
+ChatJobConsumer
+     │
+     ▼
+LLM Service (Ollama)
+     │
+     ▼
+Redis Pub/Sub (AI.RESPONSE) ← AI.RESPONSE
+     │
+     ▼
+WebAPI RedisAIResponseListener
+     │
+     ▼
+SignalR Client (ReceiveAIResponse)
+```
+
+### Traditional Job Processing Flow
 
 ```
 Redis Stream (jobs:manager/inspector/agent)
     │
     ▼
-Executor Consumer
+RedisConsumer
     │
     ├─→ Manager Runner ──→ LLM (trt-llm-manager)
     ├─→ Inspector Runner ──→ LLM (trt-llm-inspector)
@@ -38,7 +64,7 @@ Executor Consumer
 Process Result
     │
     ├─→ Save to Repository
-    └─→ Notify via SignalR (Redis stream: signalr:updates)
+    └─→ Notify via Redis stream (signalr:updates)
 ```
 
 ### Project Structure
@@ -198,9 +224,29 @@ The dispatcher ensures jobs don't exceed configured limits:
 - Total concurrent job limit
 - Automatic queuing when at capacity
 
-## 📨 Job Message Format
+## 📨 Redis Communication
 
-Jobs are added to Redis Streams with the following format:
+The Executor uses Redis for bidirectional communication with WebAPI:
+
+### Consuming Messages (Input)
+
+**1. Chat Jobs (Redis List: `chat.jobs`)**
+```json
+{
+  "UserId": "user-firebase-uid",
+  "ConnectionId": "signalr-connection-id",
+  "NodeId": "node-id",
+  "ProjectId": "project-id",
+  "Message": "user message",
+  "Model": "model-name",
+  "ChatMessageId": "message-id"
+}
+```
+
+**2. Workflow Jobs (Redis Streams)**
+- `jobs:manager`: Manager-level jobs (high-level planning)
+- `jobs:inspector`: Inspector-level jobs (code review, analysis)
+- `jobs:agent`: Agent-level jobs (specific tasks)
 
 ```json
 {
@@ -214,12 +260,43 @@ Jobs are added to Redis Streams with the following format:
 }
 ```
 
-### Redis Stream Keys
+### Publishing Messages (Output)
 
-- `jobs:manager`: Manager-level jobs (high-level planning)
-- `jobs:inspector`: Inspector-level jobs (code review, analysis)
-- `jobs:agent`: Agent-level jobs (specific tasks)
-- `signalr:updates`: Results sent to SignalR for frontend delivery
+**1. AI Responses (Redis Pub/Sub: `AI.RESPONSE`)**
+```json
+{
+  "ConnectionId": "signalr-connection-id",
+  "Content": "AI response text"
+}
+```
+
+**2. Workflow Updates (Redis Stream: `signalr:updates`)**
+```json
+{
+  "MessageId": "msg-id",
+  "NodeId": "node-id",
+  "ProjectId": "project-id",
+  "UserId": "user-id",
+  "Type": "result",
+  "Payload": "result data",
+  "Timestamp": "2024-01-01T00:00:00Z"
+}
+```
+
+### Using IRedisService
+
+The Executor uses the shared `IRedisService` from NodPT.Data:
+
+```csharp
+// Inject IRedisService
+private readonly IRedisService _redisService;
+
+// Consume from list
+var message = await _redisService.ListLeftPopAsync("chat.jobs");
+
+// Publish to channel
+await _redisService.PublishAsync("AI.RESPONSE", responseJson);
+```
 
 ## 🤖 LLM Integration
 
@@ -500,9 +577,24 @@ docker-compose logs -f nodpt-executor
 ## 📚 Dependencies
 
 This project depends on:
-- **NodPT.Data**: Shared data layer (optional, currently stubbed)
-- **Redis**: Message streaming and job queuing
+- **NodPT.Data**: Shared data layer with RedisService, models, and services
+- **Redis**: Message streaming, pub/sub, and job queuing
 - **AI Service**: LLM endpoint (Ollama or compatible)
+
+### Key Project References
+
+- `NodPT.Data.csproj`: Provides IRedisService and shared models
+- `StackExchange.Redis` (2.9.32): Redis client library
+
+### Redis Communication Flow
+
+```
+WebAPI ←─[AI.RESPONSE]──→ Executor
+   │                          │
+   └──[chat.jobs list]───────→│
+   │                          │
+   ←──[signalr:updates]───────┘
+```
 
 ## 📞 Support
 

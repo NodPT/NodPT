@@ -1,5 +1,5 @@
 using BackendExecutor.Services;
-using StackExchange.Redis;
+using NodPT.Data.Services;
 using System.Text.Json;
 
 namespace BackendExecutor.Consumers;
@@ -12,19 +12,16 @@ public interface IChatJobConsumer
 public class ChatJobConsumer : IChatJobConsumer
 {
     private readonly ILogger<ChatJobConsumer> _logger;
-    private readonly IDatabase _database;
-    private readonly IConnectionMultiplexer _redis;
+    private readonly IRedisService _redisService;
     private readonly ILlmChatService _llmChatService;
 
     public ChatJobConsumer(
         ILogger<ChatJobConsumer> logger,
-        IDatabase database,
-        IConnectionMultiplexer redis,
+        IRedisService redisService,
         ILlmChatService llmChatService)
     {
         _logger = logger;
-        _database = database;
-        _redis = redis;
+        _redisService = redisService;
         _llmChatService = llmChatService;
     }
 
@@ -37,7 +34,7 @@ public class ChatJobConsumer : IChatJobConsumer
             try
             {
                 // Pop message from the left of the list (FIFO queue)
-                var message = await _database.ListLeftPopAsync("chat.jobs");
+                var message = await _redisService.ListLeftPopAsync("chat.jobs");
 
                 if (message.HasValue)
                 {
@@ -93,18 +90,13 @@ public class ChatJobConsumer : IChatJobConsumer
             };
 
             var responseJson = JsonSerializer.Serialize(responseDto);
-            var subscriber = _redis.GetSubscriber();
-            await subscriber.PublishAsync(RedisChannel.Literal("AI.RESPONSE"), responseJson);
+            await _redisService.PublishAsync("AI.RESPONSE", responseJson);
 
             _logger.LogInformation($"ChatJobConsumer: Published AI response to Redis channel for connection {chatJob.ConnectionId}");
         }
         catch (JsonException jsonEx)
         {
             _logger.LogError(jsonEx, "ChatJobConsumer: JSON deserialization failed for chat job: {MessageJson}", messageJson);
-        }
-        catch (RedisException redisEx)
-        {
-            _logger.LogError(redisEx, "ChatJobConsumer: Redis publish failed for chat job: {MessageJson}", messageJson);
         }
         catch (Exception ex)
         {
