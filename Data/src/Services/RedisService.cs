@@ -74,7 +74,7 @@ public class RedisService : IRedisService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error adding message to Redis stream: {streamKey}");
+            _logger.LogError(ex, "Error adding message to Redis stream: {StreamKey}", streamKey);
             throw;
         }
     }
@@ -290,7 +290,7 @@ public class RedisService : IRedisService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error acknowledging message {entryId} in stream {streamKey}");
+            _logger.LogError(ex, "Error acknowledging message {EntryId} in stream {StreamKey}", entryId, streamKey);
             throw;
         }
     }
@@ -354,7 +354,7 @@ public class RedisService : IRedisService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error claiming pending messages in stream {streamKey}");
+            _logger.LogError(ex, "Error claiming pending messages in stream {StreamKey}", streamKey);
             return 0;
         }
     }
@@ -370,7 +370,7 @@ public class RedisService : IRedisService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error trimming stream {streamKey}");
+            _logger.LogError(ex, "Error trimming stream {StreamKey}", streamKey);
             throw;
         }
     }
@@ -409,7 +409,7 @@ public class RedisService : IRedisService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting info for stream {streamKey}");
+            _logger.LogError(ex, "Error getting info for stream {StreamKey}", streamKey);
             throw;
         }
     }
@@ -438,7 +438,7 @@ public class RedisService : IRedisService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error stopping listener for stream {handle.StreamKey}");
+            _logger.LogError(ex, "Error stopping listener for stream {StreamKey}", handle.StreamKey);
         }
     }
 
