@@ -54,7 +54,7 @@ Task StopListen(ListenHandle handle);
 
 **Modified Files:**
 - `Executor/src/Program.cs`:
-  - Registered `ChatStreamConsumer` and `ChatStreamWorker`
+  - Registered `ChatStreamWorker`
   - Commented out old `ChatJobConsumer`
   - Added `UnitOfWork` registration for database access
   - Added `using DevExpress.Xpo` for XPO support
