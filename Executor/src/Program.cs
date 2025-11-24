@@ -6,6 +6,7 @@ using BackendExecutor.Dispatch;
 using BackendExecutor.Notify;
 using BackendExecutor.Runners;
 using BackendExecutor.Services;
+using NodPT.Data.Services;
 using StackExchange.Redis;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -50,6 +51,14 @@ builder.Services.AddSingleton<IDatabase>(provider =>
 {
     var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
     return multiplexer.GetDatabase();
+});
+
+// Register RedisService from Data project
+builder.Services.AddSingleton<IRedisService>(provider =>
+{
+    var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
+    var logger = provider.GetRequiredService<ILogger<RedisService>>();
+    return new RedisService(multiplexer, logger);
 });
 
 // Register HttpClient for LLM service
