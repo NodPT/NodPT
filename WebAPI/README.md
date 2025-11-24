@@ -453,7 +453,7 @@ connection.on("ReceiveAIResponse", (response) => {
 
 // Listen for node updates
 connection.on("ReceiveNodeUpdate", (update) => {
-    console.log("Node Update:", update.payload);
+    console.log("Node Update:", update.Payload); // PascalCase
 });
 
 // Start connection
