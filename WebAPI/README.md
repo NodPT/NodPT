@@ -448,7 +448,7 @@ const connection = new signalR.HubConnectionBuilder()
 
 // Listen for AI responses
 connection.on("ReceiveAIResponse", (response) => {
-    console.log("AI Response:", response.content);
+    console.log("AI Response:", response.Content); // PascalCase
 });
 
 // Listen for node updates
