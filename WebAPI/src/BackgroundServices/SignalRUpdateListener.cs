@@ -103,7 +103,7 @@ public class SignalRUpdateListener : BackgroundService
             }
 
             // Get the AI response (latest assistant message for the same node)
-            var aiResponses = new XPCollection<ChatMessage>(session,
+            using var aiResponses = new XPCollection<ChatMessage>(session,
                 CriteriaOperator.Parse("Node.Id = ? AND Sender = ? AND Timestamp >= ?", 
                     originalMessage.Node?.Id, "assistant", originalMessage.Timestamp),
                 new SortProperty("Timestamp", DevExpress.Xpo.DB.SortingDirection.Descending));
