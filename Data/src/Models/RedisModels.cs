@@ -50,10 +50,6 @@ public class ListenOptions
     /// </summary>
     public bool ClaimPendingOnStartup { get; set; } = true;
 
-    /// <summary>
-    /// Whether to delete (XDEL) after acknowledge (default: false, only XACK)
-    /// </summary>
-    public bool DeleteAfterAck { get; set; } = false;
 }
 
 /// <summary>
