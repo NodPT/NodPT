@@ -69,6 +69,8 @@ Task StopListen(ListenHandle handle);
 **Obsolete Files (renamed to .obsolete):**
 - `Executor/src/ChatWorker.cs.obsolete` (was list-based)
 - `Executor/src/Consumers/ChatJobConsumer.cs.obsolete` (was list-based)
+- `Executor/src/Worker.cs.obsolete` (used direct Redis calls instead of shared RedisService)
+- `Executor/src/Consumers/RedisConsumer.cs.obsolete` (used direct IDatabase instead of shared RedisService)
 
 ### 4. SignalR Project
 
@@ -120,12 +122,15 @@ WebAPI ──[Listen]──── Redis Stream
 
 ## Benefits
 
-1. **Single Source of Truth**: One `RedisService` implementation used by all services
+1. **Single Source of Truth**: One `RedisService` implementation used by all services - ALL Redis Streams operations go through the shared service
 2. **Reliability**: Consumer groups ensure no message loss, automatic claiming of stale messages
 3. **Scalability**: Multiple consumers can process messages in parallel
 4. **Observability**: XPENDING, XINFO commands provide visibility into message processing
 5. **Dead Letter Handling**: Failed messages moved to `{streamKey}:dead` after max retries
 6. **Simplified Architecture**: SignalR Hub consolidated into WebAPI (one less service to deploy)
+7. **Consistency**: All Redis Streams code follows the same pattern - no direct `IDatabase` usage
+
+**Note on Consistency:** The old `Worker` and `RedisConsumer` classes were marked obsolete because they used direct `IDatabase.StreamReadGroupAsync()` calls instead of the unified `RedisService`. For true consistency, any future consumers for `jobs:manager`, `jobs:inspector`, or `jobs:agent` streams should be rewritten to use `RedisService.Listen()` similar to `ChatStreamConsumer`.
 
 ## Migration Notes
 
@@ -231,7 +236,13 @@ After successful migration, the following can be removed:
 - Old Redis list: `chat.jobs`
 - Old pub/sub channel: `AI.RESPONSE`
 - SignalR Docker container/service
-- Obsolete `.obsolete` files after confirming migration success
+- Obsolete `.obsolete` files in Executor and WebAPI projects:
+  - `Executor/src/Worker.cs.obsolete`
+  - `Executor/src/ChatWorker.cs.obsolete`
+  - `Executor/src/Consumers/RedisConsumer.cs.obsolete`
+  - `Executor/src/Consumers/ChatJobConsumer.cs.obsolete`
+  - `WebAPI/src/BackgroundServices/RedisAIResponseListener.cs.obsolete`
+  - `WebAPI/src/BackgroundServices/RedisStreamListener.cs.obsolete`
 
 ## Testing
 

@@ -72,9 +72,11 @@ builder.Services.AddScoped<UnitOfWork>(provider => new UnitOfWork());
 builder.Services.AddSingleton<IRepository, StubRepository>();
 builder.Services.AddSingleton<INotifier, StubNotifier>();
 builder.Services.AddSingleton<IDispatcher, JobDispatcher>();
-builder.Services.AddSingleton<IRedisConsumer, RedisConsumer>();
 
-// OLD: list-based chat consumer (commented out, will be removed)
+// OLD: Direct Redis consumer (obsolete - should use shared RedisService)
+// builder.Services.AddSingleton<IRedisConsumer, RedisConsumer>();
+
+// OLD: list-based chat consumer (obsolete - replaced by ChatStreamConsumer)
 // builder.Services.AddSingleton<IChatJobConsumer, ChatJobConsumer>();
 
 // Register new Streams-based chat consumer
@@ -86,11 +88,14 @@ builder.Services.AddSingleton<InspectorRunner>();
 builder.Services.AddSingleton<AgentRunner>();
 
 // Register workers
-builder.Services.AddHostedService<Worker>();
+// OLD: Worker using direct Redis calls (obsolete - should use shared RedisService)
+// builder.Services.AddHostedService<Worker>();
 
-// Use new ChatStreamWorker instead of old ChatWorker
-// builder.Services.AddHostedService<ChatWorker>(); // OLD: list-based
-builder.Services.AddHostedService<ChatStreamWorker>(); // NEW: streams-based
+// OLD: ChatWorker using list-based consumer (obsolete - replaced by ChatStreamWorker)
+// builder.Services.AddHostedService<ChatWorker>();
+
+// NEW: ChatStreamWorker using unified RedisService
+builder.Services.AddHostedService<ChatStreamWorker>();
 
 var host = builder.Build();
 
