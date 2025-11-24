@@ -73,7 +73,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
     }
 });
 
-builder.Services.AddSingleton<IRedisService, RedisService>();
+builder.Services.AddSingleton<IRedisService, NodPT.Data.Services.RedisService>();
 
 // 🔹 Log Services
 builder.Services.AddScoped<LogService>();
