@@ -219,7 +219,7 @@ app.UseAuthentication(); // 🔹 Enable authentication
 app.UseAuthorization(); // 🔹 Enable authorization
 
 // 🔹 Map the SignalR hub
-app.MapHub<NodptHub>("/signalr");
+app.MapHub<NodptHub>("/signalr").RequireAuthorization();
 
 app.MapControllers(); // 🔹 Map controllers
 
