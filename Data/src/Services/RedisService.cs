@@ -14,12 +14,12 @@ public interface IRedisService
 public class RedisService : IRedisService
 {
     private readonly IConnectionMultiplexer _redis;
-    private readonly ILogger<RedisService>? _logger;
+    private readonly ILogger<RedisService> _logger;
 
-    public RedisService(IConnectionMultiplexer redis, ILogger<RedisService>? logger = null)
+    public RedisService(IConnectionMultiplexer redis, ILogger<RedisService> logger)
     {
         _redis = redis ?? throw new ArgumentNullException(nameof(redis));
-        _logger = logger;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task PublishAsync(string channel, string message)
