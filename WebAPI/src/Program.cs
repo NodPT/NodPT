@@ -20,7 +20,6 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args); // 🔹 Crea
 
 // If credentials are not available, log a warning but continue
 // This allows the server to run in development mode without Firebase
-var logger = LoggerFactory.Create(config => config.AddConsole()).CreateLogger("Startup");
 
 // 🔹 Load environment variables
 #if DEBUG // 🔹 Load .env in development
