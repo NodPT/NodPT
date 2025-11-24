@@ -131,29 +131,30 @@ public class RedisService : IRedisService
                         {
                             // Process messages concurrently if configured
                             var tasks = new List<Task>();
-                            var semaphore = new SemaphoreSlim(options.Concurrency, options.Concurrency);
-
-                            foreach (var entry in entries)
+                            using (var semaphore = new SemaphoreSlim(options.Concurrency, options.Concurrency))
                             {
-                                await semaphore.WaitAsync(cancellationToken);
-                                
-                                var task = Task.Run(async () =>
+                                foreach (var entry in entries)
                                 {
-                                    try
+                                    await semaphore.WaitAsync(cancellationToken);
+                                    
+                                    var task = Task.Run(async () =>
                                     {
-                                        await ProcessMessage(db, streamKey, group, entry, handler, options, cancellationToken);
-                                    }
-                                    finally
-                                    {
-                                        semaphore.Release();
-                                    }
-                                }, cancellationToken);
+                                        try
+                                        {
+                                            await ProcessMessage(db, streamKey, group, entry, handler, options, cancellationToken);
+                                        }
+                                        finally
+                                        {
+                                            semaphore.Release();
+                                        }
+                                    }, cancellationToken);
 
-                                tasks.Add(task);
+                                    tasks.Add(task);
+                                }
+
+                                // Wait for all messages in this batch to complete
+                                await Task.WhenAll(tasks);
                             }
-
-                            // Wait for all messages in this batch to complete
-                            await Task.WhenAll(tasks);
                         }
                         else
                         {
