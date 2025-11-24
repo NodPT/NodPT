@@ -1,12 +1,13 @@
 # NodPT.Data
 
-Shared data access layer using DevExpress XPO (eXpress Persistent Objects) for object-relational mapping with MySQL/MariaDB database.
+Shared data access layer using DevExpress XPO (eXpress Persistent Objects) for object-relational mapping with MySQL/MariaDB database. **Also provides shared RedisService for unified Redis Streams communication across all services.**
 
 ## 🛠️ Technology Stack
 
 - **DevExpress XPO 25.1.3**: Object-Relational Mapping framework
 - **.NET 8.0**: Target framework
 - **MySQL/MariaDB**: Primary database
+- **StackExchange.Redis 2.9.32**: Redis client for Streams support
 - **Unit of Work Pattern**: Transaction management
 
 ## 🏗️ Architecture
@@ -32,21 +33,42 @@ XPO Session
 MySQL Database
 ```
 
+### Redis Streams Communication
+
+The shared `RedisService` provides a unified interface for all Redis Streams operations across WebAPI, Executor, and other services:
+
+```
+WebAPI ──┐
+         ├──→ IRedisService (shared) ──→ Redis Streams
+Executor─┘
+```
+
+**Key Features:**
+- Single source of truth for Redis operations
+- Consumer groups with automatic claiming of stale messages
+- Retry logic with dead-letter stream support
+- XADD, XREADGROUP, XACK, XDEL, XTRIM operations
+- Background listeners with configurable concurrency
+
 ### Project Structure
 
 ```
 Data/
 ├── src/
-│   ├── Models/             # XPO persistent objects
+│   ├── Models/             # XPO persistent objects + Redis models
 │   │   ├── User.cs        # User entity
 │   │   ├── Project.cs     # Project entity
+│   │   ├── ChatMessage.cs # Chat message with ConnectionId
+│   │   ├── RedisModels.cs # MessageEnvelope, ListenOptions, etc.
 │   │   └── ...            # Other entities
-│   ├── Services/       # Data services and Unit of Work
-│   │   └── ...                    # Service classes
-│   ├── Attributes/       # Custom attributes
-│   │   └── ...                    # Attribute classes
-│   ├── Dto/      # Data Transfer Objects
-│   │   └── ... # DTO classes
+│   ├── Services/          # Data services and Redis service
+│   │   ├── RedisService.cs      # Shared Redis Streams service
+│   │   ├── ChatService.cs       # Chat service
+│   │   └── ...                  # Other service classes
+│   ├── DTOs/              # Data Transfer Objects
+│   │   ├── ChatMessageDto.cs    # Chat DTO with ConnectionId
+│   │   └── ...                  # Other DTO classes
+│   ├── Attributes/        # Custom attributes
 │   └── NodPT.Data.csproj  # Project file
 └── README.md              # This file
 ```
@@ -57,6 +79,7 @@ Data/
 
 - .NET 8.0 SDK or later
 - MySQL 8.0+ or MariaDB 10.5+
+- Redis 7.0+ (with Streams support)
 - DevExpress XPO (free)
 
 ### Installation
@@ -64,7 +87,7 @@ Data/
 This is a shared library referenced by other projects:
 
 ```xml
-<!-- In WebAPI or other project -->
+<!-- In WebAPI or Executor project -->
 <ItemGroup>
   <ProjectReference Include="..\..\Data\src\NodPT.Data.csproj" />
 </ItemGroup>
@@ -274,3 +297,134 @@ For issues and questions:
 - Check DevExpress documentation
 - Open an issue on GitHub
 - Contact the development team
+## 📡 RedisService API
+
+The shared `IRedisService` provides a unified interface for Redis Streams operations across all NodPT services.
+
+### Methods
+
+#### Add - Publish to Stream
+```csharp
+Task<string> Add(string streamKey, IDictionary<string, string> envelope)
+```
+Adds a message to a Redis Stream using XADD. Returns the entry ID.
+
+**Example:**
+```csharp
+var envelope = new Dictionary<string, string>
+{
+    { "chatId", "123" },
+    { "connectionId", "abc-xyz" },
+    { "timestamp", DateTime.UtcNow.ToString("o") }
+};
+var entryId = await _redisService.Add("jobs:chat", envelope);
+```
+
+#### Listen - Subscribe to Stream
+```csharp
+ListenHandle Listen(string streamKey, string group, string consumerName, 
+    Func<MessageEnvelope, CancellationToken, Task<bool>> handler, 
+    ListenOptions? options = null)
+```
+Starts listening to a Redis Stream with consumer group. Handler returns `true` for success (will XACK), `false` for retry.
+
+**Example:**
+```csharp
+var handle = _redisService.Listen(
+    streamKey: "jobs:chat",
+    group: "executor",
+    consumerName: "executor-worker-1",
+    handler: async (envelope, ct) =>
+    {
+        // Process message
+        var chatId = envelope.Fields["chatId"];
+        
+        // Return true to acknowledge, false to retry
+        return true;
+    },
+    options: new ListenOptions
+    {
+        BatchSize = 10,
+        Concurrency = 3,
+        MaxRetries = 3
+    });
+```
+
+#### Delete - Acknowledge Message
+```csharp
+Task Delete(string streamKey, string group, string entryId)
+```
+Acknowledges a message using XACK. Optionally deletes with XDEL if configured.
+
+#### ClaimPending - Reclaim Stale Messages
+```csharp
+Task<int> ClaimPending(string streamKey, string group, string consumerName, int idleThresholdMs)
+```
+Claims messages that have been idle for too long (failed consumers).
+
+#### Trim - Limit Stream Size
+```csharp
+Task Trim(string streamKey, long maxLen)
+```
+Trims the stream to approximately maxLen messages using XTRIM.
+
+#### Info - Get Stream Metadata
+```csharp
+Task<RedisStreamInfo> Info(string streamKey, string? group = null)
+```
+Returns stream length, total pending, and per-consumer pending counts.
+
+#### StopListen - Stop Listener
+```csharp
+Task StopListen(ListenHandle handle)
+```
+Gracefully stops a listener started with Listen().
+
+### Stream Keys (Convention)
+
+- `jobs:chat` - Chat processing jobs (WebAPI → Executor)
+- `signalr:updates` - Real-time updates (Executor → WebAPI)
+- `{streamKey}:dead` - Dead letter stream for failed messages
+
+### Consumer Groups
+
+- `executor` - Executor service consumers
+- `signalr` - WebAPI SignalR listeners
+
+### Configuration
+
+```json
+{
+  "Redis": {
+    "ConnectionString": "localhost:6379",
+    "Streams": {
+      "JobsChat": "jobs:chat",
+      "SignalRUpdates": "signalr:updates",
+      "TrimMaxLength": 10000
+    }
+  }
+}
+```
+
+### ListenOptions
+
+```csharp
+var options = new ListenOptions
+{
+    BatchSize = 10,              // Messages per read
+    Concurrency = 3,             // Parallel handlers
+    ClaimIdleThresholdMs = 60000, // Claim after 1 minute idle
+    MaxRetries = 3,              // Retries before dead letter
+    PollDelayMs = 1000,          // Delay when no messages
+    CreateStreamIfMissing = true, // Auto-create stream/group
+    ClaimPendingOnStartup = true  // Claim on startup
+};
+```
+
+### Error Handling
+
+- Failed handlers return `false` → message is retried
+- After `MaxRetries` → message moves to `{streamKey}:dead`
+- Dead letter stream preserves original data + failure metadata
+- Pending messages are auto-claimed by healthy consumers
+
