@@ -63,8 +63,7 @@ Task StopListen(ListenHandle handle);
   - Added Redis Streams configuration section
 
 **New Files:**
-- `Executor/src/Consumers/ChatStreamConsumer.cs` - Listens to `jobs:chat` stream, processes with LLM, saves to DB, publishes to `signalr:updates`
-- `Executor/src/ChatStreamWorker.cs` - Background worker for ChatStreamConsumer
+- `Executor/src/ChatStreamWorker.cs` - BackgroundService that listens to `jobs:chat` stream, processes with LLM, saves to DB, publishes to `signalr:updates`
 
 **Obsolete Files (renamed to .obsolete):**
 - `Executor/src/ChatWorker.cs.obsolete` (was list-based)

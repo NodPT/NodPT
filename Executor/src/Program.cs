@@ -1,6 +1,5 @@
 using BackendExecutor;
 using BackendExecutor.Config;
-using BackendExecutor.Consumers;
 using BackendExecutor.Data;
 using BackendExecutor.Dispatch;
 using BackendExecutor.Notify;
@@ -76,11 +75,8 @@ builder.Services.AddSingleton<IDispatcher, JobDispatcher>();
 // OLD: Direct Redis consumer (obsolete - should use shared RedisService)
 // builder.Services.AddSingleton<IRedisConsumer, RedisConsumer>();
 
-// OLD: list-based chat consumer (obsolete - replaced by ChatStreamConsumer)
+// OLD: list-based chat consumer (obsolete - replaced by ChatStreamWorker)
 // builder.Services.AddSingleton<IChatJobConsumer, ChatJobConsumer>();
-
-// Register new Streams-based chat consumer
-builder.Services.AddSingleton<IChatStreamConsumer, ChatStreamConsumer>();
 
 // Register runners  
 builder.Services.AddSingleton<ManagerRunner>();
