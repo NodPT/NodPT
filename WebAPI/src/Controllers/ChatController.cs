@@ -356,7 +356,7 @@ namespace NodPT.API.Controllers
                 // Add to Redis stream for executor processing
                 var entryId = await _redisService.Add("jobs:chat", envelope);
 
-                _logger.LogInformation($"Chat message queued for processing: ChatId={chatMessage.Oid}, ConnectionId={dto.ConnectionId}, Model={modelName}, EntryId={entryId}");
+                _logger.LogInformation("Chat message queued for processing: ChatId={ChatId}, ConnectionId={ConnectionId}, Model={Model}, EntryId={EntryId}", chatMessage.Oid, dto.ConnectionId, modelName, entryId);
 
                 return Ok(new { status = "queued", messageId = chatMessage.Oid });
             }
