@@ -80,11 +80,8 @@ builder.Services.AddScoped<LogService>();
 // 🔹 Add SignalR services
 builder.Services.AddSignalR();
 
-// 🔹 Add Redis AI listener background service for chat workflow
-builder.Services.AddHostedService<RedisStreamListener>();
-
-// 🔹 Add Redis AI response listener for chat responses
-builder.Services.AddHostedService<RedisAIResponseListener>();
+// 🔹 Add SignalR update listener for chat responses (NEW: uses Redis Streams)
+builder.Services.AddHostedService<SignalRUpdateListener>();
 
 // 🔹 Controllers and JSON options of XPO ORM
 builder.Services.AddControllers().AddJsonOptions(options =>
@@ -144,18 +141,18 @@ try
             }
             catch (Exception ex)
             {
-                logger.LogWarning($"Failed to initialize FirebaseApp: {ex.Message}");
+                Console.WriteLine($"Failed to initialize FirebaseApp: {ex.Message}");
             }
         }
         else
         {
-            logger.LogWarning("WARNING: GOOGLE_APPLICATION_CREDENTIALS env var not set (expects JSON content).");
+            Console.WriteLine("WARNING: GOOGLE_APPLICATION_CREDENTIALS env var not set (expects JSON content).");
         }
     }
 }
 catch (Exception ex)
 {
-    logger.LogWarning($"To enable Firebase authentication, set GOOGLE_APPLICATION_CREDENTIALS environment variable. Error: {ex.Message}");
+    Console.WriteLine($"To enable Firebase authentication, set GOOGLE_APPLICATION_CREDENTIALS environment variable. Error: {ex.Message}");
 }
 
 // Add authentication using Firebase JWTs via JWT Bearer

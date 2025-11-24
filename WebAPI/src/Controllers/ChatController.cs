@@ -71,41 +71,50 @@ namespace NodPT.API.Controllers
                     return Unauthorized(new { error = "User not found or not authorized" });
                 }
 
-                // Get the connectionId from request headers (should be sent by frontend)
-                var connectionId = Request.Headers["X-SignalR-ConnectionId"].FirstOrDefault();
+                // Get the connectionId from the DTO (should be sent by frontend)
+                var connectionId = userMessage.ConnectionId;
+                if (string.IsNullOrEmpty(connectionId))
+                {
+                    // Fallback to header for backward compatibility
+                    connectionId = Request.Headers["X-SignalR-ConnectionId"].FirstOrDefault();
+                }
+                
                 if (string.IsNullOrEmpty(connectionId))
                 {
                     _logger.LogWarning("Missing SignalR ConnectionId in request");
+                    return BadRequest(new { error = "ConnectionId is required" });
                 }
 
-                // Add user message to database
+                // Add user message to database with ConnectionId
                 userMessage.Sender = "user";
+                userMessage.ConnectionId = connectionId;
                 var savedMessage = _chatService.AddMessage(userMessage, user, _session);
 
-                // Get node and project details for Redis payload
+                // Ensure DB commit before publishing to Redis
+                await _session.CommitChangesAsync();
+
+                // Get node details for context
                 var node = _session.FindObject<Node>(CriteriaOperator.Parse("Id = ?", userMessage.NodeId));
                 if (node == null)
                 {
                     return NotFound(new { error = "Node not found" });
                 }
 
-                // Prepare data for Redis queue with all required fields for SignalR
-                var redisPayload = new
+                // Prepare minimal envelope for Redis stream (jobs:chat)
+                var envelope = new Dictionary<string, string>
                 {
-                    UserId = user.FirebaseUid,
-                    ConnectionId = connectionId,
-                    NodeId = userMessage.NodeId,
-                    ProjectId = node.Project?.Oid.ToString(),
-                    Message = userMessage.Message,
-                    ChatMessageId = savedMessage.Oid.ToString(),
-                    Timestamp = DateTime.UtcNow
+                    { "chatId", savedMessage.Oid.ToString() },
+                    { "connectionId", connectionId },
+                    { "nodeId", userMessage.NodeId },
+                    { "userId", user.FirebaseUid ?? "" },
+                    { "projectId", node.Project?.Oid.ToString() ?? "" },
+                    { "timestamp", DateTime.UtcNow.ToString("o") }
                 };
 
-                // Push to Redis queue for AI processing
-                var jobData = JsonSerializer.Serialize(redisPayload);
-                await _redisService.ListRightPushAsync("chat.jobs", jobData);
+                // Add to Redis stream for executor processing
+                var entryId = await _redisService.Add("jobs:chat", envelope);
 
-                _logger.LogInformation($"Chat message queued for processing: UserId={user.FirebaseUid}, NodeId={userMessage.NodeId}, MessageId={savedMessage.Oid}");
+                _logger.LogInformation($"Chat message queued for processing: ChatId={savedMessage.Oid}, ConnectionId={connectionId}, EntryId={entryId}");
 
                 return Ok(new 
                 { 
@@ -118,7 +127,8 @@ namespace NodPT.API.Controllers
                         NodeId = savedMessage.Node?.Id,
                         MarkedAsSolution = savedMessage.MarkedAsSolution,
                         Liked = savedMessage.Liked,
-                        Disliked = savedMessage.Disliked
+                        Disliked = savedMessage.Disliked,
+                        ConnectionId = savedMessage.ConnectionId
                     },
                     status = "queued"
                 });
@@ -277,6 +287,11 @@ namespace NodPT.API.Controllers
                 return BadRequest("Chat submit data cannot be null");
             }
 
+            if (string.IsNullOrEmpty(dto.ConnectionId))
+            {
+                return BadRequest("ConnectionId is required");
+            }
+
             try
             {
                 var user = UserService.GetUser(User, _session);
@@ -287,9 +302,10 @@ namespace NodPT.API.Controllers
 
                 // Determine model name from node or template
                 string? modelName = null;
+                Node? node = null;
                 if (!string.IsNullOrEmpty(dto.NodeLevel))
                 {
-                    var node = _session.FindObject<Node>(CriteriaOperator.Parse("Id = ?", dto.NodeLevel));
+                    node = _session.FindObject<Node>(CriteriaOperator.Parse("Id = ?", dto.NodeLevel));
                     
                     if (node != null)
                     {
@@ -311,21 +327,36 @@ namespace NodPT.API.Controllers
                 // Set the model in the DTO
                 dto.Model = modelName;
 
-                // Save to DB
+                // Save to DB with ConnectionId
                 var chatMessageDto = new ChatMessageDto
                 {
                     Sender = "user",
                     Message = dto.Message,
                     NodeId = dto.NodeLevel,
-                    MarkedAsSolution = false
+                    MarkedAsSolution = false,
+                    ConnectionId = dto.ConnectionId
                 };
                 var chatMessage = _chatService.AddMessage(chatMessageDto, user, _session);
 
-                // Push to Redis queue for executor
-                var jobData = JsonSerializer.Serialize(dto);
-                await _redisService.ListRightPushAsync("chat.jobs", jobData);
+                // Ensure DB commit before publishing to Redis
+                await _session.CommitChangesAsync();
 
-                _logger.LogInformation($"Chat message queued for processing: UserId={dto.UserId}, ConnectionId={dto.ConnectionId}, Model={modelName}");
+                // Prepare minimal envelope for Redis stream (jobs:chat)
+                var envelope = new Dictionary<string, string>
+                {
+                    { "chatId", chatMessage.Oid.ToString() },
+                    { "connectionId", dto.ConnectionId },
+                    { "nodeId", dto.NodeLevel ?? "" },
+                    { "userId", user.FirebaseUid ?? dto.UserId ?? "" },
+                    { "projectId", node?.Project?.Oid.ToString() ?? dto.ProjectId ?? "" },
+                    { "model", modelName ?? "" },
+                    { "timestamp", DateTime.UtcNow.ToString("o") }
+                };
+
+                // Add to Redis stream for executor processing
+                var entryId = await _redisService.Add("jobs:chat", envelope);
+
+                _logger.LogInformation($"Chat message queued for processing: ChatId={chatMessage.Oid}, ConnectionId={dto.ConnectionId}, Model={modelName}, EntryId={entryId}");
 
                 return Ok(new { status = "queued", messageId = chatMessage.Oid });
             }
