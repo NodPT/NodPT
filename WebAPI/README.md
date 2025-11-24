@@ -378,14 +378,6 @@ const connection = new signalR.HubConnectionBuilder()
     .build();
 ```
 
-**Executor Client Connection:**
-```javascript
-// Special case for background services
-const connection = new signalR.HubConnectionBuilder()
-    .withUrl("/signalr?clientType=executor-client")
-    .build();
-```
-
 ### User Approval System
 
 - **Banned Users**: Cannot access the API (IsBanned = true)
