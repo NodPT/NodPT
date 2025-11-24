@@ -8,6 +8,7 @@ using BackendExecutor.Runners;
 using BackendExecutor.Services;
 using NodPT.Data.Services;
 using StackExchange.Redis;
+using DevExpress.Xpo;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -64,12 +65,20 @@ builder.Services.AddSingleton<IRedisService>(provider =>
 // Register HttpClient for LLM service
 builder.Services.AddHttpClient<ILlmChatService, LlmChatService>();
 
+// Register database services
+builder.Services.AddScoped<UnitOfWork>(provider => new UnitOfWork());
+
 // Register services
 builder.Services.AddSingleton<IRepository, StubRepository>();
 builder.Services.AddSingleton<INotifier, StubNotifier>();
 builder.Services.AddSingleton<IDispatcher, JobDispatcher>();
 builder.Services.AddSingleton<IRedisConsumer, RedisConsumer>();
-builder.Services.AddSingleton<IChatJobConsumer, ChatJobConsumer>();
+
+// OLD: list-based chat consumer (commented out, will be removed)
+// builder.Services.AddSingleton<IChatJobConsumer, ChatJobConsumer>();
+
+// Register new Streams-based chat consumer
+builder.Services.AddSingleton<IChatStreamConsumer, ChatStreamConsumer>();
 
 // Register runners  
 builder.Services.AddSingleton<ManagerRunner>();
@@ -78,7 +87,10 @@ builder.Services.AddSingleton<AgentRunner>();
 
 // Register workers
 builder.Services.AddHostedService<Worker>();
-builder.Services.AddHostedService<ChatWorker>();
+
+// Use new ChatStreamWorker instead of old ChatWorker
+// builder.Services.AddHostedService<ChatWorker>(); // OLD: list-based
+builder.Services.AddHostedService<ChatStreamWorker>(); // NEW: streams-based
 
 var host = builder.Build();
 
