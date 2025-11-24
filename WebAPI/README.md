@@ -347,20 +347,17 @@ public interface IRedisService
 3. API validates token using Firebase Admin SDK
 4. User information is extracted and stored in HttpContext.User
 
-### Dual Authentication System
+### Authentication System
 
-The WebAPI supports two authentication schemes:
+The WebAPI uses a single JWT Bearer authentication scheme for both REST API endpoints and SignalR connections:
 
-1. **Firebase Authentication Handler**: Used for SignalR connections
-   - Supports `access_token` query parameter (required for WebSocket)
-   - Allows executor client connections with `?clientType=executor-client`
-   - Falls back to development mode in non-production environments
-
-2. **JWT Bearer Authentication**: Used for REST API endpoints
-   - Validates Firebase ID tokens
-   - Uses Google's JWKS for token verification
-   - Standard `Authorization: Bearer <token>` header
-
+- **JWT Bearer Authentication**: 
+   - Validates Firebase ID tokens using the Firebase Admin SDK and Google's JWKS.
+   - For REST API endpoints, tokens are sent in the standard `Authorization: Bearer <token>` header.
+   - For SignalR connections (including WebSocket upgrades), tokens are passed via the `access_token` query parameter.
+   - Special handling in the authentication middleware allows SignalR to authenticate using the query string token.
+   - Allows executor client connections with `?clientType=executor-client`.
+   - Falls back to development mode in non-production environments.
 ### Authentication for Different Scenarios
 
 **REST API Calls:**
