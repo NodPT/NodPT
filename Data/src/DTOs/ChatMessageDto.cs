@@ -10,5 +10,6 @@ namespace NodPT.Data.DTOs
         public string? NodeId { get; set; }
         public bool Liked { get; set; }
         public bool Disliked { get; set; }
+        public string? ConnectionId { get; set; }
     }
 }

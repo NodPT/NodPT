@@ -1,5 +1,35 @@
 # NodPT.SignalR
 
+## ⚠️ OBSOLETE - DO NOT USE ⚠️
+
+**This project has been marked as OBSOLETE and is no longer actively used in the NodPT architecture.**
+
+### Migration Notice
+
+The SignalR Hub functionality has been **consolidated into the WebAPI project**. All real-time communication now happens through:
+
+- **WebAPI SignalR Hub**: The SignalR Hub is now hosted directly in the WebAPI service
+- **Unified Redis Streams**: WebAPI uses the shared `RedisService` from the Data project to listen to `signalr:updates` stream
+- **Single Service**: Reduces deployment complexity by eliminating a separate SignalR service
+
+### Why This Change?
+
+1. **Simplified Architecture**: One less service to deploy and manage
+2. **Unified Redis Communication**: All services use the same shared `RedisService` with Redis Streams
+3. **Better Resource Utilization**: WebAPI can handle both HTTP/REST and WebSocket connections
+4. **Easier Development**: Developers only need to run WebAPI for full functionality
+
+### For New Developers
+
+**Do not use this project.** Instead:
+- The SignalR Hub is in `/WebAPI/src/Hubs/NodptHub.cs`
+- Real-time updates are handled by `/WebAPI/src/BackgroundServices/SignalRUpdateListener.cs`
+- See WebAPI README for updated architecture documentation
+
+---
+
+## Legacy Documentation (For Historical Reference Only)
+
 A SignalR hub server built with .NET 8 and C# that listens to Redis streams and delivers real-time updates to frontend clients.
 
 ## Architecture

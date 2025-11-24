@@ -13,6 +13,7 @@ namespace NodPT.Data.Models
         private bool _liked;
         private bool _disliked;
         private User? _user;
+        private string? _connectionId;
 
         public ChatMessage(Session session) : base(session) { }
         public ChatMessage() : base(Session.DefaultSession) { }
@@ -68,6 +69,16 @@ namespace NodPT.Data.Models
         {
             get => _user;
             set => SetPropertyValue(nameof(User), ref _user, value);
+        }
+
+        /// <summary>
+        /// SignalR connection ID of the client that created this message
+        /// </summary>
+        [Size(255)]
+        public string? ConnectionId
+        {
+            get => _connectionId;
+            set => SetPropertyValue(nameof(ConnectionId), ref _connectionId, value);
         }
 
         [Association("ChatMessage-ChatResponses")]

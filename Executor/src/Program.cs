@@ -1,6 +1,5 @@
 using BackendExecutor;
 using BackendExecutor.Config;
-using BackendExecutor.Consumers;
 using BackendExecutor.Data;
 using BackendExecutor.Dispatch;
 using BackendExecutor.Notify;
@@ -8,6 +7,7 @@ using BackendExecutor.Runners;
 using BackendExecutor.Services;
 using NodPT.Data.Services;
 using StackExchange.Redis;
+using DevExpress.Xpo;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -64,12 +64,19 @@ builder.Services.AddSingleton<IRedisService>(provider =>
 // Register HttpClient for LLM service
 builder.Services.AddHttpClient<ILlmChatService, LlmChatService>();
 
+// Register database services
+builder.Services.AddScoped<UnitOfWork>(provider => new UnitOfWork());
+
 // Register services
 builder.Services.AddSingleton<IRepository, StubRepository>();
 builder.Services.AddSingleton<INotifier, StubNotifier>();
 builder.Services.AddSingleton<IDispatcher, JobDispatcher>();
-builder.Services.AddSingleton<IRedisConsumer, RedisConsumer>();
-builder.Services.AddSingleton<IChatJobConsumer, ChatJobConsumer>();
+
+// OLD: Direct Redis consumer (obsolete - should use shared RedisService)
+// builder.Services.AddSingleton<IRedisConsumer, RedisConsumer>();
+
+// OLD: list-based chat consumer (obsolete - replaced by ChatStreamWorker)
+// builder.Services.AddSingleton<IChatJobConsumer, ChatJobConsumer>();
 
 // Register runners  
 builder.Services.AddSingleton<ManagerRunner>();
@@ -77,8 +84,14 @@ builder.Services.AddSingleton<InspectorRunner>();
 builder.Services.AddSingleton<AgentRunner>();
 
 // Register workers
-builder.Services.AddHostedService<Worker>();
-builder.Services.AddHostedService<ChatWorker>();
+// OLD: Worker using direct Redis calls (obsolete - should use shared RedisService)
+// builder.Services.AddHostedService<Worker>();
+
+// OLD: ChatWorker using list-based consumer (obsolete - replaced by ChatStreamWorker)
+// builder.Services.AddHostedService<ChatWorker>();
+
+// NEW: ChatStreamWorker using unified RedisService
+builder.Services.AddHostedService<ChatStreamWorker>();
 
 var host = builder.Build();
 
