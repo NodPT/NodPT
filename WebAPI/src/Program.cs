@@ -11,10 +11,7 @@ using NodPT.Data.Services;
 using NodPT.API.Services;
 using NodPT.API.Hubs;
 using NodPT.API.BackgroundServices;
-using NodPT.API.Authentication;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.DataProtection;
 using StackExchange.Redis;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
@@ -162,14 +159,8 @@ catch (Exception ex)
     logger.LogWarning($"To enable Firebase authentication, set GOOGLE_APPLICATION_CREDENTIALS environment variable. Error: {ex.Message}");
 }
 
-// Add DataProtection with Redis persistence
-var redisMultiplexer = builder.Services.BuildServiceProvider().GetRequiredService<IConnectionMultiplexer>();
-builder.Services.AddDataProtection()
-    .PersistKeysToStackExchangeRedis(redisMultiplexer, "DataProtection-Keys");
-
-// Add authentication - Use both Firebase handler for SignalR and JWT Bearer for API
-builder.Services.AddAuthentication("Firebase")
-    .AddScheme<AuthenticationSchemeOptions, FirebaseAuthenticationHandler>("Firebase", null)
+// Add authentication using Firebase JWTs via JWT Bearer
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         string JwksUrl = $"https://securetoken.google.com/{firebaseProjectId}";
@@ -199,6 +190,23 @@ builder.Services.AddAuthentication("Firebase")
 
         // Include error details in development
         options.IncludeErrorDetails = builder.Environment.IsDevelopment();
+        
+        // Configure for SignalR to use query string token
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/signalr"))
+                {
+                    context.Token = accessToken;
+                }
+                
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
