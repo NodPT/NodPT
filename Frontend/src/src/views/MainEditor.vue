@@ -16,7 +16,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch, inject } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch, inject, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import TopBar from '../components/TopBar.vue';
 import Footer from '../components/Footer.vue';
@@ -259,14 +259,13 @@ const selectDefaultDirectorNode = () => {
 };
 
 // Watch for selectedNode changes - select Director as default when no node is selected
-watch(selectedNode, (newValue) => {
+watch(selectedNode, async (newValue) => {
         if (!newValue && editorReady.value) {
-                // Use setTimeout to avoid race conditions during node deletion
-                setTimeout(() => {
-                        if (!selectedNode.value) {
-                                selectDefaultDirectorNode();
-                        }
-                }, 100);
+                // Use nextTick to ensure DOM updates are complete before selecting default node
+                await nextTick();
+                if (!selectedNode.value) {
+                        selectDefaultDirectorNode();
+                }
         }
 });
 

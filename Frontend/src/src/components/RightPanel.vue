@@ -204,7 +204,7 @@ export default {
 		// Panel resize state
 		const panelWidth = ref(416); // Default 26rem = 416px
 		const minPanelWidth = 280; // Minimum width in pixels
-		const maxPanelWidth = window.innerWidth * 0.9; // Maximum 90% of window width
+		const panelRightMargin = 16; // Right margin in pixels (1rem)
 		const isResizing = ref(false);
 
 		// Refs for DOM elements
@@ -404,8 +404,10 @@ export default {
 
 		const handleResize = (e) => {
 			if (!isResizing.value) return;
+			// Calculate max width dynamically based on current window size
+			const maxPanelWidth = window.innerWidth * 0.9;
 			// Calculate new width based on mouse position from right edge of window
-			const newWidth = window.innerWidth - e.clientX - 16; // 16px for the right margin
+			const newWidth = window.innerWidth - e.clientX - panelRightMargin;
 			// Clamp between min and max
 			panelWidth.value = Math.max(minPanelWidth, Math.min(maxPanelWidth, newWidth));
 		};
