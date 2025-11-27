@@ -219,12 +219,20 @@ const handleSignalRToggle = async () => {
 
 const handleNodeSelected = (nodeData) => {
         selectedNode.value = nodeData;
+        // Broadcast selected node change to other components (e.g., TopBar)
+        triggerEvent(EVENT_TYPES.SELECTED_NODE_CHANGED, nodeData);
 };
 
 const handleDeleteNode = () => {
         // Check if there's a selected node
         if (!selectedNode.value || !selectedNode.value.id) {
                 console.warn('No node selected to delete');
+                return;
+        }
+
+        // Prevent deletion of Director node
+        if (selectedNode.value.type === 'director') {
+                console.warn('Director node cannot be deleted');
                 return;
         }
 

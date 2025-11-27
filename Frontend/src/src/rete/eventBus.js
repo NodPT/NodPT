@@ -11,6 +11,7 @@ export const EVENT_TYPES = {
 	NODE_SELECTED: 'node:selected',
 	NODE_DELETED: 'node:deleted',
 	DELETE_NODE: 'node:delete',
+	SELECTED_NODE_CHANGED: 'node:selected-changed',
 	GROUP_NODES: 'node:group',
 	UNGROUP_NODES: 'node:ungroup',
 	NODE_REGENERATE: 'node:regenerate',
