@@ -240,6 +240,36 @@ const handleDeleteNode = () => {
         }
 };
 
+// Select Director node as default when no node is selected
+const selectDefaultDirectorNode = () => {
+        if (!leftPanelRef.value) return;
+        
+        const nodeManager = leftPanelRef.value.getNodeManager ? leftPanelRef.value.getNodeManager() : null;
+        if (!nodeManager || !nodeManager.nodes) return;
+        
+        // Find the Director node
+        const directorNode = nodeManager.nodes.find(n => n.type === 'director');
+        if (directorNode) {
+                triggerEvent(EVENT_TYPES.NODE_SELECTED, {
+                        id: directorNode.node.id,
+                        name: directorNode.name,
+                        type: directorNode.type
+                });
+        }
+};
+
+// Watch for selectedNode changes - select Director as default when no node is selected
+watch(selectedNode, (newValue) => {
+        if (!newValue && editorReady.value) {
+                // Use setTimeout to avoid race conditions during node deletion
+                setTimeout(() => {
+                        if (!selectedNode.value) {
+                                selectDefaultDirectorNode();
+                        }
+                }, 100);
+        }
+});
+
 // Watch for route query changes to update project info
 watch(
         () => route.query,

@@ -43,6 +43,7 @@
   right: 1rem;
   bottom: 1rem;
   width: 26rem;
+  min-width: 17.5rem; /* 280px minimum width */
   max-width: 90%;
   background-color: var(--bs-body-bg);
   border: 1px solid var(--bs-border-color-translucent, rgba(0, 0, 0, 0.1));
