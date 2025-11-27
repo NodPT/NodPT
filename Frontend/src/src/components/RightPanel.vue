@@ -1,5 +1,9 @@
 ﻿<template>
-	<div class="right-panel" :data-theme="isDarkTheme ? 'dark' : 'light'">
+	<div class="right-panel" :data-theme="isDarkTheme ? 'dark' : 'light'" :style="{ width: panelWidth + 'px' }">
+		<!-- Resize handle on the left edge -->
+		<div class="resize-handle" @mousedown="startResize" title="Drag to resize">
+			<i class="bi bi-grip-vertical"></i>
+		</div>
 		<button type="button" class="btn btn-sm close-panel-btn" @click="handleClose" aria-label="Close panel">
 			<i class="bi bi-x-lg"></i>
 		</button>
@@ -197,6 +201,12 @@ export default {
 		// UI state
 		const autoScroll = ref(true);
 
+		// Panel resize state
+		const panelWidth = ref(416); // Default 26rem = 416px
+		const minPanelWidth = 280; // Minimum width in pixels
+		const panelRightMargin = 16; // Right margin in pixels (1rem)
+		const isResizing = ref(false);
+
 		// Refs for DOM elements
 		const logsContainer = ref(null);
 
@@ -382,6 +392,34 @@ export default {
 			triggerEvent(EVENT_TYPES.TOGGLE_RIGHT_PANEL);
 		};
 
+		// Resize functionality
+		const startResize = (e) => {
+			e.preventDefault();
+			isResizing.value = true;
+			document.addEventListener('mousemove', handleResize);
+			document.addEventListener('mouseup', stopResize);
+			document.body.style.cursor = 'ew-resize';
+			document.body.style.userSelect = 'none';
+		};
+
+		const handleResize = (e) => {
+			if (!isResizing.value) return;
+			// Calculate max width dynamically based on current window size
+			const maxPanelWidth = window.innerWidth * 0.9;
+			// Calculate new width based on mouse position from right edge of window
+			const newWidth = window.innerWidth - e.clientX - panelRightMargin;
+			// Clamp between min and max
+			panelWidth.value = Math.max(minPanelWidth, Math.min(maxPanelWidth, newWidth));
+		};
+
+		const stopResize = () => {
+			isResizing.value = false;
+			document.removeEventListener('mousemove', handleResize);
+			document.removeEventListener('mouseup', stopResize);
+			document.body.style.cursor = '';
+			document.body.style.userSelect = '';
+		};
+
 		// Load initial data on mount
 		onMounted(() => {
 			loadTabData('default');
@@ -391,7 +429,9 @@ export default {
 
 		// Cleanup on unmount
 		onUnmounted(() => {
-			// no-op
+			// Clean up resize listeners if still attached
+			document.removeEventListener('mousemove', handleResize);
+			document.removeEventListener('mouseup', stopResize);
 		});
 
 		return {
@@ -399,6 +439,7 @@ export default {
 			logsData,
 			propertiesData,
 			autoScroll,
+			panelWidth,
 
 			// Refs
 			logsContainer,
@@ -410,6 +451,7 @@ export default {
 			applyChanges,
 			resetProperties,
 			handleClose,
+			startResize,
 		};
 	},
 };
@@ -446,5 +488,49 @@ export default {
 
 .close-panel-btn:hover {
 	border-radius: 0.25rem;
+}
+
+/* Resize handle styling */
+.resize-handle {
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 12px;
+	cursor: ew-resize;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 15;
+	background: transparent;
+	transition: background-color 0.2s ease;
+}
+
+.resize-handle:hover {
+	background-color: rgba(0, 0, 0, 0.05);
+}
+
+.resize-handle i {
+	color: var(--bs-secondary, #6c757d);
+	font-size: 0.875rem;
+	opacity: 0.6;
+	transition: opacity 0.2s ease;
+}
+
+.resize-handle:hover i {
+	opacity: 1;
+}
+
+/* Dark theme resize handle */
+[data-theme="dark"] .resize-handle:hover {
+	background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .resize-handle i {
+	color: rgba(255, 255, 255, 0.5);
+}
+
+[data-theme="dark"] .resize-handle:hover i {
+	color: rgba(255, 255, 255, 0.8);
 }
 </style>

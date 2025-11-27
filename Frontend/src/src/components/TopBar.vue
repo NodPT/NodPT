@@ -72,7 +72,7 @@
           </button>
           <ul class="dropdown-menu" :class="{ show: openMenu === 'nodes' }">
             <li><a class="dropdown-item" href="#" @click.prevent="nodeAction('add')">Add Node</a></li>
-            <li><a class="dropdown-item" href="#" @click.prevent="nodeAction('delete')">Delete</a></li>
+            <li><a class="dropdown-item" :class="{ disabled: isDirectorSelected }" href="#" @click.prevent="nodeAction('delete')">Delete</a></li>
             <li>
               <hr class="dropdown-divider" />
             </li>
@@ -169,6 +169,7 @@ export default {
     const projectName = ref('');
     const searchPopupVisible = ref(false);
     const userPhotoUrl = ref('');
+    const isDirectorSelected = ref(false);
     const api = inject('api');
 
     let editorManager = null;
@@ -268,7 +269,11 @@ export default {
     };
 
     const nodeAction = (action) => {
-      if (action === 'delete') triggerEvent(EVENT_TYPES.DELETE_NODE);
+      if (action === 'delete') {
+        // Prevent deletion of Director node
+        if (isDirectorSelected.value) return;
+        triggerEvent(EVENT_TYPES.DELETE_NODE);
+      }
       else triggerEvent(EVENT_TYPES.NODE_ACTION, action);
     };
 
@@ -317,6 +322,15 @@ export default {
         (name) => (projectName.value = name)
       );
       eventListeners.push(unsubscribeProjectName);
+
+      // Listen for selected node changes to disable Delete button for Director node
+      const unsubscribeSelectedNode = listenEvent(
+        EVENT_TYPES.SELECTED_NODE_CHANGED,
+        (nodeData) => {
+          isDirectorSelected.value = nodeData && nodeData.type === 'director';
+        }
+      );
+      eventListeners.push(unsubscribeSelectedNode);
     });
 
     onBeforeUnmount(() => {
@@ -334,6 +348,7 @@ export default {
       projectName,
       searchPopupVisible,
       userPhotoUrl,
+      isDirectorSelected,
       handleSearch,
       nextResult,
       previousResult,

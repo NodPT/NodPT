@@ -16,7 +16,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch, inject } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch, inject, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import TopBar from '../components/TopBar.vue';
 import Footer from '../components/Footer.vue';
@@ -219,12 +219,20 @@ const handleSignalRToggle = async () => {
 
 const handleNodeSelected = (nodeData) => {
         selectedNode.value = nodeData;
+        // Broadcast selected node change to other components (e.g., TopBar)
+        triggerEvent(EVENT_TYPES.SELECTED_NODE_CHANGED, nodeData);
 };
 
 const handleDeleteNode = () => {
         // Check if there's a selected node
         if (!selectedNode.value || !selectedNode.value.id) {
                 console.warn('No node selected to delete');
+                return;
+        }
+
+        // Prevent deletion of Director node
+        if (selectedNode.value.type === 'director') {
+                console.warn('Director node cannot be deleted');
                 return;
         }
 
@@ -239,6 +247,35 @@ const handleDeleteNode = () => {
                 }
         }
 };
+
+// Select Director node as default when no node is selected
+const selectDefaultDirectorNode = () => {
+        if (!leftPanelRef.value) return;
+        
+        const nodeManager = leftPanelRef.value.getNodeManager ? leftPanelRef.value.getNodeManager() : null;
+        if (!nodeManager || !nodeManager.nodes) return;
+        
+        // Find the Director node
+        const directorNode = nodeManager.nodes.find(n => n.type === 'director');
+        if (directorNode) {
+                triggerEvent(EVENT_TYPES.NODE_SELECTED, {
+                        id: directorNode.node.id,
+                        name: directorNode.name,
+                        type: directorNode.type
+                });
+        }
+};
+
+// Watch for selectedNode changes - select Director as default when no node is selected
+watch(selectedNode, async (newValue) => {
+        if (!newValue && editorReady.value) {
+                // Use nextTick to ensure DOM updates are complete before selecting default node
+                await nextTick();
+                if (!selectedNode.value) {
+                        selectDefaultDirectorNode();
+                }
+        }
+});
 
 // Watch for route query changes to update project info
 watch(
