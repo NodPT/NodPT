@@ -227,7 +227,9 @@ public class ChatStreamWorker : BackgroundService
             // Add current user message
             messages.Add(new OllamaMessage { Role = "user", Content = userMessage });
             
-            // Get temperature from AIModel if available, otherwise default to 0
+            // NOTE: Temperature is hardcoded to 0 because AIModel.Temperature property doesn't exist.
+            // This is a pre-existing issue in the data model. When the property is added to AIModel,
+            // uncomment the line below: double temperature = matchingAiModel?.Temperature ?? 0;
             double temperature = 0;
 
             var ollamaRequest = new OllamaRequest
