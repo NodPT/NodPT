@@ -97,16 +97,10 @@ builder.Services.AddSingleton<IRedisService>(provider =>
 builder.Services.AddHttpClient<ILlmChatService, LlmChatService>();
 
 // Register HttpClient for SummarizationService
-builder.Services.AddHttpClient<ISummarizationService, SummarizationService>();
-
-// Register SummarizationService
-builder.Services.AddSingleton<ISummarizationService>(provider =>
+builder.Services.AddHttpClient<ISummarizationService, SummarizationService>((provider, client) =>
 {
-    var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
-    var httpClient = httpClientFactory.CreateClient();
     var options = provider.GetRequiredService<NodPT.Data.Services.SummarizationOptions>();
-    var logger = provider.GetRequiredService<ILogger<SummarizationService>>();
-    return new SummarizationService(httpClient, options, logger);
+    client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
 });
 
 // Register MemoryService
