@@ -190,7 +190,6 @@ public class MemoryService : IMemoryService
                     UpdatedAt = DateTime.UtcNow
                 };
                 unitOfWork.Save(nodeMemory);
-                await unitOfWork.CommitChangesAsync();
                 
                 _logger.LogInformation("Created new NodeMemory record for node {NodeId}", nodeId);
             }
