@@ -42,6 +42,70 @@ public interface IRedisService
     /// Stop listening to a stream
     /// </summary>
     Task StopListen(ListenHandle handle);
+
+    // ============================================================
+    // Key-Value Operations for Memory (Summary and History)
+    // ============================================================
+
+    /// <summary>
+    /// Get a string value from Redis
+    /// </summary>
+    /// <param name="key">The key to get</param>
+    /// <returns>The value, or null if not found</returns>
+    Task<string?> GetStringAsync(string key);
+
+    /// <summary>
+    /// Set a string value in Redis
+    /// </summary>
+    /// <param name="key">The key to set</param>
+    /// <param name="value">The value to set</param>
+    /// <param name="expiry">Optional expiration time</param>
+    Task SetStringAsync(string key, string value, TimeSpan? expiry = null);
+
+    /// <summary>
+    /// Check if a key exists in Redis
+    /// </summary>
+    /// <param name="key">The key to check</param>
+    /// <returns>True if the key exists</returns>
+    Task<bool> KeyExistsAsync(string key);
+
+    /// <summary>
+    /// Delete a key from Redis
+    /// </summary>
+    /// <param name="key">The key to delete</param>
+    /// <returns>True if the key was deleted</returns>
+    Task<bool> DeleteKeyAsync(string key);
+
+    /// <summary>
+    /// Push a value to the right of a list
+    /// </summary>
+    /// <param name="key">The list key</param>
+    /// <param name="value">The value to push</param>
+    Task<long> ListRightPushAsync(string key, string value);
+
+    /// <summary>
+    /// Get a range of values from a list
+    /// </summary>
+    /// <param name="key">The list key</param>
+    /// <param name="start">Start index (0-based, negative for from end)</param>
+    /// <param name="stop">Stop index (inclusive, negative for from end)</param>
+    /// <returns>List of values</returns>
+    Task<List<string>> ListRangeAsync(string key, long start = 0, long stop = -1);
+
+    /// <summary>
+    /// Trim a list to the specified range
+    /// </summary>
+    /// <param name="key">The list key</param>
+    /// <param name="start">Start index to keep</param>
+    /// <param name="stop">Stop index to keep</param>
+    Task ListTrimAsync(string key, long start, long stop);
+
+    /// <summary>
+    /// Get the length of a list
+    /// </summary>
+    /// <param name="key">The list key</param>
+    /// <returns>Length of the list</returns>
+    Task<long> ListLengthAsync(string key);
 }
 
 public class RedisService : IRedisService
@@ -454,6 +518,139 @@ public class RedisService : IRedisService
         {
             // Consumer group already exists, which is fine
             _logger.LogDebug($"Consumer group {group} already exists for stream {streamKey}");
+        }
+    }
+
+    // ============================================================
+    // Key-Value Operations for Memory (Summary and History)
+    // ============================================================
+
+    public async Task<string?> GetStringAsync(string key)
+    {
+        try
+        {
+            var db = _redis.GetDatabase();
+            var value = await db.StringGetAsync(key);
+            
+            if (value.IsNull)
+            {
+                _logger.LogDebug("Key {Key} not found in Redis", key);
+                return null;
+            }
+            
+            return value.ToString();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting string from Redis: {Key}", key);
+            throw;
+        }
+    }
+
+    public async Task SetStringAsync(string key, string value, TimeSpan? expiry = null)
+    {
+        try
+        {
+            var db = _redis.GetDatabase();
+            await db.StringSetAsync(key, value, expiry);
+            
+            _logger.LogDebug("Set string in Redis: {Key} = {ValueLength} chars", key, value.Length);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting string in Redis: {Key}", key);
+            throw;
+        }
+    }
+
+    public async Task<bool> KeyExistsAsync(string key)
+    {
+        try
+        {
+            var db = _redis.GetDatabase();
+            return await db.KeyExistsAsync(key);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking key existence in Redis: {Key}", key);
+            throw;
+        }
+    }
+
+    public async Task<bool> DeleteKeyAsync(string key)
+    {
+        try
+        {
+            var db = _redis.GetDatabase();
+            return await db.KeyDeleteAsync(key);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting key from Redis: {Key}", key);
+            throw;
+        }
+    }
+
+    public async Task<long> ListRightPushAsync(string key, string value)
+    {
+        try
+        {
+            var db = _redis.GetDatabase();
+            var length = await db.ListRightPushAsync(key, value);
+            
+            _logger.LogDebug("Pushed to list in Redis: {Key}, new length: {Length}", key, length);
+            return length;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error pushing to list in Redis: {Key}", key);
+            throw;
+        }
+    }
+
+    public async Task<List<string>> ListRangeAsync(string key, long start = 0, long stop = -1)
+    {
+        try
+        {
+            var db = _redis.GetDatabase();
+            var values = await db.ListRangeAsync(key, start, stop);
+            
+            return values.Select(v => v.ToString()).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting list range from Redis: {Key}", key);
+            throw;
+        }
+    }
+
+    public async Task ListTrimAsync(string key, long start, long stop)
+    {
+        try
+        {
+            var db = _redis.GetDatabase();
+            await db.ListTrimAsync(key, start, stop);
+            
+            _logger.LogDebug("Trimmed list in Redis: {Key} to range [{Start}, {Stop}]", key, start, stop);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error trimming list in Redis: {Key}", key);
+            throw;
+        }
+    }
+
+    public async Task<long> ListLengthAsync(string key)
+    {
+        try
+        {
+            var db = _redis.GetDatabase();
+            return await db.ListLengthAsync(key);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting list length from Redis: {Key}", key);
+            throw;
         }
     }
 }
