@@ -190,11 +190,14 @@ public class ChatStreamWorker : BackgroundService
             // Add user message
             messages.Add(new OllamaMessage { Role = "user", Content = userMessage });
             
+            // Get temperature from AIModel if available, otherwise default to 0
+            var temperature = matchingAiModel?.Temperature ?? 0;
+
             var ollamaRequest = new OllamaRequest
             {
                 Model = modelName,
                 Messages = messages,
-                Options = new OllamaOptions { Temperature = 0 },
+                Options = new OllamaOptions { Temperature = temperature },
                 Stream = false
             };
 
