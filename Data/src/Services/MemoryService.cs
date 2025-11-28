@@ -106,6 +106,11 @@ public class MemoryService : IMemoryService
     private readonly MemoryOptions _options;
     private readonly ILogger<MemoryService> _logger;
     private readonly IServiceProvider _serviceProvider;
+    
+    /// <summary>
+    /// Counter for tracking consecutive summarization failures for monitoring purposes.
+    /// </summary>
+    private int _failedSummarizationCount = 0;
 
     public MemoryService(
         IRedisService redisService,
@@ -303,11 +308,16 @@ public class MemoryService : IMemoryService
 
                 await RollingSummarizeAsync(nodeId, newMessageContent, role, unitOfWork);
                 
+                // Reset failure count on success
+                Interlocked.Exchange(ref _failedSummarizationCount, 0);
+                
                 _logger.LogDebug("Background summarization completed for node {NodeId}", nodeId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Background summarization failed for node {NodeId}", nodeId);
+                var failCount = Interlocked.Increment(ref _failedSummarizationCount);
+                _logger.LogError(ex, "Background summarization failed for node {NodeId} (failure count: {FailCount})", 
+                    nodeId, failCount);
                 // Don't rethrow - this is a fire-and-forget operation
             }
         });
