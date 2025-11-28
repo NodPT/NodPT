@@ -143,7 +143,7 @@ public class SummarizationService : ISummarizationService
             };
 
             var json = JsonSerializer.Serialize(request);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             _logger.LogDebug("Sending summarization request to {Endpoint}, Model: {Model}, Role: {Role}",
                 _options.BaseUrl, _options.Model, role);
