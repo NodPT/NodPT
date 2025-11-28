@@ -178,16 +178,18 @@ public class ChatStreamWorker : BackgroundService
             _logger.LogInformation("Using model: {ModelName} (from AIModel: {AIModelName})", 
                 modelName, matchingAiModel?.Name ?? "default");
 
-            // Step 10: Prepare Ollama data object
+            // Step 10: Prepare Ollama data object with prompt and suffix
+            var suffix = string.Join("\n", promptContents);
             var ollamaRequest = new OllamaRequest
             {
                 Model = modelName,
-                User = firebaseUid,
-                Messages = BuildMessages(userMessage, promptContents)
+                Prompt = userMessage,
+                Suffix = string.IsNullOrEmpty(suffix) ? null : suffix,
+                Options = new OllamaOptions { Temperature = 0 },
+                Stream = false
             };
 
-            _logger.LogInformation("Prepared Ollama request with {MessageCount} messages for chatId {ChatId}", 
-                ollamaRequest.Messages.Count, chatId);
+            _logger.LogInformation("Prepared Ollama request for chatId {ChatId}", chatId);
 
             // Step 11-12: Send message to Ollama and wait for response
             var aiResponse = await _llmChatService.SendChatRequestAsync(ollamaRequest, cancellationToken);
@@ -210,26 +212,20 @@ public class ChatStreamWorker : BackgroundService
             session.Save(aiMessage);
             await session.CommitChangesAsync(cancellationToken);
 
-            var responseChatId = aiMessage.Oid;
-            _logger.LogInformation("Saved AI response: ResponseId={ResponseId} for original chatId {ChatId}", 
-                responseChatId, chatId);
+            _logger.LogInformation("Saved AI response: NewChatId={NewChatId} for original chatId {ChatId}", 
+                aiMessage.Oid, chatId);
 
-            // Step 16: Prepare new Redis data (data B) with new chatId
+            // Step 16: Prepare new Redis data (data B) with new chatId only
+            // Other data (connectionId, nodeId, userId, projectId) are already saved in the ChatMessage
             var resultEnvelope = new Dictionary<string, string>
             {
-                { "chatId", chatId },
-                { "connectionId", connectionId },
-                { "responseId", responseChatId.ToString() },
-                { "nodeId", node.Id ?? "" },
-                { "userId", firebaseUid },
-                { "projectId", project.Oid.ToString() },
-                { "timestamp", DateTime.UtcNow.ToString("o") }
+                { "chatId", aiMessage.Oid.ToString() }
             };
 
             var entryId = await _redisService.Add("signalr:updates", resultEnvelope);
 
-            _logger.LogInformation("Published result to signalr:updates: EntryId={EntryId}, ResponseId={ResponseId}", 
-                entryId, responseChatId);
+            _logger.LogInformation("Published result to signalr:updates: EntryId={EntryId}, NewChatId={NewChatId}", 
+                entryId, aiMessage.Oid);
 
             // Step 17: Acknowledge the Redis data (data A) - handled by returning true
             return true; // Success, ack the message
@@ -239,33 +235,6 @@ public class ChatStreamWorker : BackgroundService
             _logger.LogError(ex, "Error processing chat job for entry {EntryId}", envelope.EntryId);
             return false; // Fail, will retry
         }
-    }
-
-    /// <summary>
-    /// Build the messages array for Ollama request with system prompts and user message
-    /// </summary>
-    private List<OllamaMessage> BuildMessages(string userMessage, List<string> promptContents)
-    {
-        var messages = new List<OllamaMessage>();
-
-        // Add system prompts first
-        foreach (var promptContent in promptContents)
-        {
-            messages.Add(new OllamaMessage
-            {
-                Role = "system",
-                Content = promptContent
-            });
-        }
-
-        // Add user message
-        messages.Add(new OllamaMessage
-        {
-            Role = "user",
-            Content = userMessage
-        });
-
-        return messages;
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
