@@ -178,18 +178,28 @@ public class ChatStreamWorker : BackgroundService
             _logger.LogInformation("Using model: {ModelName} (from AIModel: {AIModelName})", 
                 modelName, matchingAiModel?.Name ?? "default");
 
-            // Step 10: Prepare Ollama data object with prompt and suffix
-            var suffix = string.Join("\n", promptContents);
+            // Step 10: Prepare Ollama data object with messages array
+            var messages = new List<OllamaMessage>();
+            
+            // Add system prompts first
+            foreach (var promptContent in promptContents)
+            {
+                messages.Add(new OllamaMessage { Role = "system", Content = promptContent });
+            }
+            
+            // Add user message
+            messages.Add(new OllamaMessage { Role = "user", Content = userMessage });
+            
             var ollamaRequest = new OllamaRequest
             {
                 Model = modelName,
-                Prompt = userMessage,
-                Suffix = string.IsNullOrEmpty(suffix) ? null : suffix,
+                Messages = messages,
                 Options = new OllamaOptions { Temperature = 0 },
                 Stream = false
             };
 
-            _logger.LogInformation("Prepared Ollama request for chatId {ChatId}", chatId);
+            _logger.LogInformation("Prepared Ollama request with {MessageCount} messages for chatId {ChatId}", 
+                messages.Count, chatId);
 
             // Step 11-12: Send message to Ollama and wait for response
             var aiResponse = await _llmChatService.SendChatRequestAsync(ollamaRequest, cancellationToken);

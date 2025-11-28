@@ -6,24 +6,33 @@ using BackendExecutor.Config;
 namespace BackendExecutor.Services;
 
 /// <summary>
-/// Request model for Ollama API (generate endpoint)
+/// Request model for Ollama API (chat endpoint)
 /// </summary>
 public class OllamaRequest
 {
     [JsonPropertyName("model")]
     public string Model { get; set; } = string.Empty;
 
-    [JsonPropertyName("prompt")]
-    public string Prompt { get; set; } = string.Empty;
-
-    [JsonPropertyName("suffix")]
-    public string? Suffix { get; set; }
+    [JsonPropertyName("messages")]
+    public List<OllamaMessage> Messages { get; set; } = new();
 
     [JsonPropertyName("options")]
     public OllamaOptions? Options { get; set; }
 
     [JsonPropertyName("stream")]
     public bool Stream { get; set; } = false;
+}
+
+/// <summary>
+/// Message model for Ollama API
+/// </summary>
+public class OllamaMessage
+{
+    [JsonPropertyName("role")]
+    public string Role { get; set; } = string.Empty;
+
+    [JsonPropertyName("content")]
+    public string Content { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -97,7 +106,10 @@ public class LlmChatService : ILlmChatService
         var request = new OllamaRequest
         {
             Model = model,
-            Prompt = message,
+            Messages = new List<OllamaMessage>
+            {
+                new OllamaMessage { Role = "user", Content = message }
+            },
             Stream = false,
             Options = new OllamaOptions { Temperature = 0 }
         };
@@ -130,8 +142,8 @@ public class LlmChatService : ILlmChatService
             var json = JsonSerializer.Serialize(request);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            _logger.LogInformation("Sending chat request to LLM endpoint: {Endpoint}, Model: {Model}", 
-                _options.LlmEndpoint, request.Model);
+            _logger.LogInformation("Sending chat request to LLM endpoint: {Endpoint}, Model: {Model}, Messages: {MessageCount}", 
+                _options.LlmEndpoint, request.Model, request.Messages.Count);
 
             var response = await _httpClient.PostAsync(_options.LlmEndpoint, content, cancellationToken);
             response.EnsureSuccessStatusCode();
