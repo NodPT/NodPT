@@ -20,20 +20,24 @@ namespace BackendExecutor;
 /// 7. Get templateId from project data to get template data
 /// 8. Get prompts from template data based on Node's level
 /// 9. Get model name from template data based on Node's level
-/// 10. Prepare Ollama data object with proper JSON format
-/// 11. Send message to Ollama
-/// 12. Wait for response data
-/// 13. Extract content from response data
-/// 14. Create new message data with response content
-/// 15. Save new message data to database to get new chatId
-/// 16. Prepare new Redis data (data B) with new chatId
-/// 17. Acknowledge the Redis data from WebAPI (data A)
+/// 10. Load memory summary and history for the node
+/// 11. Prepare Ollama data object with summary, history, prompts, and user message
+/// 12. Send message to Ollama
+/// 13. Wait for response data
+/// 14. Extract content from response data
+/// 15. Create new message data with response content
+/// 16. Save new message data to database to get new chatId
+/// 17. Update memory: add user message to history, trigger rolling summarization
+/// 18. Update memory: add AI message to history, trigger rolling summarization
+/// 19. Prepare new Redis data (data B) with new chatId
+/// 20. Acknowledge the Redis data from WebAPI (data A)
 /// </summary>
 public class ChatStreamWorker : BackgroundService
 {
     private readonly ILogger<ChatStreamWorker> _logger;
     private readonly IRedisService _redisService;
     private readonly ILlmChatService _llmChatService;
+    private readonly IMemoryService _memoryService;
     private readonly IServiceProvider _serviceProvider;
     private ListenHandle? _listenHandle;
 
@@ -41,11 +45,13 @@ public class ChatStreamWorker : BackgroundService
         ILogger<ChatStreamWorker> logger,
         IRedisService redisService,
         ILlmChatService llmChatService,
+        IMemoryService memoryService,
         IServiceProvider serviceProvider)
     {
         _logger = logger;
         _redisService = redisService;
         _llmChatService = llmChatService;
+        _memoryService = memoryService;
         _serviceProvider = serviceProvider;
     }
 
@@ -135,14 +141,21 @@ public class ChatStreamWorker : BackgroundService
                 return true; // Ack anyway - no node association
             }
 
+            var nodeId = node.Id;
+            if (string.IsNullOrEmpty(nodeId))
+            {
+                _logger.LogWarning("Node has no Id for chatId {ChatId}", chatId);
+                return true; // Ack anyway - no node ID
+            }
+
             _logger.LogInformation("Node found: NodeId={NodeId}, Level={Level}, MessageType={MessageType}", 
-                node.Id, node.Level, node.MessageType);
+                nodeId, node.Level, node.MessageType);
 
             // Step 6: Get projectId from node data to get project data
             var project = node.Project;
             if (project == null)
             {
-                _logger.LogWarning("Project not found for nodeId {NodeId}", node.Id);
+                _logger.LogWarning("Project not found for nodeId {NodeId}", nodeId);
                 return true; // Ack anyway - no project association
             }
 
@@ -178,7 +191,14 @@ public class ChatStreamWorker : BackgroundService
             _logger.LogInformation("Using model: {ModelName} (from AIModel: {AIModelName})", 
                 modelName, matchingAiModel?.Name ?? "default");
 
-            // Step 10: Prepare Ollama data object with messages array
+            // Step 10: Load memory summary and history for the node
+            var summary = await _memoryService.LoadSummaryAsync(nodeId, session);
+            var history = await _memoryService.GetHistoryAsync(nodeId);
+
+            _logger.LogInformation("Loaded memory for node {NodeId}: Summary={SummaryLength} chars, History={HistoryCount} messages",
+                nodeId, summary.Length, history.Count);
+
+            // Step 11: Prepare Ollama data object with messages array
             var messages = new List<OllamaMessage>();
             
             // Add system prompts first
@@ -186,12 +206,31 @@ public class ChatStreamWorker : BackgroundService
             {
                 messages.Add(new OllamaMessage { Role = "system", Content = promptContent });
             }
+
+            // Add memory summary as system context if available
+            if (!string.IsNullOrEmpty(summary))
+            {
+                var summaryContext = $"[Conversation Memory]\n{summary}";
+                messages.Add(new OllamaMessage { Role = "system", Content = summaryContext });
+            }
+
+            // Add recent history messages
+            foreach (var historyMessage in history)
+            {
+                messages.Add(new OllamaMessage 
+                { 
+                    Role = historyMessage.Role == "user" ? "user" : "assistant", 
+                    Content = historyMessage.Content 
+                });
+            }
             
-            // Add user message
+            // Add current user message
             messages.Add(new OllamaMessage { Role = "user", Content = userMessage });
             
-            // Get temperature from AIModel if available, otherwise default to 0
-            var temperature = matchingAiModel?.Temperature ?? 0;
+            // NOTE: Temperature is hardcoded to 0 because AIModel.Temperature property doesn't exist.
+            // This is a pre-existing issue in the data model. When the property is added to AIModel,
+            // uncomment the line below: double temperature = matchingAiModel?.Temperature ?? 0;
+            double temperature = 0;
 
             var ollamaRequest = new OllamaRequest
             {
@@ -201,16 +240,16 @@ public class ChatStreamWorker : BackgroundService
                 Stream = false
             };
 
-            _logger.LogInformation("Prepared Ollama request with {MessageCount} messages for chatId {ChatId}", 
+            _logger.LogInformation("Prepared Ollama request with {MessageCount} messages for chatId {ChatId} (including memory context)", 
                 messages.Count, chatId);
 
-            // Step 11-12: Send message to Ollama and wait for response
+            // Step 12-13: Send message to Ollama and wait for response
             var aiResponse = await _llmChatService.SendChatRequestAsync(ollamaRequest, cancellationToken);
 
             _logger.LogInformation("Received AI response with {Length} chars for chatId {ChatId}", 
                 aiResponse.Length, chatId);
 
-            // Step 13-14: Extract content and create new message data
+            // Step 14-15: Extract content and create new message data
             var aiMessage = new ChatMessage(session)
             {
                 Sender = "assistant",
@@ -221,14 +260,40 @@ public class ChatStreamWorker : BackgroundService
                 ConnectionId = connectionId
             };
 
-            // Step 15: Save new message data to database to get new chatId
+            // Step 16: Save new message data to database to get new chatId
             session.Save(aiMessage);
             await session.CommitChangesAsync(cancellationToken);
 
             _logger.LogInformation("Saved AI response: NewChatId={NewChatId} for original chatId {ChatId}", 
                 aiMessage.Oid, chatId);
 
-            // Step 16: Prepare new Redis data (data B) with new chatId only
+            // Step 17: Update memory - add user message to history and queue rolling summarization (non-blocking)
+            await _memoryService.AddToHistoryAsync(nodeId, new HistoryMessage
+            {
+                Role = "user",
+                Content = userMessage,
+                Timestamp = chatMessage.Timestamp
+            });
+
+            // Queue rolling summarization for user message (runs in background, doesn't block chat flow)
+            _memoryService.QueueSummarization(nodeId, userMessage, "user");
+
+            _logger.LogInformation("Updated memory with user message for node {NodeId}", nodeId);
+
+            // Step 18: Update memory - add AI message to history and queue rolling summarization (non-blocking)
+            await _memoryService.AddToHistoryAsync(nodeId, new HistoryMessage
+            {
+                Role = "assistant",
+                Content = aiResponse,
+                Timestamp = aiMessage.Timestamp
+            });
+
+            // Queue rolling summarization for AI message (runs in background, doesn't block chat flow)
+            _memoryService.QueueSummarization(nodeId, aiResponse, "ai_assistant");
+
+            _logger.LogInformation("Updated memory with AI response for node {NodeId}", nodeId);
+
+            // Step 19: Prepare new Redis data (data B) with new chatId only
             // Other data (connectionId, nodeId, userId, projectId) are already saved in the ChatMessage
             var resultEnvelope = new Dictionary<string, string>
             {
@@ -240,7 +305,7 @@ public class ChatStreamWorker : BackgroundService
             _logger.LogInformation("Published result to signalr:updates: EntryId={EntryId}, NewChatId={NewChatId}", 
                 entryId, aiMessage.Oid);
 
-            // Step 17: Acknowledge the Redis data (data A) - handled by returning true
+            // Step 20: Acknowledge the Redis data (data A) - handled by returning true
             return true; // Success, ack the message
         }
         catch (Exception ex)

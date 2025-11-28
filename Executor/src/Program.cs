@@ -40,6 +40,38 @@ builder.Services.AddSingleton<ExecutorOptions>(provider =>
     return options;
 });
 
+// Register SummarizationOptions
+builder.Services.AddSingleton<NodPT.Data.Services.SummarizationOptions>(provider =>
+{
+    var options = new NodPT.Data.Services.SummarizationOptions();
+    provider.GetRequiredService<IConfiguration>().GetSection("Summarization").Bind(options);
+    
+    // Override with environment variables
+    options.BaseUrl = Environment.GetEnvironmentVariable("SUMMARIZATION_BASE_URL") ?? options.BaseUrl;
+    options.Model = Environment.GetEnvironmentVariable("SUMMARIZATION_MODEL") ?? options.Model;
+    if (int.TryParse(Environment.GetEnvironmentVariable("SUMMARIZATION_TIMEOUT_SECONDS"), out var timeout))
+        options.TimeoutSeconds = timeout;
+    if (int.TryParse(Environment.GetEnvironmentVariable("SUMMARIZATION_MAX_LENGTH"), out var maxLen))
+        options.MaxSummaryLength = maxLen;
+    
+    return options;
+});
+
+// Register MemoryOptions
+builder.Services.AddSingleton<NodPT.Data.Services.MemoryOptions>(provider =>
+{
+    var options = new NodPT.Data.Services.MemoryOptions();
+    provider.GetRequiredService<IConfiguration>().GetSection("Memory").Bind(options);
+    
+    // Override with environment variables
+    if (int.TryParse(Environment.GetEnvironmentVariable("MEMORY_HISTORY_LIMIT"), out var historyLimit))
+        options.HistoryLimit = historyLimit;
+    options.SummaryKeyPrefix = Environment.GetEnvironmentVariable("MEMORY_SUMMARY_KEY_PREFIX") ?? options.SummaryKeyPrefix;
+    options.HistoryKeyPrefix = Environment.GetEnvironmentVariable("MEMORY_HISTORY_KEY_PREFIX") ?? options.HistoryKeyPrefix;
+    
+    return options;
+});
+
 // Register Redis
 builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
 {
@@ -63,6 +95,24 @@ builder.Services.AddSingleton<IRedisService>(provider =>
 
 // Register HttpClient for LLM service
 builder.Services.AddHttpClient<ILlmChatService, LlmChatService>();
+
+// Register HttpClient for SummarizationService
+builder.Services.AddHttpClient<ISummarizationService, SummarizationService>((provider, client) =>
+{
+    var options = provider.GetRequiredService<NodPT.Data.Services.SummarizationOptions>();
+    client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+});
+
+// Register MemoryService
+builder.Services.AddSingleton<IMemoryService>(provider =>
+{
+    var redisService = provider.GetRequiredService<IRedisService>();
+    var summarizationService = provider.GetRequiredService<ISummarizationService>();
+    var options = provider.GetRequiredService<NodPT.Data.Services.MemoryOptions>();
+    var logger = provider.GetRequiredService<ILogger<MemoryService>>();
+    var serviceScopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
+    return new MemoryService(redisService, summarizationService, options, logger, serviceScopeFactory);
+});
 
 // Register database services
 builder.Services.AddScoped<UnitOfWork>(provider => new UnitOfWork());
@@ -98,6 +148,8 @@ var host = builder.Build();
 // Log configuration on startup
 var logger = host.Services.GetRequiredService<ILogger<Program>>();
 var executorOptions = host.Services.GetRequiredService<ExecutorOptions>();
+var summarizationOptions = host.Services.GetRequiredService<NodPT.Data.Services.SummarizationOptions>();
+var memoryOptions = host.Services.GetRequiredService<NodPT.Data.Services.MemoryOptions>();
 
 logger.LogInformation("BackendExecutor starting with configuration:");
 logger.LogInformation("  Redis Connection: {RedisConnection}", executorOptions.RedisConnection);
@@ -106,5 +158,8 @@ logger.LogInformation("  Max Manager: {MaxManager}", executorOptions.MaxManager 
 logger.LogInformation("  Max Inspector: {MaxInspector}", executorOptions.MaxInspector == 0 ? "unlimited" : executorOptions.MaxInspector);
 logger.LogInformation("  Max Agent: {MaxAgent}", executorOptions.MaxAgent == 0 ? "unlimited" : executorOptions.MaxAgent);
 logger.LogInformation("  Max Total: {MaxTotal}", executorOptions.MaxTotal == 0 ? "unlimited" : executorOptions.MaxTotal);
+logger.LogInformation("  Summarization Base URL: {BaseUrl}", summarizationOptions.BaseUrl);
+logger.LogInformation("  Summarization Model: {Model}", summarizationOptions.Model);
+logger.LogInformation("  Memory History Limit: {HistoryLimit}", memoryOptions.HistoryLimit);
 
 host.Run();
