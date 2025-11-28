@@ -116,7 +116,7 @@ builder.Services.AddSingleton<IMemoryService>(provider =>
     var summarizationService = provider.GetRequiredService<ISummarizationService>();
     var options = provider.GetRequiredService<NodPT.Data.Services.MemoryOptions>();
     var logger = provider.GetRequiredService<ILogger<MemoryService>>();
-    return new MemoryService(redisService, summarizationService, options, logger);
+    return new MemoryService(redisService, summarizationService, options, logger, provider);
 });
 
 // Register database services

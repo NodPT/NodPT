@@ -267,7 +267,7 @@ public class ChatStreamWorker : BackgroundService
             _logger.LogInformation("Saved AI response: NewChatId={NewChatId} for original chatId {ChatId}", 
                 aiMessage.Oid, chatId);
 
-            // Step 17: Update memory - add user message to history and trigger rolling summarization
+            // Step 17: Update memory - add user message to history and queue rolling summarization (non-blocking)
             await _memoryService.AddToHistoryAsync(nodeId, new HistoryMessage
             {
                 Role = "user",
@@ -275,12 +275,12 @@ public class ChatStreamWorker : BackgroundService
                 Timestamp = chatMessage.Timestamp
             });
 
-            // Trigger rolling summarization for user message
-            await _memoryService.RollingSummarizeAsync(nodeId, userMessage, "user", session);
+            // Queue rolling summarization for user message (runs in background, doesn't block chat flow)
+            _memoryService.QueueSummarization(nodeId, userMessage, "user");
 
             _logger.LogInformation("Updated memory with user message for node {NodeId}", nodeId);
 
-            // Step 18: Update memory - add AI message to history and trigger rolling summarization
+            // Step 18: Update memory - add AI message to history and queue rolling summarization (non-blocking)
             await _memoryService.AddToHistoryAsync(nodeId, new HistoryMessage
             {
                 Role = "assistant",
@@ -288,8 +288,8 @@ public class ChatStreamWorker : BackgroundService
                 Timestamp = aiMessage.Timestamp
             });
 
-            // Trigger rolling summarization for AI message
-            await _memoryService.RollingSummarizeAsync(nodeId, aiResponse, "ai_assistant", session);
+            // Queue rolling summarization for AI message (runs in background, doesn't block chat flow)
+            _memoryService.QueueSummarization(nodeId, aiResponse, "ai_assistant");
 
             _logger.LogInformation("Updated memory with AI response for node {NodeId}", nodeId);
 

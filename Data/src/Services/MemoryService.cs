@@ -1,6 +1,7 @@
 using DevExpress.Xpo;
 using DevExpress.Data.Filtering;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using NodPT.Data.Models;
 using System.Text.Json;
 
@@ -57,6 +58,7 @@ public interface IMemoryService
     /// <summary>
     /// Perform rolling summarization after a new message.
     /// Updates both Redis and database with the new summary.
+    /// This is a blocking operation.
     /// </summary>
     /// <param name="nodeId">The node identifier</param>
     /// <param name="newMessageContent">The content of the new message</param>
@@ -64,6 +66,15 @@ public interface IMemoryService
     /// <param name="unitOfWork">XPO UnitOfWork for database access</param>
     /// <returns>The new summary text</returns>
     Task<string> RollingSummarizeAsync(string nodeId, string newMessageContent, string role, UnitOfWork unitOfWork);
+
+    /// <summary>
+    /// Queue rolling summarization to run in the background (non-blocking).
+    /// This allows the chat flow to continue without waiting for summarization.
+    /// </summary>
+    /// <param name="nodeId">The node identifier</param>
+    /// <param name="newMessageContent">The content of the new message</param>
+    /// <param name="role">The role: "user" or "ai_assistant"</param>
+    void QueueSummarization(string nodeId, string newMessageContent, string role);
 
     /// <summary>
     /// Add a message to the short-term history in Redis.
@@ -94,17 +105,20 @@ public class MemoryService : IMemoryService
     private readonly ISummarizationService _summarizationService;
     private readonly MemoryOptions _options;
     private readonly ILogger<MemoryService> _logger;
+    private readonly IServiceProvider _serviceProvider;
 
     public MemoryService(
         IRedisService redisService,
         ISummarizationService summarizationService,
         MemoryOptions options,
-        ILogger<MemoryService> logger)
+        ILogger<MemoryService> logger,
+        IServiceProvider serviceProvider)
     {
         _redisService = redisService ?? throw new ArgumentNullException(nameof(redisService));
         _summarizationService = summarizationService ?? throw new ArgumentNullException(nameof(summarizationService));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     }
 
     /// <summary>
@@ -132,7 +146,7 @@ public class MemoryService : IMemoryService
         try
         {
             // Step 1: Check Redis for the summary
-            var redisSummary = await _redisService.GetStringAsync(summaryKey);
+            var redisSummary = await _redisService.Get(summaryKey);
             
             if (redisSummary != null)
             {
@@ -150,7 +164,7 @@ public class MemoryService : IMemoryService
             if (nodeMemory != null && !string.IsNullOrEmpty(nodeMemory.Summary))
             {
                 // Found in database - cache in Redis
-                await _redisService.SetStringAsync(summaryKey, nodeMemory.Summary);
+                await _redisService.Set(summaryKey, nodeMemory.Summary);
                 
                 _logger.LogInformation("Loaded summary for node {NodeId} from database and cached in Redis ({Length} chars)", 
                     nodeId, nodeMemory.Summary.Length);
@@ -177,7 +191,7 @@ public class MemoryService : IMemoryService
             }
 
             // Cache empty summary in Redis
-            await _redisService.SetStringAsync(summaryKey, emptySummary);
+            await _redisService.Set(summaryKey, emptySummary);
             
             _logger.LogDebug("Initialized empty summary for node {NodeId}", nodeId);
             return emptySummary;
@@ -221,7 +235,7 @@ public class MemoryService : IMemoryService
 
             // Step 3: Update Redis
             var summaryKey = GetSummaryKey(nodeId);
-            await _redisService.SetStringAsync(summaryKey, newSummary);
+            await _redisService.Set(summaryKey, newSummary);
 
             // Step 4: Persist to database
             var nodeMemory = unitOfWork.FindObject<NodeMemory>(
@@ -259,6 +273,47 @@ public class MemoryService : IMemoryService
     }
 
     /// <summary>
+    /// Queue rolling summarization to run in the background (non-blocking).
+    /// This allows the chat flow to continue without waiting for summarization.
+    /// </summary>
+    public void QueueSummarization(string nodeId, string newMessageContent, string role)
+    {
+        if (string.IsNullOrEmpty(nodeId))
+        {
+            _logger.LogWarning("Cannot queue summarization: nodeId is null or empty");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(newMessageContent))
+        {
+            _logger.LogDebug("Skipping summarization for node {NodeId}: empty message content", nodeId);
+            return;
+        }
+
+        _logger.LogInformation("Queuing background summarization for node {NodeId}, role: {Role}", nodeId, role);
+
+        // Fire and forget - run summarization in a background task
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                // Create a new scope for the database context
+                using var scope = _serviceProvider.CreateScope();
+                var unitOfWork = scope.ServiceProvider.GetRequiredService<UnitOfWork>();
+
+                await RollingSummarizeAsync(nodeId, newMessageContent, role, unitOfWork);
+                
+                _logger.LogDebug("Background summarization completed for node {NodeId}", nodeId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Background summarization failed for node {NodeId}", nodeId);
+                // Don't rethrow - this is a fire-and-forget operation
+            }
+        });
+    }
+
+    /// <summary>
     /// Add a message to the short-term history in Redis.
     /// </summary>
     public async Task AddToHistoryAsync(string nodeId, HistoryMessage message)
@@ -276,13 +331,13 @@ public class MemoryService : IMemoryService
             var messageJson = JsonSerializer.Serialize(message);
 
             // Push to the list
-            var length = await _redisService.ListRightPushAsync(historyKey, messageJson);
+            var length = await _redisService.Push(historyKey, messageJson);
 
             // Trim if necessary
             if (length > _options.HistoryLimit)
             {
                 // Keep only the last HistoryLimit messages
-                await _redisService.ListTrimAsync(historyKey, -_options.HistoryLimit, -1);
+                await _redisService.TrimList(historyKey, -_options.HistoryLimit, -1);
                 
                 _logger.LogDebug("Trimmed history for node {NodeId} to {Limit} messages", 
                     nodeId, _options.HistoryLimit);
@@ -312,7 +367,7 @@ public class MemoryService : IMemoryService
 
         try
         {
-            var values = await _redisService.ListRangeAsync(historyKey);
+            var values = await _redisService.Range(historyKey);
             
             var messages = new List<HistoryMessage>();
             foreach (var value in values)
@@ -358,8 +413,8 @@ public class MemoryService : IMemoryService
             var summaryKey = GetSummaryKey(nodeId);
             var historyKey = GetHistoryKey(nodeId);
 
-            await _redisService.DeleteKeyAsync(summaryKey);
-            await _redisService.DeleteKeyAsync(historyKey);
+            await _redisService.Remove(summaryKey);
+            await _redisService.Remove(historyKey);
 
             // Clear database record
             var nodeMemory = unitOfWork.FindObject<NodeMemory>(

@@ -50,62 +50,42 @@ public interface IRedisService
     /// <summary>
     /// Get a string value from Redis
     /// </summary>
-    /// <param name="key">The key to get</param>
-    /// <returns>The value, or null if not found</returns>
-    Task<string?> GetStringAsync(string key);
+    Task<string?> Get(string key);
 
     /// <summary>
     /// Set a string value in Redis
     /// </summary>
-    /// <param name="key">The key to set</param>
-    /// <param name="value">The value to set</param>
-    /// <param name="expiry">Optional expiration time</param>
-    Task SetStringAsync(string key, string value, TimeSpan? expiry = null);
+    Task Set(string key, string value, TimeSpan? expiry = null);
 
     /// <summary>
     /// Check if a key exists in Redis
     /// </summary>
-    /// <param name="key">The key to check</param>
-    /// <returns>True if the key exists</returns>
-    Task<bool> KeyExistsAsync(string key);
+    Task<bool> Exists(string key);
 
     /// <summary>
     /// Delete a key from Redis
     /// </summary>
-    /// <param name="key">The key to delete</param>
-    /// <returns>True if the key was deleted</returns>
-    Task<bool> DeleteKeyAsync(string key);
+    Task<bool> Remove(string key);
 
     /// <summary>
     /// Push a value to the right of a list
     /// </summary>
-    /// <param name="key">The list key</param>
-    /// <param name="value">The value to push</param>
-    Task<long> ListRightPushAsync(string key, string value);
+    Task<long> Push(string key, string value);
 
     /// <summary>
     /// Get a range of values from a list
     /// </summary>
-    /// <param name="key">The list key</param>
-    /// <param name="start">Start index (0-based, negative for from end)</param>
-    /// <param name="stop">Stop index (inclusive, negative for from end)</param>
-    /// <returns>List of values</returns>
-    Task<List<string>> ListRangeAsync(string key, long start = 0, long stop = -1);
+    Task<List<string>> Range(string key, long start = 0, long stop = -1);
 
     /// <summary>
     /// Trim a list to the specified range
     /// </summary>
-    /// <param name="key">The list key</param>
-    /// <param name="start">Start index to keep</param>
-    /// <param name="stop">Stop index to keep</param>
-    Task ListTrimAsync(string key, long start, long stop);
+    Task TrimList(string key, long start, long stop);
 
     /// <summary>
     /// Get the length of a list
     /// </summary>
-    /// <param name="key">The list key</param>
-    /// <returns>Length of the list</returns>
-    Task<long> ListLengthAsync(string key);
+    Task<long> Length(string key);
 }
 
 public class RedisService : IRedisService
@@ -525,7 +505,7 @@ public class RedisService : IRedisService
     // Key-Value Operations for Memory (Summary and History)
     // ============================================================
 
-    public async Task<string?> GetStringAsync(string key)
+    public async Task<string?> Get(string key)
     {
         try
         {
@@ -547,7 +527,7 @@ public class RedisService : IRedisService
         }
     }
 
-    public async Task SetStringAsync(string key, string value, TimeSpan? expiry = null)
+    public async Task Set(string key, string value, TimeSpan? expiry = null)
     {
         try
         {
@@ -563,7 +543,7 @@ public class RedisService : IRedisService
         }
     }
 
-    public async Task<bool> KeyExistsAsync(string key)
+    public async Task<bool> Exists(string key)
     {
         try
         {
@@ -577,7 +557,7 @@ public class RedisService : IRedisService
         }
     }
 
-    public async Task<bool> DeleteKeyAsync(string key)
+    public async Task<bool> Remove(string key)
     {
         try
         {
@@ -591,7 +571,7 @@ public class RedisService : IRedisService
         }
     }
 
-    public async Task<long> ListRightPushAsync(string key, string value)
+    public async Task<long> Push(string key, string value)
     {
         try
         {
@@ -608,7 +588,7 @@ public class RedisService : IRedisService
         }
     }
 
-    public async Task<List<string>> ListRangeAsync(string key, long start = 0, long stop = -1)
+    public async Task<List<string>> Range(string key, long start = 0, long stop = -1)
     {
         try
         {
@@ -624,7 +604,7 @@ public class RedisService : IRedisService
         }
     }
 
-    public async Task ListTrimAsync(string key, long start, long stop)
+    public async Task TrimList(string key, long start, long stop)
     {
         try
         {
@@ -640,7 +620,7 @@ public class RedisService : IRedisService
         }
     }
 
-    public async Task<long> ListLengthAsync(string key)
+    public async Task<long> Length(string key)
     {
         try
         {

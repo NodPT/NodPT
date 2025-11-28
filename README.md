@@ -300,7 +300,7 @@ Environment variable overrides:
 
 ### Operational Notes
 
-1. **Summarization happens after every message**, keeping context always up-to-date
+1. **Summarization runs in background** - doesn't block the chat flow, allowing for smooth user experience
 2. **Redis can be flushed** without data loss - summaries reload from MariaDB on demand
 3. **Separate summarizer model** recommended (smaller, faster like llama3.2:1b)
 4. **Memory is per-node**, enabling different contexts for different workflow nodes
