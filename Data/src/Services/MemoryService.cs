@@ -380,6 +380,7 @@ public class MemoryService : IMemoryService
             var values = await _redisService.Range(historyKey);
             
             var messages = new List<HistoryMessage>();
+            var errorCount = 0;
             foreach (var value in values)
             {
                 try
@@ -392,7 +393,15 @@ public class MemoryService : IMemoryService
                 }
                 catch (JsonException ex)
                 {
-                    _logger.LogWarning(ex, "Failed to deserialize history message for node {NodeId}", nodeId);
+                    errorCount++;
+                    if (errorCount > values.Count / 2) // More than 50% corrupted
+                    {
+                        _logger.LogError("History for node {NodeId} is severely corrupted ({ErrorCount}/{Total})", 
+                            nodeId, errorCount, values.Count);
+                        throw new InvalidOperationException($"History data corrupted for node {nodeId}");
+                    }
+                    _logger.LogWarning(ex, "Failed to deserialize history message {Index} for node {NodeId}", 
+                        messages.Count, nodeId);
                 }
             }
 
