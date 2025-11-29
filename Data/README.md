@@ -525,8 +525,19 @@ var options = new ListenOptions
 
 ```csharp
 // Register both Redis services
-builder.Services.AddSingleton<RedisCacheService>();
-builder.Services.AddSingleton<RedisQueueService>();
+builder.Services.AddSingleton<RedisCacheService>(provider =>
+{
+    var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
+    var logger = provider.GetRequiredService<ILogger<RedisCacheService>>();
+    return new RedisCacheService(multiplexer, logger);
+});
+
+builder.Services.AddSingleton<RedisQueueService>(provider =>
+{
+    var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
+    var logger = provider.GetRequiredService<ILogger<RedisQueueService>>();
+    return new RedisQueueService(multiplexer, logger);
+});
 ```
 
 **Usage in services:**
