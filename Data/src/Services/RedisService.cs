@@ -7,19 +7,29 @@ using NodPT.Data.Interfaces;
 namespace NodPT.Data.Services;
 
 /// <summary>
-/// Service for interacting with Redis, providing both Redis Streams for message queuing
-/// and key-value/list operations for caching and storage.
+/// Unified Redis service implementing both Queue and Cache operations.
 /// 
-/// This service provides three distinct categories of operations:
+/// This class provides a complete Redis implementation supporting:
 /// 
-/// 1. **Redis Streams** (Add, Listen, Acknowledge, ClaimPending, Trim, Info, StopListen):
-///    Used for reliable message queuing between services (e.g., WebAPI → Executor → SignalR).
-///    
-/// 2. **Key-Value Operations** (Get, Set, Exists, Remove):
-///    Used for caching simple string values like conversation summaries.
-///    
-/// 3. **List Operations** (Update, Range, TrimList, Length):
-///    Used for storing ordered collections like chat history.
+/// <list type="bullet">
+/// <item>
+/// <term>Queue Operations (<see cref="IRedisQueueService"/>)</term>
+/// <description>
+/// Message queuing using Redis Streams: Add, Listen, Acknowledge, ClaimPending, Trim, Info, StopListen.
+/// Used for reliable async communication between WebAPI → Executor → SignalR.
+/// </description>
+/// </item>
+/// <item>
+/// <term>Cache Operations (<see cref="IRedisCacheService"/>)</term>
+/// <description>
+/// Key-Value storage (Get, Set, Exists, Remove) and List operations (Update, Range, TrimList, Length).
+/// Used for caching summaries and storing chat history.
+/// </description>
+/// </item>
+/// </list>
+/// 
+/// The service can be injected as <see cref="IRedisService"/> (unified), 
+/// <see cref="IRedisQueueService"/> (queue only), or <see cref="IRedisCacheService"/> (cache only).
 /// </summary>
 public class RedisService : IRedisService
 {
@@ -39,9 +49,7 @@ public class RedisService : IRedisService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    // ============================================================
-    // Redis Stream Operations - Message Queue Functionality
-    // ============================================================
+    #region IRedisQueueService - Message Queue Operations
 
     /// <summary>
     /// Adds a message to a Redis Stream for asynchronous processing by consumers.
@@ -634,10 +642,9 @@ public class RedisService : IRedisService
         }
     }
 
-    // ============================================================
-    // Key-Value Operations - Simple String Storage
-    // Used for caching summaries and other simple values
-    // ============================================================
+    #endregion
+
+    #region IRedisCacheService - Cache Operations
 
     /// <summary>
     /// Gets a string value from Redis by key.
@@ -779,11 +786,6 @@ public class RedisService : IRedisService
             throw;
         }
     }
-
-    // ============================================================
-    // List Operations - Ordered Collection Storage
-    // Used for storing chat history and other ordered data
-    // ============================================================
 
     /// <summary>
     /// Appends a value to the right (end) of a Redis List.
@@ -937,4 +939,6 @@ public class RedisService : IRedisService
             throw;
         }
     }
+
+    #endregion
 }

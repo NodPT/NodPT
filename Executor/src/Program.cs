@@ -95,6 +95,10 @@ builder.Services.AddSingleton<IRedisService>(provider =>
     return new RedisService(multiplexer, logger);
 });
 
+// Also register the specific interfaces for clearer dependency injection
+builder.Services.AddSingleton<IRedisQueueService>(sp => sp.GetRequiredService<IRedisService>());
+builder.Services.AddSingleton<IRedisCacheService>(sp => sp.GetRequiredService<IRedisService>());
+
 // Register HttpClient for LLM service
 builder.Services.AddHttpClient<ILlmChatService, LlmChatService>();
 

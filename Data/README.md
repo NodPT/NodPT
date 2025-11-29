@@ -50,6 +50,37 @@ Executor─┘
 - XADD, XREADGROUP, XACK, XDEL, XTRIM operations
 - Background listeners with configurable concurrency
 
+### Redis Service Architecture
+
+The Redis functionality is organized into two logical categories:
+
+```
+IRedisService (unified interface)
+    ├── IRedisQueueService (message queue operations)
+    │   ├── Add()           # Publish message to stream
+    │   ├── Listen()        # Subscribe to stream
+    │   ├── Acknowledge()   # Confirm message processed
+    │   ├── ClaimPending()  # Recover stale messages
+    │   ├── Trim()          # Limit stream size
+    │   ├── Info()          # Get stream stats
+    │   └── StopListen()    # Stop listener
+    │
+    └── IRedisCacheService (caching operations)
+        ├── Get()           # Get cached value
+        ├── Set()           # Cache value with optional expiry
+        ├── Exists()        # Check if key exists
+        ├── Remove()        # Delete cached value
+        ├── Update()        # Append to list
+        ├── Range()         # Get list range
+        ├── TrimList()      # Limit list size
+        └── Length()        # Get list length
+```
+
+**Interface Selection Guide:**
+- Use `IRedisQueueService` for message queuing (WebAPI → Executor → SignalR)
+- Use `IRedisCacheService` for caching summaries and chat history
+- Use `IRedisService` for backward compatibility or mixed usage
+
 ### Project Structure
 
 ```
@@ -61,8 +92,13 @@ Data/
 │   │   ├── ChatMessage.cs # Chat message with ConnectionId
 │   │   ├── RedisModels.cs # MessageEnvelope, ListenOptions, etc.
 │   │   └── ...            # Other entities
+│   ├── Interfaces/        # Service interfaces
+│   │   ├── IRedisService.cs       # Unified Redis interface
+│   │   ├── IRedisQueueService.cs  # Queue operations interface
+│   │   ├── IRedisCacheService.cs  # Cache operations interface
+│   │   └── ...                    # Other interfaces
 │   ├── Services/          # Data services and Redis service
-│   │   ├── RedisService.cs      # Shared Redis Streams service
+│   │   ├── RedisService.cs      # Shared Redis implementation
 │   │   ├── ChatService.cs       # Chat service
 │   │   └── ...                  # Other service classes
 │   ├── DTOs/              # Data Transfer Objects
@@ -297,11 +333,20 @@ For issues and questions:
 - Check DevExpress documentation
 - Open an issue on GitHub
 - Contact the development team
+
 ## 📡 RedisService API
 
-The shared `IRedisService` provides a unified interface for Redis Streams operations across all NodPT services.
+The Redis functionality is split into two interfaces for better separation of concerns:
 
-### Methods
+### Interfaces
+
+| Interface | Purpose | Methods |
+|-----------|---------|---------|
+| `IRedisQueueService` | Message queuing between services | Add, Listen, Acknowledge, ClaimPending, Trim, Info, StopListen |
+| `IRedisCacheService` | Caching summaries and history | Get, Set, Exists, Remove, Update, Range, TrimList, Length |
+| `IRedisService` | Unified interface (backward compatible) | All methods from both interfaces |
+
+### Queue Operations (IRedisQueueService)
 
 #### Add - Publish to Stream
 ```csharp
@@ -350,11 +395,11 @@ var handle = _redisService.Listen(
     });
 ```
 
-#### Delete - Acknowledge Message
+#### Acknowledge - Acknowledge Message
 ```csharp
-Task Delete(string streamKey, string group, string entryId)
+Task Acknowledge(string streamKey, string group, string entryId)
 ```
-Acknowledges a message using XACK. Optionally deletes with XDEL if configured.
+Acknowledges a message using XACK, marking it as successfully processed.
 
 #### ClaimPending - Reclaim Stale Messages
 ```csharp
@@ -380,11 +425,66 @@ Task StopListen(ListenHandle handle)
 ```
 Gracefully stops a listener started with Listen().
 
+### Cache Operations (IRedisCacheService)
+
+#### Get - Retrieve Cached Value
+```csharp
+Task<string?> Get(string key)
+```
+Gets a string value from Redis, returns null if not found.
+
+#### Set - Cache a Value
+```csharp
+Task Set(string key, string value, TimeSpan? expiry = null)
+```
+Stores a string value with optional expiration.
+
+#### Exists - Check Key Existence
+```csharp
+Task<bool> Exists(string key)
+```
+Returns true if the key exists in Redis.
+
+#### Remove - Delete Cached Value
+```csharp
+Task<bool> Remove(string key)
+```
+Deletes a key, returns true if deleted.
+
+#### Update - Append to List
+```csharp
+Task<long> Update(string key, string value)
+```
+Appends a value to a Redis list, returns new length.
+
+#### Range - Get List Range
+```csharp
+Task<List<string>> Range(string key, long start = 0, long stop = -1)
+```
+Gets elements from a list. Supports negative indices.
+
+#### TrimList - Limit List Size
+```csharp
+Task TrimList(string key, long start, long stop)
+```
+Keeps only elements in the specified range.
+
+#### Length - Get List Length
+```csharp
+Task<long> Length(string key)
+```
+Returns the number of elements in the list.
+
 ### Stream Keys (Convention)
 
 - `jobs:chat` - Chat processing jobs (WebAPI → Executor)
 - `signalr:updates` - Real-time updates (Executor → WebAPI)
 - `{streamKey}:dead` - Dead letter stream for failed messages
+
+### Cache Keys (Convention)
+
+- `node:summary:{nodeId}` - Conversation summaries
+- `node:history:{nodeId}` - Chat history lists
 
 ### Consumer Groups
 
@@ -419,6 +519,39 @@ var options = new ListenOptions
     CreateStreamIfMissing = true, // Auto-create stream/group
     ClaimPendingOnStartup = true  // Claim on startup
 };
+```
+
+### Dependency Injection
+
+```csharp
+// All three interfaces resolve to the same RedisService instance
+builder.Services.AddSingleton<IRedisService, RedisService>();
+builder.Services.AddSingleton<IRedisQueueService>(sp => sp.GetRequiredService<IRedisService>());
+builder.Services.AddSingleton<IRedisCacheService>(sp => sp.GetRequiredService<IRedisService>());
+```
+
+**Usage in services:**
+```csharp
+// For queue-only operations
+public class ChatWorker
+{
+    private readonly IRedisQueueService _queue;
+    public ChatWorker(IRedisQueueService queue) => _queue = queue;
+}
+
+// For cache-only operations
+public class MemoryService
+{
+    private readonly IRedisCacheService _cache;
+    public MemoryService(IRedisCacheService cache) => _cache = cache;
+}
+
+// For mixed operations (backward compatible)
+public class LegacyService
+{
+    private readonly IRedisService _redis;
+    public LegacyService(IRedisService redis) => _redis = redis;
+}
 ```
 
 ### Error Handling

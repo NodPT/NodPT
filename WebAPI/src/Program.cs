@@ -81,6 +81,9 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
 });
 
 builder.Services.AddSingleton<IRedisService, NodPT.Data.Services.RedisService>();
+// Also register the specific interfaces for clearer dependency injection
+builder.Services.AddSingleton<IRedisQueueService>(sp => sp.GetRequiredService<IRedisService>());
+builder.Services.AddSingleton<IRedisCacheService>(sp => sp.GetRequiredService<IRedisService>());
 
 // 🔹 Log Services
 builder.Services.AddScoped<LogService>();
