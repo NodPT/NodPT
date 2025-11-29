@@ -6,18 +6,71 @@ using NodPT.Data.Interfaces;
 
 namespace NodPT.Data.Services;
 
+/// <summary>
+/// Service for interacting with Redis, providing both Redis Streams for message queuing
+/// and key-value/list operations for caching and storage.
+/// 
+/// This service provides three distinct categories of operations:
+/// 
+/// 1. **Redis Streams** (Add, Listen, Acknowledge, ClaimPending, Trim, Info, StopListen):
+///    Used for reliable message queuing between services (e.g., WebAPI → Executor → SignalR).
+///    
+/// 2. **Key-Value Operations** (Get, Set, Exists, Remove):
+///    Used for caching simple string values like conversation summaries.
+///    
+/// 3. **List Operations** (Update, Range, TrimList, Length):
+///    Used for storing ordered collections like chat history.
+/// </summary>
 public class RedisService : IRedisService
 {
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<RedisService> _logger;
     private readonly ConcurrentDictionary<string, int> _retryCounters = new();
 
+    /// <summary>
+    /// Initializes a new instance of the RedisService.
+    /// </summary>
+    /// <param name="redis">The Redis connection multiplexer.</param>
+    /// <param name="logger">The logger for diagnostic output.</param>
+    /// <exception cref="ArgumentNullException">Thrown when redis or logger is null.</exception>
     public RedisService(IConnectionMultiplexer redis, ILogger<RedisService> logger)
     {
         _redis = redis ?? throw new ArgumentNullException(nameof(redis));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    // ============================================================
+    // Redis Stream Operations - Message Queue Functionality
+    // ============================================================
+
+    /// <summary>
+    /// Adds a message to a Redis Stream for asynchronous processing by consumers.
+    /// 
+    /// Redis Streams are append-only logs ideal for message queuing between services.
+    /// Each message gets a unique entry ID (timestamp-based) and can be consumed by 
+    /// multiple consumer groups.
+    /// 
+    /// <para>
+    /// <b>Note:</b> This is different from <see cref="Set"/> which stores a simple key-value pair.
+    /// Use <c>Add</c> for message queuing, use <c>Set</c> for caching single values.
+    /// </para>
+    /// </summary>
+    /// <param name="streamKey">The key/name of the Redis Stream (e.g., "jobs:chat", "signalr:updates").</param>
+    /// <param name="envelope">Dictionary of field-value pairs to include in the message.</param>
+    /// <returns>The unique entry ID assigned to the message (e.g., "1609459200000-0").</returns>
+    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
+    /// <example>
+    /// <code>
+    /// // Queue a chat job for processing by the Executor service
+    /// var envelope = new Dictionary&lt;string, string&gt;
+    /// {
+    ///     { "chatId", "12345" },
+    ///     { "connectionId", "abc-123-def" }
+    /// };
+    /// var entryId = await redisService.Add("jobs:chat", envelope);
+    /// // entryId = "1609459200000-0"
+    /// </code>
+    /// </example>
     public async Task<string> Add(string streamKey, IDictionary<string, string> envelope)
     {
         try
@@ -41,6 +94,56 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Starts a background listener for a Redis Stream using consumer groups.
+    /// 
+    /// Consumer groups allow multiple instances to process messages from the same stream
+    /// without duplicates. Each message is delivered to exactly one consumer in the group.
+    /// Messages must be acknowledged after successful processing.
+    /// 
+    /// Features:
+    /// - Automatic consumer group creation if missing
+    /// - Claims pending messages from failed consumers on startup
+    /// - Configurable concurrency and batch sizes
+    /// - Automatic retry with dead letter support
+    /// </summary>
+    /// <param name="streamKey">The Redis Stream key to listen to (e.g., "jobs:chat").</param>
+    /// <param name="group">The consumer group name (e.g., "executor", "signalr").</param>
+    /// <param name="consumerName">Unique name for this consumer instance (e.g., "executor-host1-abc123").</param>
+    /// <param name="handler">
+    /// Async callback invoked for each message. Return true to acknowledge (success),
+    /// false to trigger retry. After max retries, message moves to dead letter stream.
+    /// </param>
+    /// <param name="options">Optional configuration for batch size, concurrency, retries, etc.</param>
+    /// <returns>A handle to control the listener (use with <see cref="StopListen"/>).</returns>
+    /// <example>
+    /// <code>
+    /// // Start listening for chat jobs in the Executor service
+    /// var options = new ListenOptions
+    /// {
+    ///     BatchSize = 10,
+    ///     Concurrency = 3,
+    ///     MaxRetries = 3
+    /// };
+    /// 
+    /// var consumerName = $"executor-{Environment.MachineName}-{Guid.NewGuid().ToString()[..8]}";
+    /// 
+    /// var handle = redisService.Listen(
+    ///     streamKey: "jobs:chat",
+    ///     group: "executor",
+    ///     consumerName: consumerName,
+    ///     handler: async (envelope, ct) =>
+    ///     {
+    ///         var chatId = envelope.Fields["chatId"];
+    ///         // Process the chat message...
+    ///         return true; // Acknowledge on success
+    ///     },
+    ///     options: options);
+    /// 
+    /// // Later, to stop listening:
+    /// await redisService.StopListen(handle);
+    /// </code>
+    /// </example>
     public ListenHandle Listen(string streamKey, string group, string consumerName,
         Func<MessageEnvelope, CancellationToken, Task<bool>> handler, ListenOptions? options = null)
     {
@@ -146,6 +249,9 @@ public class RedisService : IRedisService
         return handle;
     }
 
+    /// <summary>
+    /// Processes a single message from the stream, calling the handler and managing acknowledgment/retry.
+    /// </summary>
     private async Task ProcessMessage(IDatabase db, string streamKey, string group, 
         StreamEntry entry, Func<MessageEnvelope, CancellationToken, Task<bool>> handler,
         ListenOptions options, CancellationToken cancellationToken)
@@ -215,6 +321,10 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Moves a failed message to the dead letter stream for manual inspection.
+    /// The dead letter stream key is the original stream key with ":dead" suffix.
+    /// </summary>
     private async Task MoveToDeadLetter(IDatabase db, string streamKey, string group, StreamEntry entry)
     {
         try
@@ -240,6 +350,23 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Acknowledges a message in a Redis Stream, marking it as successfully processed.
+    /// 
+    /// Acknowledged messages are removed from the consumer's pending list but remain
+    /// in the stream until explicitly trimmed. This enables reliable message delivery
+    /// with at-least-once semantics.
+    /// </summary>
+    /// <param name="streamKey">The Redis Stream key.</param>
+    /// <param name="group">The consumer group name.</param>
+    /// <param name="entryId">The entry ID of the message to acknowledge.</param>
+    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
+    /// <example>
+    /// <code>
+    /// // Manually acknowledge a message after successful processing
+    /// await redisService.Acknowledge("jobs:chat", "executor", "1609459200000-0");
+    /// </code>
+    /// </example>
     public async Task Acknowledge(string streamKey, string group, string entryId)
     {
         try
@@ -258,6 +385,32 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Claims pending messages that have been idle (unacknowledged) for too long.
+    /// 
+    /// When a consumer crashes or fails to acknowledge messages, those messages remain
+    /// in the pending entries list (PEL). This method allows other consumers to claim
+    /// ownership of those messages and retry processing them.
+    /// 
+    /// This is typically called on consumer startup to recover from previous failures.
+    /// </summary>
+    /// <param name="streamKey">The Redis Stream key.</param>
+    /// <param name="group">The consumer group name.</param>
+    /// <param name="consumerName">The name of the consumer claiming the messages.</param>
+    /// <param name="idleThresholdMs">Minimum idle time in milliseconds before a message can be claimed.</param>
+    /// <returns>The number of messages successfully claimed.</returns>
+    /// <example>
+    /// <code>
+    /// // Claim messages that have been pending for more than 60 seconds
+    /// var claimedCount = await redisService.ClaimPending(
+    ///     "jobs:chat", 
+    ///     "executor", 
+    ///     "executor-host1-abc123", 
+    ///     idleThresholdMs: 60000);
+    /// 
+    /// Console.WriteLine($"Claimed {claimedCount} pending messages");
+    /// </code>
+    /// </example>
     public async Task<int> ClaimPending(string streamKey, string group, string consumerName, int idleThresholdMs)
     {
         try
@@ -322,6 +475,25 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Trims a Redis Stream to approximately the specified maximum length.
+    /// 
+    /// Redis uses an approximate trimming strategy (~) for performance, which may leave
+    /// slightly more entries than specified. This helps manage stream size and memory usage.
+    /// 
+    /// <para>
+    /// <b>Note:</b> This is for Redis Streams. For Redis Lists, use <see cref="TrimList"/>.
+    /// </para>
+    /// </summary>
+    /// <param name="streamKey">The Redis Stream key to trim.</param>
+    /// <param name="maxLen">The approximate maximum number of entries to keep.</param>
+    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
+    /// <example>
+    /// <code>
+    /// // Keep approximately the last 10,000 messages in the stream
+    /// await redisService.Trim("jobs:chat", maxLen: 10000);
+    /// </code>
+    /// </example>
     public async Task Trim(string streamKey, long maxLen)
     {
         try
@@ -338,6 +510,30 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Gets information about a Redis Stream including length and pending message counts.
+    /// 
+    /// Useful for monitoring stream health, identifying stuck consumers, and debugging
+    /// message processing issues.
+    /// </summary>
+    /// <param name="streamKey">The Redis Stream key.</param>
+    /// <param name="group">Optional consumer group name to get pending message info.</param>
+    /// <returns>Stream information including length and per-consumer pending counts.</returns>
+    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
+    /// <example>
+    /// <code>
+    /// // Get stream info with pending message counts per consumer
+    /// var info = await redisService.Info("jobs:chat", group: "executor");
+    /// 
+    /// Console.WriteLine($"Stream length: {info.Length}");
+    /// Console.WriteLine($"Total pending: {info.TotalPending}");
+    /// 
+    /// foreach (var consumer in info.ConsumerPending)
+    /// {
+    ///     Console.WriteLine($"  {consumer.Key}: {consumer.Value} pending");
+    /// }
+    /// </code>
+    /// </example>
     public async Task<RedisStreamInfo> Info(string streamKey, string? group = null)
     {
         try
@@ -359,7 +555,7 @@ public class RedisService : IRedisService
                     // Get per-consumer pending counts
                     foreach (var consumer in pendingInfo.Consumers)
                     {
-                        info.ConsumerPending[consumer.Name] = consumer.PendingMessageCount;
+                        info.ConsumerPending[consumer.Name!] = consumer.PendingMessageCount;
                     }
                 }
                 catch (Exception ex)
@@ -377,6 +573,22 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Stops a stream listener that was started with <see cref="Listen"/>.
+    /// 
+    /// Signals cancellation and waits up to 10 seconds for the background task to complete
+    /// gracefully. Any messages being processed will finish before the listener stops.
+    /// </summary>
+    /// <param name="handle">The listen handle returned by <see cref="Listen"/>.</param>
+    /// <example>
+    /// <code>
+    /// // Start listening
+    /// var handle = redisService.Listen("jobs:chat", "executor", "consumer1", handler);
+    /// 
+    /// // Later, stop the listener gracefully
+    /// await redisService.StopListen(handle);
+    /// </code>
+    /// </example>
     public async Task StopListen(ListenHandle handle)
     {
         if (handle == null)
@@ -405,6 +617,9 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Ensures a consumer group exists for a stream, creating it if necessary.
+    /// </summary>
     private async Task EnsureConsumerGroupExists(IDatabase db, string streamKey, string group)
     {
         try
@@ -420,9 +635,34 @@ public class RedisService : IRedisService
     }
 
     // ============================================================
-    // Key-Value Operations for Memory (Summary and History)
+    // Key-Value Operations - Simple String Storage
+    // Used for caching summaries and other simple values
     // ============================================================
 
+    /// <summary>
+    /// Gets a string value from Redis by key.
+    /// 
+    /// Used for retrieving cached values like conversation summaries.
+    /// Returns null if the key doesn't exist.
+    /// </summary>
+    /// <param name="key">The Redis key (e.g., "node:summary:abc123").</param>
+    /// <returns>The stored string value, or null if not found.</returns>
+    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
+    /// <example>
+    /// <code>
+    /// // Get a cached summary for a node
+    /// var summary = await redisService.Get("node:summary:abc123");
+    /// 
+    /// if (summary != null)
+    /// {
+    ///     Console.WriteLine($"Found cached summary: {summary}");
+    /// }
+    /// else
+    /// {
+    ///     Console.WriteLine("No cached summary found");
+    /// }
+    /// </code>
+    /// </example>
     public async Task<string?> Get(string key)
     {
         try
@@ -445,6 +685,30 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Sets a string value in Redis with an optional expiration time.
+    /// 
+    /// Used for caching values like conversation summaries. If the key already exists,
+    /// the value is overwritten.
+    /// 
+    /// <para>
+    /// <b>Note:</b> This is different from <see cref="Add"/> which appends to a Redis Stream.
+    /// Use <c>Set</c> for caching single values, use <c>Add</c> for message queuing.
+    /// </para>
+    /// </summary>
+    /// <param name="key">The Redis key (e.g., "node:summary:abc123").</param>
+    /// <param name="value">The string value to store.</param>
+    /// <param name="expiry">Optional expiration time. If null, the key never expires.</param>
+    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
+    /// <example>
+    /// <code>
+    /// // Cache a summary with no expiration
+    /// await redisService.Set("node:summary:abc123", "This is a conversation about...");
+    /// 
+    /// // Cache a value that expires in 1 hour
+    /// await redisService.Set("temp:session:xyz", "session-data", TimeSpan.FromHours(1));
+    /// </code>
+    /// </example>
     public async Task Set(string key, string value, TimeSpan? expiry = null)
     {
         try
@@ -461,6 +725,20 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Checks if a key exists in Redis.
+    /// </summary>
+    /// <param name="key">The Redis key to check.</param>
+    /// <returns>True if the key exists, false otherwise.</returns>
+    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
+    /// <example>
+    /// <code>
+    /// if (await redisService.Exists("node:summary:abc123"))
+    /// {
+    ///     Console.WriteLine("Summary is cached");
+    /// }
+    /// </code>
+    /// </example>
     public async Task<bool> Exists(string key)
     {
         try
@@ -475,6 +753,19 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Deletes a key from Redis.
+    /// </summary>
+    /// <param name="key">The Redis key to delete.</param>
+    /// <returns>True if the key was deleted, false if it didn't exist.</returns>
+    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
+    /// <example>
+    /// <code>
+    /// // Clear a cached summary
+    /// var deleted = await redisService.Remove("node:summary:abc123");
+    /// Console.WriteLine(deleted ? "Cache cleared" : "Key didn't exist");
+    /// </code>
+    /// </example>
     public async Task<bool> Remove(string key)
     {
         try
@@ -489,6 +780,43 @@ public class RedisService : IRedisService
         }
     }
 
+    // ============================================================
+    // List Operations - Ordered Collection Storage
+    // Used for storing chat history and other ordered data
+    // ============================================================
+
+    /// <summary>
+    /// Appends a value to the right (end) of a Redis List.
+    /// 
+    /// Used for maintaining ordered collections like chat history. Each new message
+    /// is appended to the end of the list.
+    /// 
+    /// <para>
+    /// <b>Note:</b> The method is named "Update" for historical reasons but actually
+    /// performs a RPUSH (right push) operation. Consider using with <see cref="TrimList"/>
+    /// to limit list size.
+    /// </para>
+    /// </summary>
+    /// <param name="key">The Redis List key (e.g., "node:history:abc123").</param>
+    /// <param name="value">The value to append (typically JSON-serialized message).</param>
+    /// <returns>The new length of the list after the push.</returns>
+    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
+    /// <example>
+    /// <code>
+    /// // Add a message to chat history
+    /// var historyKey = "node:history:abc123";
+    /// var messageJson = JsonSerializer.Serialize(new { role = "user", content = "Hello" });
+    /// 
+    /// var newLength = await redisService.Update(historyKey, messageJson);
+    /// Console.WriteLine($"History now has {newLength} messages");
+    /// 
+    /// // Trim to keep only the last 20 messages
+    /// if (newLength > 20)
+    /// {
+    ///     await redisService.TrimList(historyKey, -20, -1);
+    /// }
+    /// </code>
+    /// </example>
     public async Task<long> Update(string key, string value)
     {
         try
@@ -506,6 +834,29 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Gets a range of values from a Redis List.
+    /// 
+    /// Supports negative indices where -1 is the last element, -2 is second to last, etc.
+    /// Use start=0 and stop=-1 to get all elements.
+    /// </summary>
+    /// <param name="key">The Redis List key.</param>
+    /// <param name="start">Start index (0-based, supports negative).</param>
+    /// <param name="stop">Stop index (inclusive, supports negative). Use -1 for end of list.</param>
+    /// <returns>List of string values in the specified range.</returns>
+    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
+    /// <example>
+    /// <code>
+    /// // Get all messages in history
+    /// var allMessages = await redisService.Range("node:history:abc123");
+    /// 
+    /// // Get only the last 10 messages
+    /// var recentMessages = await redisService.Range("node:history:abc123", -10, -1);
+    /// 
+    /// // Get first 5 messages
+    /// var firstMessages = await redisService.Range("node:history:abc123", 0, 4);
+    /// </code>
+    /// </example>
     public async Task<List<string>> Range(string key, long start = 0, long stop = -1)
     {
         try
@@ -522,6 +873,29 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Trims a Redis List to only contain elements in the specified range.
+    /// 
+    /// Elements outside the range are deleted. Supports negative indices.
+    /// Commonly used to limit list size by keeping only the most recent N elements.
+    /// 
+    /// <para>
+    /// <b>Note:</b> This is for Redis Lists. For Redis Streams, use <see cref="Trim"/>.
+    /// </para>
+    /// </summary>
+    /// <param name="key">The Redis List key.</param>
+    /// <param name="start">Start index to keep (0-based, supports negative).</param>
+    /// <param name="stop">Stop index to keep (inclusive, supports negative).</param>
+    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
+    /// <example>
+    /// <code>
+    /// // Keep only the last 20 messages in history
+    /// await redisService.TrimList("node:history:abc123", -20, -1);
+    /// 
+    /// // Keep only first 10 messages
+    /// await redisService.TrimList("node:history:abc123", 0, 9);
+    /// </code>
+    /// </example>
     public async Task TrimList(string key, long start, long stop)
     {
         try
@@ -538,6 +912,18 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Gets the length (number of elements) of a Redis List.
+    /// </summary>
+    /// <param name="key">The Redis List key.</param>
+    /// <returns>The number of elements in the list, or 0 if the key doesn't exist.</returns>
+    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
+    /// <example>
+    /// <code>
+    /// var historyLength = await redisService.Length("node:history:abc123");
+    /// Console.WriteLine($"Chat history has {historyLength} messages");
+    /// </code>
+    /// </example>
     public async Task<long> Length(string key)
     {
         try
