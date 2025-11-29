@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using StackExchange.Redis;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
+using NodPT.Data.Interfaces;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args); // 🔹 Create builder
 
@@ -53,6 +54,12 @@ var redisConnection = builder.Configuration["Redis:ConnectionString"]
     ?? Environment.GetEnvironmentVariable("REDIS_CONNECTION")
     ?? "localhost:6379";
 
+// Add abortConnect=false to allow retry behavior when Redis is unavailable
+var redisOptions = ConfigurationOptions.Parse(redisConnection);
+redisOptions.AbortOnConnectFail = false;
+redisOptions.ConnectTimeout = 5000;
+redisOptions.SyncTimeout = 5000;
+
 // Configure Redis connection with error handling and logging
 builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
 {
@@ -60,15 +67,16 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
     {
         var logger = provider.GetService<ILogger<Program>>();
         logger?.LogInformation($"Connecting to Redis at {redisConnection}...");
-        var connection = ConnectionMultiplexer.Connect(redisConnection);
+        var connection = ConnectionMultiplexer.Connect(redisOptions);
         logger?.LogInformation("Successfully connected to Redis");
         return connection;
     }
     catch (Exception ex)
     {
         var logger = provider.GetService<ILogger<Program>>();
-        logger?.LogError(ex, $"Failed to connect to Redis at {redisConnection}. Please ensure Redis is running and accessible.");
-        throw;
+        logger?.LogWarning(ex, $"Failed to connect to Redis at {redisConnection}. Redis features will be unavailable. Ensure Redis is running and accessible.");
+        // Return a dummy connection that won't break the app if Redis is down
+        return ConnectionMultiplexer.Connect(redisOptions);
     }
 });
 
@@ -221,6 +229,8 @@ app.MapHub<NodptHub>("/signalr").RequireAuthorization();
 app.MapControllers(); // 🔹 Map controllers
 
 app.Run();
+
+
 
 
 

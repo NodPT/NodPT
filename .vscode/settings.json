@@ -1,0 +1,19 @@
+{
+    "sqltools.connections": [
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 8444,
+            "driver": "MariaDB",
+            "name": "nodpt",
+            "database": "nodpt_db_master",
+            "username": "sql_user_admin",
+            "password": "Ca159753*"
+        }
+    ]
+}

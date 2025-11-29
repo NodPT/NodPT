@@ -8,6 +8,8 @@ using BackendExecutor.Services;
 using NodPT.Data.Services;
 using StackExchange.Redis;
 using DevExpress.Xpo;
+using NodPT.Data.DTOs;
+using NodPT.Data.Interfaces;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -41,9 +43,9 @@ builder.Services.AddSingleton<ExecutorOptions>(provider =>
 });
 
 // Register SummarizationOptions
-builder.Services.AddSingleton<NodPT.Data.Services.SummarizationOptions>(provider =>
+builder.Services.AddSingleton<SummarizationOptions>(provider =>
 {
-    var options = new NodPT.Data.Services.SummarizationOptions();
+    var options = new SummarizationOptions();
     provider.GetRequiredService<IConfiguration>().GetSection("Summarization").Bind(options);
     
     // Override with environment variables
@@ -58,9 +60,9 @@ builder.Services.AddSingleton<NodPT.Data.Services.SummarizationOptions>(provider
 });
 
 // Register MemoryOptions
-builder.Services.AddSingleton<NodPT.Data.Services.MemoryOptions>(provider =>
+builder.Services.AddSingleton<MemoryOptions>(provider =>
 {
-    var options = new NodPT.Data.Services.MemoryOptions();
+    var options = new MemoryOptions();
     provider.GetRequiredService<IConfiguration>().GetSection("Memory").Bind(options);
     
     // Override with environment variables
@@ -99,7 +101,7 @@ builder.Services.AddHttpClient<ILlmChatService, LlmChatService>();
 // Register HttpClient for SummarizationService
 builder.Services.AddHttpClient<ISummarizationService, SummarizationService>((provider, client) =>
 {
-    var options = provider.GetRequiredService<NodPT.Data.Services.SummarizationOptions>();
+    var options = provider.GetRequiredService<SummarizationOptions>();
     client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
 });
 
@@ -108,7 +110,7 @@ builder.Services.AddSingleton<IMemoryService>(provider =>
 {
     var redisService = provider.GetRequiredService<IRedisService>();
     var summarizationService = provider.GetRequiredService<ISummarizationService>();
-    var options = provider.GetRequiredService<NodPT.Data.Services.MemoryOptions>();
+    var options = provider.GetRequiredService<MemoryOptions>();
     var logger = provider.GetRequiredService<ILogger<MemoryService>>();
     var serviceScopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
     return new MemoryService(redisService, summarizationService, options, logger, serviceScopeFactory);
@@ -118,9 +120,9 @@ builder.Services.AddSingleton<IMemoryService>(provider =>
 builder.Services.AddScoped<UnitOfWork>(provider => new UnitOfWork());
 
 // Register services
-builder.Services.AddSingleton<IRepository, StubRepository>();
-builder.Services.AddSingleton<INotifier, StubNotifier>();
-builder.Services.AddSingleton<IDispatcher, JobDispatcher>();
+//builder.Services.AddSingleton<IRepository, StubRepository>();
+//builder.Services.AddSingleton<INotifier, StubNotifier>();
+//builder.Services.AddSingleton<IDispatcher, JobDispatcher>();
 
 // OLD: Direct Redis consumer (obsolete - should use shared RedisService)
 // builder.Services.AddSingleton<IRedisConsumer, RedisConsumer>();
@@ -129,9 +131,9 @@ builder.Services.AddSingleton<IDispatcher, JobDispatcher>();
 // builder.Services.AddSingleton<IChatJobConsumer, ChatJobConsumer>();
 
 // Register runners  
-builder.Services.AddSingleton<ManagerRunner>();
-builder.Services.AddSingleton<InspectorRunner>();
-builder.Services.AddSingleton<AgentRunner>();
+//builder.Services.AddSingleton<ManagerRunner>();
+//builder.Services.AddSingleton<InspectorRunner>();
+//builder.Services.AddSingleton<AgentRunner>();
 
 // Register workers
 // OLD: Worker using direct Redis calls (obsolete - should use shared RedisService)
@@ -148,8 +150,8 @@ var host = builder.Build();
 // Log configuration on startup
 var logger = host.Services.GetRequiredService<ILogger<Program>>();
 var executorOptions = host.Services.GetRequiredService<ExecutorOptions>();
-var summarizationOptions = host.Services.GetRequiredService<NodPT.Data.Services.SummarizationOptions>();
-var memoryOptions = host.Services.GetRequiredService<NodPT.Data.Services.MemoryOptions>();
+var summarizationOptions = host.Services.GetRequiredService<SummarizationOptions>();
+var memoryOptions = host.Services.GetRequiredService<MemoryOptions>();
 
 logger.LogInformation("BackendExecutor starting with configuration:");
 logger.LogInformation("  Redis Connection: {RedisConnection}", executorOptions.RedisConnection);

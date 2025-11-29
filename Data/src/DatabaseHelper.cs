@@ -17,12 +17,18 @@ public static class DatabaseHelper
 
         var dataStore = XpoDefault.GetConnectionProvider(connectionString, AutoCreateOption.SchemaAlreadyExists);
         var dl = new SimpleDataLayer(dataStore);
+
+#if DEBUG
+//        CreateSampleData(dl);
+#endif
+
         return new UnitOfWork(dl);
+
     }
 
-    private static void CreateSampleData()
+    private static void CreateSampleData(SimpleDataLayer dl)
     {
-        using var session = CreateUnitOfWork();
+        using var session = new UnitOfWork(dl);
 
         // Check if data already exists
         if (session.Query<User>().Any())

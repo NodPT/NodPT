@@ -2,100 +2,10 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
+using NodPT.Data.DTOs;
+using NodPT.Data.Interfaces;
 
 namespace NodPT.Data.Services;
-
-/// <summary>
-/// Configuration options for the summarization service.
-/// </summary>
-public class SummarizationOptions
-{
-    /// <summary>
-    /// Base URL for the Ollama endpoint used specifically for summarization.
-    /// </summary>
-    public string BaseUrl { get; set; } = "http://localhost:11434/api/generate";
-
-    /// <summary>
-    /// Model name for the summarization model.
-    /// </summary>
-    public string Model { get; set; } = "llama3.2:1b";
-
-    /// <summary>
-    /// Timeout in seconds for summarization requests.
-    /// </summary>
-    public int TimeoutSeconds { get; set; } = 60;
-
-    /// <summary>
-    /// Maximum length of the summary in characters.
-    /// </summary>
-    public int MaxSummaryLength { get; set; } = 2000;
-}
-
-/// <summary>
-/// Request model for Ollama generate API
-/// </summary>
-public class OllamaGenerateRequest
-{
-    [JsonPropertyName("model")]
-    public string Model { get; set; } = string.Empty;
-
-    [JsonPropertyName("prompt")]
-    public string Prompt { get; set; } = string.Empty;
-
-    [JsonPropertyName("stream")]
-    public bool Stream { get; set; } = false;
-
-    [JsonPropertyName("options")]
-    public OllamaGenerateOptions? Options { get; set; }
-}
-
-/// <summary>
-/// Options for Ollama generate API request
-/// </summary>
-public class OllamaGenerateOptions
-{
-    [JsonPropertyName("temperature")]
-    public double Temperature { get; set; } = 0.3;
-
-    [JsonPropertyName("num_predict")]
-    public int NumPredict { get; set; } = 1000;
-}
-
-/// <summary>
-/// Response model for Ollama generate API
-/// </summary>
-public class OllamaGenerateResponse
-{
-    [JsonPropertyName("model")]
-    public string? Model { get; set; }
-
-    [JsonPropertyName("created_at")]
-    public string? CreatedAt { get; set; }
-
-    [JsonPropertyName("response")]
-    public string? Response { get; set; }
-
-    [JsonPropertyName("done")]
-    public bool Done { get; set; }
-}
-
-/// <summary>
-/// Service for calling Ollama summarizer endpoint to perform rolling summarization.
-/// This service is responsible ONLY for the actual summarization request.
-/// It does not touch Redis or the database.
-/// </summary>
-public interface ISummarizationService
-{
-    /// <summary>
-    /// Summarize an old summary with a new message to produce an updated summary.
-    /// </summary>
-    /// <param name="oldSummary">The existing summary text</param>
-    /// <param name="newMessageContent">The new message to integrate</param>
-    /// <param name="role">The role of the message sender: "user" or "ai_assistant"</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>The new merged summary text</returns>
-    Task<string> SummarizeAsync(string oldSummary, string newMessageContent, string role, CancellationToken cancellationToken = default);
-}
 
 public class SummarizationService : ISummarizationService
 {

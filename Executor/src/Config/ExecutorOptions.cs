@@ -10,7 +10,7 @@ public class ExecutorOptions
     /// <summary>
     /// Redis connection string
     /// </summary>
-    public string RedisConnection { get; set; } = "localhost:6379";
+    public string RedisConnection { get; set; } = "localhost:8847";
 
     /// <summary>
     /// Maximum concurrent manager jobs (0 = unlimited)

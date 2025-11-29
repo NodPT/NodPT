@@ -3,6 +3,8 @@ using NodPT.Data.Services;
 using NodPT.Data.Models;
 using DevExpress.Xpo;
 using DevExpress.Data.Filtering;
+using NodPT.Data.Interfaces;
+using NodPT.Data.DTOs;
 
 namespace BackendExecutor;
 

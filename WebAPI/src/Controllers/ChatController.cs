@@ -6,6 +6,7 @@ using System.Text.Json;
 using NodPT.Data.Models;
 using DevExpress.Xpo;
 using DevExpress.Data.Filtering;
+using NodPT.Data.Interfaces;
 
 namespace NodPT.API.Controllers
 {
@@ -104,11 +105,6 @@ namespace NodPT.API.Controllers
                 var envelope = new Dictionary<string, string>
                 {
                     { "chatId", savedMessage.Oid.ToString() },
-                    { "connectionId", connectionId },
-                    { "nodeId", userMessage.NodeId },
-                    { "userId", user.FirebaseUid ?? "" },
-                    { "projectId", node.Project?.Oid.ToString() ?? "" },
-                    { "timestamp", DateTime.UtcNow.ToString("o") }
                 };
 
                 // Add to Redis stream for executor processing

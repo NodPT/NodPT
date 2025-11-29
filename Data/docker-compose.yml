@@ -1,0 +1,15 @@
+services:
+  data:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nodpt-data
+    ports:
+      - "8444:3306"
+    restart: unless-stopped
+    networks:
+      - backend_network
+
+networks:
+  backend_network:
+    external: true
