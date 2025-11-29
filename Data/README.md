@@ -35,20 +35,52 @@ MySQL Database
 
 ### Redis Streams Communication
 
-The shared `RedisService` provides a unified interface for all Redis Streams operations across WebAPI, Executor, and other services:
+The Redis services provide operations for both message queuing and caching across WebAPI, Executor, and other services:
 
 ```
 WebAPI ──┐
-         ├──→ IRedisService (shared) ──→ Redis Streams
+         ├──→ RedisService.Queue (message queuing) ──→ Redis Streams
+         ├──→ RedisService.Cache (caching) ──→ Redis Key-Value/Lists
 Executor─┘
 ```
 
 **Key Features:**
-- Single source of truth for Redis operations
+- Separate services for Queue and Cache operations
 - Consumer groups with automatic claiming of stale messages
 - Retry logic with dead-letter stream support
 - XADD, XREADGROUP, XACK, XDEL, XTRIM operations
 - Background listeners with configurable concurrency
+
+### Redis Service Architecture
+
+The Redis functionality is organized into two separate services:
+
+```
+RedisService.Queue (namespace: RedisService.Queue)
+├── RedisQueueService class
+│   ├── Add()           # Publish message to stream
+│   ├── Listen()        # Subscribe to stream
+│   ├── Acknowledge()   # Confirm message processed
+│   ├── ClaimPending()  # Recover stale messages
+│   ├── Trim()          # Limit stream size
+│   ├── Info()          # Get stream stats
+│   └── StopListen()    # Stop listener
+
+RedisService.Cache (namespace: RedisService.Cache)
+├── RedisCacheService class
+│   ├── Get()           # Get cached value
+│   ├── Set()           # Cache value with optional expiry
+│   ├── Exists()        # Check if key exists
+│   ├── Remove()        # Delete cached value
+│   ├── Update()        # Append to list
+│   ├── Range()         # Get list range
+│   ├── TrimList()      # Limit list size
+│   └── Length()        # Get list length
+```
+
+**Service Selection Guide:**
+- Use `RedisQueueService` for message queuing (WebAPI → Executor → SignalR)
+- Use `RedisCacheService` for caching summaries and chat history
 
 ### Project Structure
 
@@ -61,8 +93,13 @@ Data/
 │   │   ├── ChatMessage.cs # Chat message with ConnectionId
 │   │   ├── RedisModels.cs # MessageEnvelope, ListenOptions, etc.
 │   │   └── ...            # Other entities
-│   ├── Services/          # Data services and Redis service
-│   │   ├── RedisService.cs      # Shared Redis Streams service
+│   ├── Interfaces/        # Service interfaces
+│   │   ├── IMemoryService.cs         # Memory service interface
+│   │   ├── ISummarizationService.cs  # Summarization interface
+│   │   └── ...                       # Other interfaces
+│   ├── Services/          # Data services and Redis services
+│   │   ├── RedisService.Queue.cs  # Queue operations (namespace: RedisService.Queue)
+│   │   ├── RedisService.Cache.cs  # Cache operations (namespace: RedisService.Cache)
 │   │   ├── ChatService.cs       # Chat service
 │   │   └── ...                  # Other service classes
 │   ├── DTOs/              # Data Transfer Objects
@@ -297,11 +334,19 @@ For issues and questions:
 - Check DevExpress documentation
 - Open an issue on GitHub
 - Contact the development team
+
 ## 📡 RedisService API
 
-The shared `IRedisService` provides a unified interface for Redis Streams operations across all NodPT services.
+The Redis functionality is split into two separate service classes:
 
-### Methods
+### Services
+
+| Service Class | Namespace | Purpose | Methods |
+|--------------|-----------|---------|---------|
+| `RedisQueueService` | `RedisService.Queue` | Message queuing between services | Add, Listen, Acknowledge, ClaimPending, Trim, Info, StopListen |
+| `RedisCacheService` | `RedisService.Cache` | Caching summaries and history | Get, Set, Exists, Remove, Update, Range, TrimList, Length |
+
+### Queue Operations (RedisService.Queue.RedisQueueService)
 
 #### Add - Publish to Stream
 ```csharp
@@ -317,7 +362,7 @@ var envelope = new Dictionary<string, string>
     { "connectionId", "abc-xyz" },
     { "timestamp", DateTime.UtcNow.ToString("o") }
 };
-var entryId = await _redisService.Add("jobs:chat", envelope);
+var entryId = await _queueService.Add("jobs:chat", envelope);
 ```
 
 #### Listen - Subscribe to Stream
@@ -330,7 +375,7 @@ Starts listening to a Redis Stream with consumer group. Handler returns `true` f
 
 **Example:**
 ```csharp
-var handle = _redisService.Listen(
+var handle = _queueService.Listen(
     streamKey: "jobs:chat",
     group: "executor",
     consumerName: "executor-worker-1",
@@ -350,11 +395,11 @@ var handle = _redisService.Listen(
     });
 ```
 
-#### Delete - Acknowledge Message
+#### Acknowledge - Acknowledge Message
 ```csharp
-Task Delete(string streamKey, string group, string entryId)
+Task Acknowledge(string streamKey, string group, string entryId)
 ```
-Acknowledges a message using XACK. Optionally deletes with XDEL if configured.
+Acknowledges a message using XACK, marking it as successfully processed.
 
 #### ClaimPending - Reclaim Stale Messages
 ```csharp
@@ -380,11 +425,66 @@ Task StopListen(ListenHandle handle)
 ```
 Gracefully stops a listener started with Listen().
 
+### Cache Operations (RedisService.Cache.RedisCacheService)
+
+#### Get - Retrieve Cached Value
+```csharp
+Task<string?> Get(string key)
+```
+Gets a string value from Redis, returns null if not found.
+
+#### Set - Cache a Value
+```csharp
+Task Set(string key, string value, TimeSpan? expiry = null)
+```
+Stores a string value with optional expiration.
+
+#### Exists - Check Key Existence
+```csharp
+Task<bool> Exists(string key)
+```
+Returns true if the key exists in Redis.
+
+#### Remove - Delete Cached Value
+```csharp
+Task<bool> Remove(string key)
+```
+Deletes a key, returns true if deleted.
+
+#### Update - Append to List
+```csharp
+Task<long> Update(string key, string value)
+```
+Appends a value to a Redis list, returns new length.
+
+#### Range - Get List Range
+```csharp
+Task<List<string>> Range(string key, long start = 0, long stop = -1)
+```
+Gets elements from a list. Supports negative indices.
+
+#### TrimList - Limit List Size
+```csharp
+Task TrimList(string key, long start, long stop)
+```
+Keeps only elements in the specified range.
+
+#### Length - Get List Length
+```csharp
+Task<long> Length(string key)
+```
+Returns the number of elements in the list.
+
 ### Stream Keys (Convention)
 
 - `jobs:chat` - Chat processing jobs (WebAPI → Executor)
 - `signalr:updates` - Real-time updates (Executor → WebAPI)
 - `{streamKey}:dead` - Dead letter stream for failed messages
+
+### Cache Keys (Convention)
+
+- `node:summary:{nodeId}` - Conversation summaries
+- `node:history:{nodeId}` - Chat history lists
 
 ### Consumer Groups
 
@@ -419,6 +519,45 @@ var options = new ListenOptions
     CreateStreamIfMissing = true, // Auto-create stream/group
     ClaimPendingOnStartup = true  // Claim on startup
 };
+```
+
+### Dependency Injection
+
+```csharp
+// Register both Redis services
+builder.Services.AddSingleton<RedisCacheService>(provider =>
+{
+    var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
+    var logger = provider.GetRequiredService<ILogger<RedisCacheService>>();
+    return new RedisCacheService(multiplexer, logger);
+});
+
+builder.Services.AddSingleton<RedisQueueService>(provider =>
+{
+    var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
+    var logger = provider.GetRequiredService<ILogger<RedisQueueService>>();
+    return new RedisQueueService(multiplexer, logger);
+});
+```
+
+**Usage in services:**
+```csharp
+using RedisService.Queue;
+using RedisService.Cache;
+
+// For queue operations
+public class ChatWorker
+{
+    private readonly RedisQueueService _queue;
+    public ChatWorker(RedisQueueService queue) => _queue = queue;
+}
+
+// For cache operations
+public class MemoryService
+{
+    private readonly RedisCacheService _cache;
+    public MemoryService(RedisCacheService cache) => _cache = cache;
+}
 ```
 
 ### Error Handling

@@ -6,12 +6,13 @@ using NodPT.Data.Models;
 using System.Text.Json;
 using NodPT.Data.DTOs;
 using NodPT.Data.Interfaces;
+using RedisService.Cache;
 
 namespace NodPT.Data.Services;
 
 public class MemoryService : IMemoryService
 {
-    private readonly IRedisService _redisService;
+    private readonly RedisCacheService _redisService;
     private readonly ISummarizationService _summarizationService;
     private readonly MemoryOptions _options;
     private readonly ILogger<MemoryService> _logger;
@@ -23,7 +24,7 @@ public class MemoryService : IMemoryService
     private int _failedSummarizationCount = 0;
 
     public MemoryService(
-        IRedisService redisService,
+        RedisCacheService redisService,
         ISummarizationService summarizationService,
         MemoryOptions options,
         ILogger<MemoryService> logger,
