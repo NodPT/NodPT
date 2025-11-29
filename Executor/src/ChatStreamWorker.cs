@@ -5,6 +5,8 @@ using DevExpress.Xpo;
 using DevExpress.Data.Filtering;
 using NodPT.Data.Interfaces;
 using NodPT.Data.DTOs;
+using RedisService.Queue;
+using RedisService.Cache;
 
 namespace BackendExecutor;
 
@@ -37,7 +39,7 @@ namespace BackendExecutor;
 public class ChatStreamWorker : BackgroundService
 {
     private readonly ILogger<ChatStreamWorker> _logger;
-    private readonly IRedisService _redisService;
+    private readonly RedisQueueService _redisService;
     private readonly ILlmChatService _llmChatService;
     private readonly IMemoryService _memoryService;
     private readonly IServiceProvider _serviceProvider;
@@ -45,7 +47,7 @@ public class ChatStreamWorker : BackgroundService
 
     public ChatStreamWorker(
         ILogger<ChatStreamWorker> logger,
-        IRedisService redisService,
+        RedisQueueService redisService,
         ILlmChatService llmChatService,
         IMemoryService memoryService,
         IServiceProvider serviceProvider)

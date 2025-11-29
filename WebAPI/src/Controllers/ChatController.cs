@@ -6,7 +6,7 @@ using System.Text.Json;
 using NodPT.Data.Models;
 using DevExpress.Xpo;
 using DevExpress.Data.Filtering;
-using NodPT.Data.Interfaces;
+using RedisService.Queue;
 
 namespace NodPT.API.Controllers
 {
@@ -16,11 +16,11 @@ namespace NodPT.API.Controllers
     public class ChatController : ControllerBase
     {
         private readonly ChatService _chatService = new();
-        private readonly IRedisService _redisService;
+        private readonly RedisQueueService _redisService;
         private readonly ILogger<ChatController> _logger;
         private readonly UnitOfWork _session;
 
-        public ChatController(IRedisService redisService, ILogger<ChatController> logger, UnitOfWork session)
+        public ChatController(RedisQueueService redisService, ILogger<ChatController> logger, UnitOfWork session)
         {
             _redisService = redisService;
             _logger = logger;

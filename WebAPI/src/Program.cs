@@ -15,7 +15,8 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using StackExchange.Redis;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
-using NodPT.Data.Interfaces;
+using RedisService.Cache;
+using RedisService.Queue;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args); // 🔹 Create builder
 
@@ -80,10 +81,20 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
     }
 });
 
-builder.Services.AddSingleton<IRedisService, NodPT.Data.Services.RedisService>();
-// Also register the specific interfaces for clearer dependency injection
-builder.Services.AddSingleton<IRedisQueueService>(sp => sp.GetRequiredService<IRedisService>());
-builder.Services.AddSingleton<IRedisCacheService>(sp => sp.GetRequiredService<IRedisService>());
+// Register Redis Cache and Queue Services
+builder.Services.AddSingleton<RedisCacheService>(provider =>
+{
+    var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
+    var logger = provider.GetRequiredService<ILogger<RedisCacheService>>();
+    return new RedisCacheService(multiplexer, logger);
+});
+
+builder.Services.AddSingleton<RedisQueueService>(provider =>
+{
+    var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
+    var logger = provider.GetRequiredService<ILogger<RedisQueueService>>();
+    return new RedisQueueService(multiplexer, logger);
+});
 
 // 🔹 Log Services
 builder.Services.AddScoped<LogService>();

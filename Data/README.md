@@ -35,16 +35,17 @@ MySQL Database
 
 ### Redis Streams Communication
 
-The shared `RedisService` provides a unified interface for all Redis Streams operations across WebAPI, Executor, and other services:
+The Redis services provide operations for both message queuing and caching across WebAPI, Executor, and other services:
 
 ```
 WebAPI ──┐
-         ├──→ IRedisService (shared) ──→ Redis Streams
+         ├──→ RedisService.Queue (message queuing) ──→ Redis Streams
+         ├──→ RedisService.Cache (caching) ──→ Redis Key-Value/Lists
 Executor─┘
 ```
 
 **Key Features:**
-- Single source of truth for Redis operations
+- Separate services for Queue and Cache operations
 - Consumer groups with automatic claiming of stale messages
 - Retry logic with dead-letter stream support
 - XADD, XREADGROUP, XACK, XDEL, XTRIM operations
@@ -52,34 +53,34 @@ Executor─┘
 
 ### Redis Service Architecture
 
-The Redis functionality is organized into two logical categories:
+The Redis functionality is organized into two separate services:
 
 ```
-IRedisService (unified interface)
-    ├── IRedisQueueService (message queue operations)
-    │   ├── Add()           # Publish message to stream
-    │   ├── Listen()        # Subscribe to stream
-    │   ├── Acknowledge()   # Confirm message processed
-    │   ├── ClaimPending()  # Recover stale messages
-    │   ├── Trim()          # Limit stream size
-    │   ├── Info()          # Get stream stats
-    │   └── StopListen()    # Stop listener
-    │
-    └── IRedisCacheService (caching operations)
-        ├── Get()           # Get cached value
-        ├── Set()           # Cache value with optional expiry
-        ├── Exists()        # Check if key exists
-        ├── Remove()        # Delete cached value
-        ├── Update()        # Append to list
-        ├── Range()         # Get list range
-        ├── TrimList()      # Limit list size
-        └── Length()        # Get list length
+RedisService.Queue (namespace: RedisService.Queue)
+├── RedisQueueService class
+│   ├── Add()           # Publish message to stream
+│   ├── Listen()        # Subscribe to stream
+│   ├── Acknowledge()   # Confirm message processed
+│   ├── ClaimPending()  # Recover stale messages
+│   ├── Trim()          # Limit stream size
+│   ├── Info()          # Get stream stats
+│   └── StopListen()    # Stop listener
+
+RedisService.Cache (namespace: RedisService.Cache)
+├── RedisCacheService class
+│   ├── Get()           # Get cached value
+│   ├── Set()           # Cache value with optional expiry
+│   ├── Exists()        # Check if key exists
+│   ├── Remove()        # Delete cached value
+│   ├── Update()        # Append to list
+│   ├── Range()         # Get list range
+│   ├── TrimList()      # Limit list size
+│   └── Length()        # Get list length
 ```
 
-**Interface Selection Guide:**
-- Use `IRedisQueueService` for message queuing (WebAPI → Executor → SignalR)
-- Use `IRedisCacheService` for caching summaries and chat history
-- Use `IRedisService` for backward compatibility or mixed usage
+**Service Selection Guide:**
+- Use `RedisQueueService` for message queuing (WebAPI → Executor → SignalR)
+- Use `RedisCacheService` for caching summaries and chat history
 
 ### Project Structure
 
@@ -93,12 +94,12 @@ Data/
 │   │   ├── RedisModels.cs # MessageEnvelope, ListenOptions, etc.
 │   │   └── ...            # Other entities
 │   ├── Interfaces/        # Service interfaces
-│   │   ├── IRedisService.cs       # Unified Redis interface
-│   │   ├── IRedisQueueService.cs  # Queue operations interface
-│   │   ├── IRedisCacheService.cs  # Cache operations interface
-│   │   └── ...                    # Other interfaces
-│   ├── Services/          # Data services and Redis service
-│   │   ├── RedisService.cs      # Shared Redis implementation
+│   │   ├── IMemoryService.cs         # Memory service interface
+│   │   ├── ISummarizationService.cs  # Summarization interface
+│   │   └── ...                       # Other interfaces
+│   ├── Services/          # Data services and Redis services
+│   │   ├── RedisService.Queue.cs  # Queue operations (namespace: RedisService.Queue)
+│   │   ├── RedisService.Cache.cs  # Cache operations (namespace: RedisService.Cache)
 │   │   ├── ChatService.cs       # Chat service
 │   │   └── ...                  # Other service classes
 │   ├── DTOs/              # Data Transfer Objects
@@ -336,17 +337,16 @@ For issues and questions:
 
 ## 📡 RedisService API
 
-The Redis functionality is split into two interfaces for better separation of concerns:
+The Redis functionality is split into two separate service classes:
 
-### Interfaces
+### Services
 
-| Interface | Purpose | Methods |
-|-----------|---------|---------|
-| `IRedisQueueService` | Message queuing between services | Add, Listen, Acknowledge, ClaimPending, Trim, Info, StopListen |
-| `IRedisCacheService` | Caching summaries and history | Get, Set, Exists, Remove, Update, Range, TrimList, Length |
-| `IRedisService` | Unified interface (backward compatible) | All methods from both interfaces |
+| Service Class | Namespace | Purpose | Methods |
+|--------------|-----------|---------|---------|
+| `RedisQueueService` | `RedisService.Queue` | Message queuing between services | Add, Listen, Acknowledge, ClaimPending, Trim, Info, StopListen |
+| `RedisCacheService` | `RedisService.Cache` | Caching summaries and history | Get, Set, Exists, Remove, Update, Range, TrimList, Length |
 
-### Queue Operations (IRedisQueueService)
+### Queue Operations (RedisService.Queue.RedisQueueService)
 
 #### Add - Publish to Stream
 ```csharp
@@ -362,7 +362,7 @@ var envelope = new Dictionary<string, string>
     { "connectionId", "abc-xyz" },
     { "timestamp", DateTime.UtcNow.ToString("o") }
 };
-var entryId = await _redisService.Add("jobs:chat", envelope);
+var entryId = await _queueService.Add("jobs:chat", envelope);
 ```
 
 #### Listen - Subscribe to Stream
@@ -375,7 +375,7 @@ Starts listening to a Redis Stream with consumer group. Handler returns `true` f
 
 **Example:**
 ```csharp
-var handle = _redisService.Listen(
+var handle = _queueService.Listen(
     streamKey: "jobs:chat",
     group: "executor",
     consumerName: "executor-worker-1",
@@ -425,7 +425,7 @@ Task StopListen(ListenHandle handle)
 ```
 Gracefully stops a listener started with Listen().
 
-### Cache Operations (IRedisCacheService)
+### Cache Operations (RedisService.Cache.RedisCacheService)
 
 #### Get - Retrieve Cached Value
 ```csharp
@@ -524,33 +524,28 @@ var options = new ListenOptions
 ### Dependency Injection
 
 ```csharp
-// All three interfaces resolve to the same RedisService instance
-builder.Services.AddSingleton<IRedisService, RedisService>();
-builder.Services.AddSingleton<IRedisQueueService>(sp => sp.GetRequiredService<IRedisService>());
-builder.Services.AddSingleton<IRedisCacheService>(sp => sp.GetRequiredService<IRedisService>());
+// Register both Redis services
+builder.Services.AddSingleton<RedisCacheService>();
+builder.Services.AddSingleton<RedisQueueService>();
 ```
 
 **Usage in services:**
 ```csharp
-// For queue-only operations
+using RedisService.Queue;
+using RedisService.Cache;
+
+// For queue operations
 public class ChatWorker
 {
-    private readonly IRedisQueueService _queue;
-    public ChatWorker(IRedisQueueService queue) => _queue = queue;
+    private readonly RedisQueueService _queue;
+    public ChatWorker(RedisQueueService queue) => _queue = queue;
 }
 
-// For cache-only operations
+// For cache operations
 public class MemoryService
 {
-    private readonly IRedisCacheService _cache;
-    public MemoryService(IRedisCacheService cache) => _cache = cache;
-}
-
-// For mixed operations (backward compatible)
-public class LegacyService
-{
-    private readonly IRedisService _redis;
-    public LegacyService(IRedisService redis) => _redis = redis;
+    private readonly RedisCacheService _cache;
+    public MemoryService(RedisCacheService cache) => _cache = cache;
 }
 ```
 

@@ -2,54 +2,48 @@ using StackExchange.Redis;
 using Microsoft.Extensions.Logging;
 using NodPT.Data.Models;
 using System.Collections.Concurrent;
-using NodPT.Data.Interfaces;
 
-namespace NodPT.Data.Services;
+namespace RedisService.Queue;
 
 /// <summary>
-/// Unified Redis service implementing both Queue and Cache operations.
+/// Redis Queue service providing message queue operations using Redis Streams.
 /// 
-/// This class provides a complete Redis implementation supporting:
+/// Redis Streams provide reliable message queuing between services with features like:
+/// - Consumer groups for load balancing
+/// - Message acknowledgment for at-least-once delivery
+/// - Dead letter handling for failed messages
+/// - Pending message recovery
 /// 
-/// <list type="bullet">
-/// <item>
-/// <term>Queue Operations (<see cref="IRedisQueueService"/>)</term>
-/// <description>
-/// Message queuing using Redis Streams: Add, Listen, Acknowledge, ClaimPending, Trim, Info, StopListen.
-/// Used for reliable async communication between WebAPI → Executor → SignalR.
-/// </description>
-/// </item>
-/// <item>
-/// <term>Cache Operations (<see cref="IRedisCacheService"/>)</term>
-/// <description>
-/// Key-Value storage (Get, Set, Exists, Remove) and List operations (Update, Range, TrimList, Length).
-/// Used for caching summaries and storing chat history.
-/// </description>
-/// </item>
-/// </list>
-/// 
-/// The service can be injected as <see cref="IRedisService"/> (unified), 
-/// <see cref="IRedisQueueService"/> (queue only), or <see cref="IRedisCacheService"/> (cache only).
+/// Used for async communication between WebAPI → Executor → SignalR.
 /// </summary>
-public class RedisService : IRedisService
+/// <example>
+/// <code>
+/// // Publishing a message to a queue
+/// var envelope = new Dictionary&lt;string, string&gt; { { "chatId", "12345" } };
+/// var entryId = await queueService.Add("jobs:chat", envelope);
+/// 
+/// // Consuming messages from a queue
+/// var handle = queueService.Listen("jobs:chat", "executor", "worker-1", 
+///     async (msg, ct) => { /* process */ return true; });
+/// </code>
+/// </example>
+public class RedisQueueService
 {
     private readonly IConnectionMultiplexer _redis;
-    private readonly ILogger<RedisService> _logger;
+    private readonly ILogger<RedisQueueService> _logger;
     private readonly ConcurrentDictionary<string, int> _retryCounters = new();
 
     /// <summary>
-    /// Initializes a new instance of the RedisService.
+    /// Initializes a new instance of the RedisQueueService.
     /// </summary>
     /// <param name="redis">The Redis connection multiplexer.</param>
     /// <param name="logger">The logger for diagnostic output.</param>
     /// <exception cref="ArgumentNullException">Thrown when redis or logger is null.</exception>
-    public RedisService(IConnectionMultiplexer redis, ILogger<RedisService> logger)
+    public RedisQueueService(IConnectionMultiplexer redis, ILogger<RedisQueueService> logger)
     {
         _redis = redis ?? throw new ArgumentNullException(nameof(redis));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
-
-    #region IRedisQueueService - Message Queue Operations
 
     /// <summary>
     /// Adds a message to a Redis Stream for asynchronous processing by consumers.
@@ -57,11 +51,6 @@ public class RedisService : IRedisService
     /// Redis Streams are append-only logs ideal for message queuing between services.
     /// Each message gets a unique entry ID (timestamp-based) and can be consumed by 
     /// multiple consumer groups.
-    /// 
-    /// <para>
-    /// <b>Note:</b> This is different from <see cref="Set"/> which stores a simple key-value pair.
-    /// Use <c>Add</c> for message queuing, use <c>Set</c> for caching single values.
-    /// </para>
     /// </summary>
     /// <param name="streamKey">The key/name of the Redis Stream (e.g., "jobs:chat", "signalr:updates").</param>
     /// <param name="envelope">Dictionary of field-value pairs to include in the message.</param>
@@ -75,7 +64,7 @@ public class RedisService : IRedisService
     ///     { "chatId", "12345" },
     ///     { "connectionId", "abc-123-def" }
     /// };
-    /// var entryId = await redisService.Add("jobs:chat", envelope);
+    /// var entryId = await queueService.Add("jobs:chat", envelope);
     /// // entryId = "1609459200000-0"
     /// </code>
     /// </example>
@@ -136,7 +125,7 @@ public class RedisService : IRedisService
     /// 
     /// var consumerName = $"executor-{Environment.MachineName}-{Guid.NewGuid().ToString()[..8]}";
     /// 
-    /// var handle = redisService.Listen(
+    /// var handle = queueService.Listen(
     ///     streamKey: "jobs:chat",
     ///     group: "executor",
     ///     consumerName: consumerName,
@@ -149,7 +138,7 @@ public class RedisService : IRedisService
     ///     options: options);
     /// 
     /// // Later, to stop listening:
-    /// await redisService.StopListen(handle);
+    /// await queueService.StopListen(handle);
     /// </code>
     /// </example>
     public ListenHandle Listen(string streamKey, string group, string consumerName,
@@ -372,7 +361,7 @@ public class RedisService : IRedisService
     /// <example>
     /// <code>
     /// // Manually acknowledge a message after successful processing
-    /// await redisService.Acknowledge("jobs:chat", "executor", "1609459200000-0");
+    /// await queueService.Acknowledge("jobs:chat", "executor", "1609459200000-0");
     /// </code>
     /// </example>
     public async Task Acknowledge(string streamKey, string group, string entryId)
@@ -410,7 +399,7 @@ public class RedisService : IRedisService
     /// <example>
     /// <code>
     /// // Claim messages that have been pending for more than 60 seconds
-    /// var claimedCount = await redisService.ClaimPending(
+    /// var claimedCount = await queueService.ClaimPending(
     ///     "jobs:chat", 
     ///     "executor", 
     ///     "executor-host1-abc123", 
@@ -488,10 +477,6 @@ public class RedisService : IRedisService
     /// 
     /// Redis uses an approximate trimming strategy (~) for performance, which may leave
     /// slightly more entries than specified. This helps manage stream size and memory usage.
-    /// 
-    /// <para>
-    /// <b>Note:</b> This is for Redis Streams. For Redis Lists, use <see cref="TrimList"/>.
-    /// </para>
     /// </summary>
     /// <param name="streamKey">The Redis Stream key to trim.</param>
     /// <param name="maxLen">The approximate maximum number of entries to keep.</param>
@@ -499,7 +484,7 @@ public class RedisService : IRedisService
     /// <example>
     /// <code>
     /// // Keep approximately the last 10,000 messages in the stream
-    /// await redisService.Trim("jobs:chat", maxLen: 10000);
+    /// await queueService.Trim("jobs:chat", maxLen: 10000);
     /// </code>
     /// </example>
     public async Task Trim(string streamKey, long maxLen)
@@ -531,7 +516,7 @@ public class RedisService : IRedisService
     /// <example>
     /// <code>
     /// // Get stream info with pending message counts per consumer
-    /// var info = await redisService.Info("jobs:chat", group: "executor");
+    /// var info = await queueService.Info("jobs:chat", group: "executor");
     /// 
     /// Console.WriteLine($"Stream length: {info.Length}");
     /// Console.WriteLine($"Total pending: {info.TotalPending}");
@@ -591,10 +576,10 @@ public class RedisService : IRedisService
     /// <example>
     /// <code>
     /// // Start listening
-    /// var handle = redisService.Listen("jobs:chat", "executor", "consumer1", handler);
+    /// var handle = queueService.Listen("jobs:chat", "executor", "consumer1", handler);
     /// 
     /// // Later, stop the listener gracefully
-    /// await redisService.StopListen(handle);
+    /// await queueService.StopListen(handle);
     /// </code>
     /// </example>
     public async Task StopListen(ListenHandle handle)
@@ -641,304 +626,4 @@ public class RedisService : IRedisService
             _logger.LogDebug($"Consumer group {group} already exists for stream {streamKey}");
         }
     }
-
-    #endregion
-
-    #region IRedisCacheService - Cache Operations
-
-    /// <summary>
-    /// Gets a string value from Redis by key.
-    /// 
-    /// Used for retrieving cached values like conversation summaries.
-    /// Returns null if the key doesn't exist.
-    /// </summary>
-    /// <param name="key">The Redis key (e.g., "node:summary:abc123").</param>
-    /// <returns>The stored string value, or null if not found.</returns>
-    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
-    /// <example>
-    /// <code>
-    /// // Get a cached summary for a node
-    /// var summary = await redisService.Get("node:summary:abc123");
-    /// 
-    /// if (summary != null)
-    /// {
-    ///     Console.WriteLine($"Found cached summary: {summary}");
-    /// }
-    /// else
-    /// {
-    ///     Console.WriteLine("No cached summary found");
-    /// }
-    /// </code>
-    /// </example>
-    public async Task<string?> Get(string key)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            var value = await db.StringGetAsync(key);
-            
-            if (value.IsNull)
-            {
-                _logger.LogDebug("Key {Key} not found in Redis", key);
-                return null;
-            }
-            
-            return value.ToString();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting string from Redis: {Key}", key);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Sets a string value in Redis with an optional expiration time.
-    /// 
-    /// Used for caching values like conversation summaries. If the key already exists,
-    /// the value is overwritten.
-    /// 
-    /// <para>
-    /// <b>Note:</b> This is different from <see cref="Add"/> which appends to a Redis Stream.
-    /// Use <c>Set</c> for caching single values, use <c>Add</c> for message queuing.
-    /// </para>
-    /// </summary>
-    /// <param name="key">The Redis key (e.g., "node:summary:abc123").</param>
-    /// <param name="value">The string value to store.</param>
-    /// <param name="expiry">Optional expiration time. If null, the key never expires.</param>
-    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
-    /// <example>
-    /// <code>
-    /// // Cache a summary with no expiration
-    /// await redisService.Set("node:summary:abc123", "This is a conversation about...");
-    /// 
-    /// // Cache a value that expires in 1 hour
-    /// await redisService.Set("temp:session:xyz", "session-data", TimeSpan.FromHours(1));
-    /// </code>
-    /// </example>
-    public async Task Set(string key, string value, TimeSpan? expiry = null)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            await db.StringSetAsync(key, value, expiry);
-            
-            _logger.LogDebug("Set string in Redis: {Key} = {ValueLength} chars", key, value.Length);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error setting string in Redis: {Key}", key);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Checks if a key exists in Redis.
-    /// </summary>
-    /// <param name="key">The Redis key to check.</param>
-    /// <returns>True if the key exists, false otherwise.</returns>
-    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
-    /// <example>
-    /// <code>
-    /// if (await redisService.Exists("node:summary:abc123"))
-    /// {
-    ///     Console.WriteLine("Summary is cached");
-    /// }
-    /// </code>
-    /// </example>
-    public async Task<bool> Exists(string key)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            return await db.KeyExistsAsync(key);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error checking key existence in Redis: {Key}", key);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Deletes a key from Redis.
-    /// </summary>
-    /// <param name="key">The Redis key to delete.</param>
-    /// <returns>True if the key was deleted, false if it didn't exist.</returns>
-    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
-    /// <example>
-    /// <code>
-    /// // Clear a cached summary
-    /// var deleted = await redisService.Remove("node:summary:abc123");
-    /// Console.WriteLine(deleted ? "Cache cleared" : "Key didn't exist");
-    /// </code>
-    /// </example>
-    public async Task<bool> Remove(string key)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            return await db.KeyDeleteAsync(key);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting key from Redis: {Key}", key);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Appends a value to the right (end) of a Redis List.
-    /// 
-    /// Used for maintaining ordered collections like chat history. Each new message
-    /// is appended to the end of the list.
-    /// 
-    /// <para>
-    /// <b>Note:</b> The method is named "Update" for historical reasons but actually
-    /// performs a RPUSH (right push) operation. Consider using with <see cref="TrimList"/>
-    /// to limit list size.
-    /// </para>
-    /// </summary>
-    /// <param name="key">The Redis List key (e.g., "node:history:abc123").</param>
-    /// <param name="value">The value to append (typically JSON-serialized message).</param>
-    /// <returns>The new length of the list after the push.</returns>
-    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
-    /// <example>
-    /// <code>
-    /// // Add a message to chat history
-    /// var historyKey = "node:history:abc123";
-    /// var messageJson = JsonSerializer.Serialize(new { role = "user", content = "Hello" });
-    /// 
-    /// var newLength = await redisService.Update(historyKey, messageJson);
-    /// Console.WriteLine($"History now has {newLength} messages");
-    /// 
-    /// // Trim to keep only the last 20 messages
-    /// if (newLength > 20)
-    /// {
-    ///     await redisService.TrimList(historyKey, -20, -1);
-    /// }
-    /// </code>
-    /// </example>
-    public async Task<long> Update(string key, string value)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            var length = await db.ListRightPushAsync(key, value);
-            
-            _logger.LogDebug("Pushed to list in Redis: {Key}, new length: {Length}", key, length);
-            return length;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error pushing to list in Redis: {Key}", key);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Gets a range of values from a Redis List.
-    /// 
-    /// Supports negative indices where -1 is the last element, -2 is second to last, etc.
-    /// Use start=0 and stop=-1 to get all elements.
-    /// </summary>
-    /// <param name="key">The Redis List key.</param>
-    /// <param name="start">Start index (0-based, supports negative).</param>
-    /// <param name="stop">Stop index (inclusive, supports negative). Use -1 for end of list.</param>
-    /// <returns>List of string values in the specified range.</returns>
-    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
-    /// <example>
-    /// <code>
-    /// // Get all messages in history
-    /// var allMessages = await redisService.Range("node:history:abc123");
-    /// 
-    /// // Get only the last 10 messages
-    /// var recentMessages = await redisService.Range("node:history:abc123", -10, -1);
-    /// 
-    /// // Get first 5 messages
-    /// var firstMessages = await redisService.Range("node:history:abc123", 0, 4);
-    /// </code>
-    /// </example>
-    public async Task<List<string>> Range(string key, long start = 0, long stop = -1)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            var values = await db.ListRangeAsync(key, start, stop);
-            
-            return values.Select(v => v.ToString()).ToList();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting list range from Redis: {Key}", key);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Trims a Redis List to only contain elements in the specified range.
-    /// 
-    /// Elements outside the range are deleted. Supports negative indices.
-    /// Commonly used to limit list size by keeping only the most recent N elements.
-    /// 
-    /// <para>
-    /// <b>Note:</b> This is for Redis Lists. For Redis Streams, use <see cref="Trim"/>.
-    /// </para>
-    /// </summary>
-    /// <param name="key">The Redis List key.</param>
-    /// <param name="start">Start index to keep (0-based, supports negative).</param>
-    /// <param name="stop">Stop index to keep (inclusive, supports negative).</param>
-    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
-    /// <example>
-    /// <code>
-    /// // Keep only the last 20 messages in history
-    /// await redisService.TrimList("node:history:abc123", -20, -1);
-    /// 
-    /// // Keep only first 10 messages
-    /// await redisService.TrimList("node:history:abc123", 0, 9);
-    /// </code>
-    /// </example>
-    public async Task TrimList(string key, long start, long stop)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            await db.ListTrimAsync(key, start, stop);
-            
-            _logger.LogDebug("Trimmed list in Redis: {Key} to range [{Start}, {Stop}]", key, start, stop);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error trimming list in Redis: {Key}", key);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Gets the length (number of elements) of a Redis List.
-    /// </summary>
-    /// <param name="key">The Redis List key.</param>
-    /// <returns>The number of elements in the list, or 0 if the key doesn't exist.</returns>
-    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
-    /// <example>
-    /// <code>
-    /// var historyLength = await redisService.Length("node:history:abc123");
-    /// Console.WriteLine($"Chat history has {historyLength} messages");
-    /// </code>
-    /// </example>
-    public async Task<long> Length(string key)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            return await db.ListLengthAsync(key);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting list length from Redis: {Key}", key);
-            throw;
-        }
-    }
-
-    #endregion
 }

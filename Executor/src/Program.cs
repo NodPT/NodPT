@@ -10,6 +10,8 @@ using StackExchange.Redis;
 using DevExpress.Xpo;
 using NodPT.Data.DTOs;
 using NodPT.Data.Interfaces;
+using RedisService.Cache;
+using RedisService.Queue;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -87,17 +89,20 @@ builder.Services.AddSingleton<IDatabase>(provider =>
     return multiplexer.GetDatabase();
 });
 
-// Register RedisService from Data project
-builder.Services.AddSingleton<IRedisService>(provider =>
+// Register Redis Cache and Queue Services
+builder.Services.AddSingleton<RedisCacheService>(provider =>
 {
     var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
-    var logger = provider.GetRequiredService<ILogger<RedisService>>();
-    return new RedisService(multiplexer, logger);
+    var logger = provider.GetRequiredService<ILogger<RedisCacheService>>();
+    return new RedisCacheService(multiplexer, logger);
 });
 
-// Also register the specific interfaces for clearer dependency injection
-builder.Services.AddSingleton<IRedisQueueService>(sp => sp.GetRequiredService<IRedisService>());
-builder.Services.AddSingleton<IRedisCacheService>(sp => sp.GetRequiredService<IRedisService>());
+builder.Services.AddSingleton<RedisQueueService>(provider =>
+{
+    var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
+    var logger = provider.GetRequiredService<ILogger<RedisQueueService>>();
+    return new RedisQueueService(multiplexer, logger);
+});
 
 // Register HttpClient for LLM service
 builder.Services.AddHttpClient<ILlmChatService, LlmChatService>();
@@ -112,7 +117,7 @@ builder.Services.AddHttpClient<ISummarizationService, SummarizationService>((pro
 // Register MemoryService
 builder.Services.AddSingleton<IMemoryService>(provider =>
 {
-    var redisService = provider.GetRequiredService<IRedisService>();
+    var redisService = provider.GetRequiredService<RedisCacheService>();
     var summarizationService = provider.GetRequiredService<ISummarizationService>();
     var options = provider.GetRequiredService<MemoryOptions>();
     var logger = provider.GetRequiredService<ILogger<MemoryService>>();
