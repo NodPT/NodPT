@@ -10,7 +10,7 @@ using DevExpress.Xpo.Helpers;
 public static class DatabaseInitializer
 {
     static string connectionString = string.Empty;
-    public static void Initialize(Microsoft.AspNetCore.Builder.WebApplicationBuilder builder)
+    public static void Initialize(WebApplicationBuilder builder)
     {
         // Do NOT use defaults. Require all parts to be provided via env vars or configuration.
         var host = Environment.GetEnvironmentVariable("DB_HOST");
