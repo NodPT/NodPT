@@ -40,14 +40,14 @@ public class CustomAuthorizedAttribute : Attribute, IAuthorizationFilter
         // Check database for admin status
         try
         {
-            using var session = DatabaseHelper.CreateUnitOfWork();
+            var session = DatabaseHelper.GetSession();
             if (UserService.IsValidFirebaseUid(firebaseUid, context.HttpContext.User) == false)
             {
                 context.Result = new UnauthorizedObjectResult(new { message = "User is not valid" });
                 return;
             }
 
-            var dbUser = session.FindObject<User>(new BinaryOperator("FirebaseUid", firebaseUid));
+            var dbUser = session!.FindObject<User>(new BinaryOperator("FirebaseUid", firebaseUid));
             if (dbUser == null)
             {
                 context.Result = new UnauthorizedObjectResult(new { message = "User not found" });

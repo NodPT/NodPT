@@ -268,6 +268,7 @@ var nodes = user.Projects
 6. **Validation**: Validate data before saving
 7. **Indexes**: Add indexes to frequently queried columns
 8. **Relationships**: Use XPO associations for foreign keys
+1. Do not use interface
 
 ### Naming Conventions
 

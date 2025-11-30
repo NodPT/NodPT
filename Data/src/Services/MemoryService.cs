@@ -5,18 +5,16 @@ using Microsoft.Extensions.DependencyInjection;
 using NodPT.Data.Models;
 using System.Text.Json;
 using NodPT.Data.DTOs;
-using NodPT.Data.Interfaces;
 using RedisService.Cache;
 
 namespace NodPT.Data.Services;
 
-public class MemoryService : IMemoryService
+public class MemoryService 
 {
     private readonly RedisCacheService _redisService;
-    private readonly ISummarizationService _summarizationService;
+    private readonly SummarizationService _summarizationService;
     private readonly MemoryOptions _options;
     private readonly ILogger<MemoryService> _logger;
-    private readonly IServiceProvider _serviceProvider;
     
     /// <summary>
     /// Counter for tracking consecutive summarization failures for monitoring purposes.
@@ -25,16 +23,14 @@ public class MemoryService : IMemoryService
 
     public MemoryService(
         RedisCacheService redisService,
-        ISummarizationService summarizationService,
+        SummarizationService summarizationService,
         MemoryOptions options,
-        ILogger<MemoryService> logger,
-        IServiceProvider serviceProvider)
+        ILogger<MemoryService> logger)
     {
         _redisService = redisService ?? throw new ArgumentNullException(nameof(redisService));
         _summarizationService = summarizationService ?? throw new ArgumentNullException(nameof(summarizationService));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     }
 
     /// <summary>
@@ -142,7 +138,7 @@ public class MemoryService : IMemoryService
             // Step 2: Call the summarization service
             _logger.LogInformation("Starting rolling summarization for node {NodeId}, role: {Role}, message length: {Length}", 
                 nodeId, role, newMessageContent.Length);
-
+            // Summarize old summary + new message
             var newSummary = await _summarizationService.SummarizeAsync(
                 oldSummary, 
                 newMessageContent, 
@@ -213,8 +209,7 @@ public class MemoryService : IMemoryService
             try
             {
                 // Create a new scope for the database context
-                using var scope = _serviceProvider.CreateScope();
-                var unitOfWork = scope.ServiceProvider.GetRequiredService<UnitOfWork>();
+                var unitOfWork = DatabaseHelper.GetSession();
 
                 await RollingSummarizeAsync(nodeId, newMessageContent, role, unitOfWork);
                 

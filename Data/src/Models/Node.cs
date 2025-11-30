@@ -159,34 +159,24 @@ namespace NodPT.Data.Models
         /// <summary>
         /// Readonly property that returns the AIModel from Project.Template that matches this Node's MessageType and Level
         /// </summary>
-        [Browsable(false)]
-        [NonPersistent]
-        public AIModel? MatchingAIModel
+        public AIModel? GetMatchingAIModel()
         {
-            get
-            {
-                if (Project?.Template == null) return null;
+            if (Project?.Template == null) return null;
 
-                return Project.Template.AIModels
-                    .FirstOrDefault(am => am.MessageType == MessageType && am.Level == Level && am.IsActive);
-            }
+            return Project.Template.AIModels
+                .FirstOrDefault(am => am.MessageType == MessageType && am.Level == Level && am.IsActive);
         }
 
         /// <summary>
         /// Readonly property that returns the list of Prompts from Project.Template that match this Node's MessageType and Level
         /// </summary>
-        [Browsable(false)]
-        [NonPersistent]
-        public List<Prompt> MatchingPrompts
+        public List<Prompt> GetMatchingPrompts()
         {
-            get
-            {
-                if (Project?.Template == null) return new List<Prompt>();
+            if (Project?.Template == null) return new List<Prompt>();
 
-                return Project.Template.Prompts
-                    .Where(p => p.MessageType == MessageType && p.Level == Level)
-                    .ToList();
-            }
+            return Project.Template.Prompts
+                .Where(p => p.MessageType == MessageType && p.Level == Level)
+                .ToList();
         }
     }
 }

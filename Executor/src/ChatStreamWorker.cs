@@ -3,7 +3,6 @@ using NodPT.Data.Services;
 using NodPT.Data.Models;
 using DevExpress.Xpo;
 using DevExpress.Data.Filtering;
-using NodPT.Data.Interfaces;
 using NodPT.Data.DTOs;
 using RedisService.Queue;
 using RedisService.Cache;
@@ -40,17 +39,17 @@ public class ChatStreamWorker : BackgroundService
 {
     private readonly ILogger<ChatStreamWorker> _logger;
     private readonly RedisQueueService _redisService;
-    private readonly ILlmChatService _llmChatService;
-    private readonly IMemoryService _memoryService;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly LlmChatService _llmChatService;
+    private readonly MemoryService _memoryService;
+    private readonly ServiceProvider _serviceProvider;
     private ListenHandle? _listenHandle;
 
     public ChatStreamWorker(
         ILogger<ChatStreamWorker> logger,
         RedisQueueService redisService,
-        ILlmChatService llmChatService,
-        IMemoryService memoryService,
-        IServiceProvider serviceProvider)
+        LlmChatService llmChatService,
+        MemoryService memoryService,
+        ServiceProvider serviceProvider)
     {
         _logger = logger;
         _redisService = redisService;
@@ -104,13 +103,7 @@ public class ChatStreamWorker : BackgroundService
                 return true; // Ack anyway to remove from queue
             }
 
-            if (!fields.TryGetValue("connectionId", out var connectionId) || string.IsNullOrEmpty(connectionId))
-            {
-                _logger.LogWarning("Chat job missing connectionId for chatId {ChatId}, skipping", chatId);
-                return true; // Ack anyway to remove from queue
-            }
-
-            _logger.LogInformation("Processing chat job: ChatId={ChatId}, ConnectionId={ConnectionId}", chatId, connectionId);
+            _logger.LogInformation("Processing chat job: ChatId={ChatId}", chatId);
 
             // Step 3: Parse chatId
             if (!int.TryParse(chatId, out var chatIdInt))
@@ -120,12 +113,15 @@ public class ChatStreamWorker : BackgroundService
             }
 
             // Create database session
-            using var scope = _serviceProvider.CreateScope();
-            var session = scope.ServiceProvider.GetRequiredService<UnitOfWork>();
+            var session = DatabaseHelper.GetSession();
+            if (session == null)
+            {
+                _logger.LogError("Failed to create database session");
+                return false; // Fail, will retry
+            }
 
             // Step 4: Use chatId to query chat data from database
-            var chatMessage = session.FindObject<ChatMessage>(
-                CriteriaOperator.Parse("Oid = ?", chatIdInt));
+            ChatMessage chatMessage = session.GetObjectByKey<ChatMessage>(chatIdInt);
 
             if (chatMessage == null)
             {
@@ -133,39 +129,32 @@ public class ChatStreamWorker : BackgroundService
                 return true; // Ack anyway to remove from queue
             }
 
+            // extract chat message content
             var userMessage = chatMessage.Message ?? "";
             _logger.LogInformation("Retrieved chat message for chatId {ChatId}: {MessageLength} chars", 
                 chatId, userMessage.Length);
 
+            if (string.IsNullOrEmpty(userMessage))
+            {
+                _logger.LogWarning("Chat message is empty for chatId {ChatId}", chatId);
+                return true; // Ack anyway - nothing to process
+            }
+
             // Step 5: Get nodeId from chat data to get node data
-            var node = chatMessage.Node;
+            Node? node = chatMessage.Node;
             if (node == null)
             {
                 _logger.LogWarning("Node not found for chatId {ChatId}", chatId);
                 return true; // Ack anyway - no node association
             }
 
-            var nodeId = node.Id;
-            if (string.IsNullOrEmpty(nodeId))
-            {
-                _logger.LogWarning("Node has no Id for chatId {ChatId}", chatId);
-                return true; // Ack anyway - no node ID
-            }
-
-            _logger.LogInformation("Node found: NodeId={NodeId}, Level={Level}, MessageType={MessageType}", 
-                nodeId, node.Level, node.MessageType);
-
             // Step 6: Get projectId from node data to get project data
             var project = node.Project;
             if (project == null)
             {
-                _logger.LogWarning("Project not found for nodeId {NodeId}", nodeId);
+                _logger.LogWarning("Project not found for chatId {chatId}", chatId);
                 return true; // Ack anyway - no project association
             }
-
-            var firebaseUid = project.User?.FirebaseUid ?? "";
-            _logger.LogInformation("Project found: ProjectId={ProjectId}, UserId={FirebaseUid}", 
-                project.Oid, firebaseUid);
 
             // Step 7: Get templateId from project data to get template data
             var template = project.Template;
@@ -179,7 +168,7 @@ public class ChatStreamWorker : BackgroundService
                 template.Oid, template.Name);
 
             // Step 8: Get prompts from template data based on Node's level and message type
-            var matchingPrompts = node.MatchingPrompts;
+            var matchingPrompts = node.GetMatchingPrompts();
             var promptContents = matchingPrompts
                 .Where(p => !string.IsNullOrEmpty(p.Content))
                 .Select(p => p.Content!)
@@ -189,11 +178,13 @@ public class ChatStreamWorker : BackgroundService
                 promptContents.Count, node.Level, node.MessageType);
 
             // Step 9: Get model name from template data based on Node's level
-            var matchingAiModel = node.MatchingAIModel;
+            var matchingAiModel = node.GetMatchingAIModel();
             var modelName = matchingAiModel?.ModelIdentifier ?? "llama3.2:3b";
 
             _logger.LogInformation("Using model: {ModelName} (from AIModel: {AIModelName})", 
                 modelName, matchingAiModel?.Name ?? "default");
+
+            string nodeId = node.Id!;
 
             // Step 10: Load memory summary and history for the node
             var summary = await _memoryService.LoadSummaryAsync(nodeId, session);
@@ -208,14 +199,14 @@ public class ChatStreamWorker : BackgroundService
             // Add system prompts first
             foreach (var promptContent in promptContents)
             {
-                messages.Add(new OllamaMessage { Role = "system", Content = promptContent });
+                messages.Add(new OllamaMessage { role = "system", content = promptContent });
             }
 
             // Add memory summary as system context if available
             if (!string.IsNullOrEmpty(summary))
             {
                 var summaryContext = $"[Conversation Memory]\n{summary}";
-                messages.Add(new OllamaMessage { Role = "system", Content = summaryContext });
+                messages.Add(new OllamaMessage { role = "system", content = summaryContext });
             }
 
             // Add recent history messages
@@ -223,37 +214,31 @@ public class ChatStreamWorker : BackgroundService
             {
                 messages.Add(new OllamaMessage 
                 { 
-                    Role = historyMessage.Role == "user" ? "user" : "assistant", 
-                    Content = historyMessage.Content 
+                    role = historyMessage.Role, 
+                    content = historyMessage.Content 
                 });
             }
             
             // Add current user message
-            messages.Add(new OllamaMessage { Role = "user", Content = userMessage });
+            messages.Add(new OllamaMessage { role = "user", content = userMessage });
             
-            // NOTE: Temperature is hardcoded to 0 because AIModel.Temperature property doesn't exist.
             // This is a pre-existing issue in the data model. When the property is added to AIModel,
-            // uncomment the line below: double temperature = matchingAiModel?.Temperature ?? 0;
-            double temperature = 0;
-
             var ollamaRequest = new OllamaRequest
             {
-                Model = modelName,
-                Messages = messages,
-                Options = new OllamaOptions { Temperature = temperature },
-                Stream = false
+                model = modelName,
+                messages = messages,
             };
 
             _logger.LogInformation("Prepared Ollama request with {MessageCount} messages for chatId {ChatId} (including memory context)", 
                 messages.Count, chatId);
 
-            // Step 12-13: Send message to Ollama and wait for response
+            //! STEP 12-13: SEND MESSAGE TO OLLAMA AND WAIT FOR RESPONSE
             var aiResponse = await _llmChatService.SendChatRequestAsync(ollamaRequest, cancellationToken);
 
             _logger.LogInformation("Received AI response with {Length} chars for chatId {ChatId}", 
                 aiResponse.Length, chatId);
 
-            // Step 14-15: Extract content and create new message data
+            // Step 14-15: Extract content and create new message data from the responsed message
             var aiMessage = new ChatMessage(session)
             {
                 Sender = "assistant",
@@ -261,7 +246,7 @@ public class ChatStreamWorker : BackgroundService
                 Node = node,
                 User = chatMessage.User,
                 Timestamp = DateTime.UtcNow,
-                ConnectionId = connectionId
+                ConnectionId = chatMessage.ConnectionId
             };
 
             // Step 16: Save new message data to database to get new chatId
@@ -293,7 +278,7 @@ public class ChatStreamWorker : BackgroundService
             });
 
             // Queue rolling summarization for AI message (runs in background, doesn't block chat flow)
-            _memoryService.QueueSummarization(nodeId, aiResponse, "ai_assistant");
+            _memoryService.QueueSummarization(nodeId, aiResponse, "assistant");
 
             _logger.LogInformation("Updated memory with AI response for node {NodeId}", nodeId);
 

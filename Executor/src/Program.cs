@@ -1,15 +1,11 @@
 using BackendExecutor;
 using BackendExecutor.Config;
 using BackendExecutor.Data;
-using BackendExecutor.Dispatch;
-using BackendExecutor.Notify;
-using BackendExecutor.Runners;
 using BackendExecutor.Services;
 using NodPT.Data.Services;
 using StackExchange.Redis;
 using DevExpress.Xpo;
 using NodPT.Data.DTOs;
-using NodPT.Data.Interfaces;
 using RedisService.Cache;
 using RedisService.Queue;
 
@@ -105,51 +101,28 @@ builder.Services.AddSingleton<RedisQueueService>(provider =>
 });
 
 // Register HttpClient for LLM service
-builder.Services.AddHttpClient<ILlmChatService, LlmChatService>();
+builder.Services.AddHttpClient<LlmChatService, LlmChatService>();
 
 // Register HttpClient for SummarizationService
-builder.Services.AddHttpClient<ISummarizationService, SummarizationService>((provider, client) =>
+builder.Services.AddHttpClient<SummarizationService, SummarizationService>((provider, client) =>
 {
     var options = provider.GetRequiredService<SummarizationOptions>();
     client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
 });
 
 // Register MemoryService
-builder.Services.AddSingleton<IMemoryService>(provider =>
+builder.Services.AddSingleton<MemoryService>(provider =>
 {
     var redisService = provider.GetRequiredService<RedisCacheService>();
-    var summarizationService = provider.GetRequiredService<ISummarizationService>();
+    var summarizationService = provider.GetRequiredService<SummarizationService>();
     var options = provider.GetRequiredService<MemoryOptions>();
     var logger = provider.GetRequiredService<ILogger<MemoryService>>();
     var serviceScopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
-    return new MemoryService(redisService, summarizationService, options, logger, serviceScopeFactory);
+    return new MemoryService(redisService, summarizationService, options, logger);
 });
 
 // Register database services
 builder.Services.AddScoped<UnitOfWork>(provider => new UnitOfWork());
-
-// Register services
-//builder.Services.AddSingleton<IRepository, StubRepository>();
-//builder.Services.AddSingleton<INotifier, StubNotifier>();
-//builder.Services.AddSingleton<IDispatcher, JobDispatcher>();
-
-// OLD: Direct Redis consumer (obsolete - should use shared RedisService)
-// builder.Services.AddSingleton<IRedisConsumer, RedisConsumer>();
-
-// OLD: list-based chat consumer (obsolete - replaced by ChatStreamWorker)
-// builder.Services.AddSingleton<IChatJobConsumer, ChatJobConsumer>();
-
-// Register runners  
-//builder.Services.AddSingleton<ManagerRunner>();
-//builder.Services.AddSingleton<InspectorRunner>();
-//builder.Services.AddSingleton<AgentRunner>();
-
-// Register workers
-// OLD: Worker using direct Redis calls (obsolete - should use shared RedisService)
-// builder.Services.AddHostedService<Worker>();
-
-// OLD: ChatWorker using list-based consumer (obsolete - replaced by ChatStreamWorker)
-// builder.Services.AddHostedService<ChatWorker>();
 
 // NEW: ChatStreamWorker using unified RedisService
 builder.Services.AddHostedService<ChatStreamWorker>();

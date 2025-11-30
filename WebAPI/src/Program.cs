@@ -47,6 +47,8 @@ if (File.Exists(dotenvPath))
 builder.Configuration.AddEnvironmentVariables();
 #endif
 
+
+
 // 🔹 Database initialization
 DatabaseInitializer.Initialize(builder);
 

@@ -42,7 +42,11 @@ namespace NodPT.Data.Services
 
         public static void LogError(string errorMessage, string? stackTrace, string? username, string? controller, string? action)
         {
-            using var session = DatabaseHelper.CreateUnitOfWork();
+            var session = DatabaseHelper.GetSession();
+
+            if (session == null)
+                return;
+
             session.BeginTransaction();
 
             try

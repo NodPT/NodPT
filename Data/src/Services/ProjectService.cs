@@ -67,25 +67,25 @@ namespace NodPT.Data.Services
             };
 
             // Map MatchingAIModel if available
-            if (node.MatchingAIModel != null)
+            if (node.GetMatchingAIModel() != null)
             {
                 dto.MatchingAIModel = new AIModelDto
                 {
-                    Id = node.MatchingAIModel.Oid,
-                    Name = node.MatchingAIModel.Name,
-                    ModelIdentifier = node.MatchingAIModel.ModelIdentifier,
-                    MessageType = node.MatchingAIModel.MessageType,
-                    Level = node.MatchingAIModel.Level,
-                    Description = node.MatchingAIModel.Description,
-                    IsActive = node.MatchingAIModel.IsActive,
-                    CreatedAt = node.MatchingAIModel.CreatedAt,
-                    UpdatedAt = node.MatchingAIModel.UpdatedAt,
-                    TemplateId = node.MatchingAIModel.Template?.Oid
+                    Id = node.GetMatchingAIModel().Oid,
+                    Name = node.GetMatchingAIModel().Name,
+                    ModelIdentifier = node.GetMatchingAIModel().ModelIdentifier,
+                    MessageType = node.GetMatchingAIModel().MessageType,
+                    Level = node.GetMatchingAIModel().Level,
+                    Description = node.GetMatchingAIModel().Description,
+                    IsActive = node.GetMatchingAIModel().IsActive,
+                    CreatedAt = node.GetMatchingAIModel().CreatedAt,
+                    UpdatedAt = node.GetMatchingAIModel().UpdatedAt,
+                    TemplateId = node.GetMatchingAIModel().Template?.Oid
                 };
             }
 
             // Map MatchingPrompts
-            dto.MatchingPrompts = node.MatchingPrompts.Select(p => new PromptDto
+            dto.MatchingPrompts = node.GetMatchingPrompts().Select(p => new PromptDto
             {
                 Id = p.Oid,
                 Content = p.Content,
