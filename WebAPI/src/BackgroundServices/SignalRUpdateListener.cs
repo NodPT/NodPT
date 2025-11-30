@@ -3,7 +3,7 @@ using NodPT.Data.Models;
 using NodPT.API.Hubs;
 using DevExpress.Xpo;
 using DevExpress.Data.Filtering;
-using NodPT.Data.Interfaces;
+using RedisService.Queue;
 
 namespace NodPT.API.BackgroundServices;
 
@@ -13,14 +13,14 @@ namespace NodPT.API.BackgroundServices;
 /// </summary>
 public class SignalRUpdateListener : BackgroundService
 {
-    private readonly IRedisService _redisService;
+    private readonly RedisQueueService _redisService;
     private readonly IHubContext<NodptHub> _hubContext;
     private readonly ILogger<SignalRUpdateListener> _logger;
     private readonly IServiceProvider _serviceProvider;
     private ListenHandle? _listenHandle;
 
     public SignalRUpdateListener(
-        IRedisService redisService,
+        RedisQueueService redisService,
         IHubContext<NodptHub> hubContext,
         ILogger<SignalRUpdateListener> logger,
         IServiceProvider serviceProvider)

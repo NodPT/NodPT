@@ -2,22 +2,72 @@ using StackExchange.Redis;
 using Microsoft.Extensions.Logging;
 using NodPT.Data.Models;
 using System.Collections.Concurrent;
-using NodPT.Data.Interfaces;
 
-namespace NodPT.Data.Services;
+namespace RedisService.Queue;
 
-public class RedisService : IRedisService
+/// <summary>
+/// Redis Queue service providing message queue operations using Redis Streams.
+/// 
+/// Redis Streams provide reliable message queuing between services with features like:
+/// - Consumer groups for load balancing
+/// - Message acknowledgment for at-least-once delivery
+/// - Dead letter handling for failed messages
+/// - Pending message recovery
+/// 
+/// Used for async communication between WebAPI → Executor → SignalR.
+/// </summary>
+/// <example>
+/// <code>
+/// // Publishing a message to a queue
+/// var envelope = new Dictionary&lt;string, string&gt; { { "chatId", "12345" } };
+/// var entryId = await queueService.Add("jobs:chat", envelope);
+/// 
+/// // Consuming messages from a queue
+/// var handle = queueService.Listen("jobs:chat", "executor", "worker-1", 
+///     async (msg, ct) => { /* process */ return true; });
+/// </code>
+/// </example>
+public class RedisQueueService
 {
     private readonly IConnectionMultiplexer _redis;
-    private readonly ILogger<RedisService> _logger;
+    private readonly ILogger<RedisQueueService> _logger;
     private readonly ConcurrentDictionary<string, int> _retryCounters = new();
 
-    public RedisService(IConnectionMultiplexer redis, ILogger<RedisService> logger)
+    /// <summary>
+    /// Initializes a new instance of the RedisQueueService.
+    /// </summary>
+    /// <param name="redis">The Redis connection multiplexer.</param>
+    /// <param name="logger">The logger for diagnostic output.</param>
+    /// <exception cref="ArgumentNullException">Thrown when redis or logger is null.</exception>
+    public RedisQueueService(IConnectionMultiplexer redis, ILogger<RedisQueueService> logger)
     {
         _redis = redis ?? throw new ArgumentNullException(nameof(redis));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    /// <summary>
+    /// Adds a message to a Redis Stream for asynchronous processing by consumers.
+    /// 
+    /// Redis Streams are append-only logs ideal for message queuing between services.
+    /// Each message gets a unique entry ID (timestamp-based) and can be consumed by 
+    /// multiple consumer groups.
+    /// </summary>
+    /// <param name="streamKey">The key/name of the Redis Stream (e.g., "jobs:chat", "signalr:updates").</param>
+    /// <param name="envelope">Dictionary of field-value pairs to include in the message.</param>
+    /// <returns>The unique entry ID assigned to the message (e.g., "1609459200000-0").</returns>
+    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
+    /// <example>
+    /// <code>
+    /// // Queue a chat job for processing by the Executor service
+    /// var envelope = new Dictionary&lt;string, string&gt;
+    /// {
+    ///     { "chatId", "12345" },
+    ///     { "connectionId", "abc-123-def" }
+    /// };
+    /// var entryId = await queueService.Add("jobs:chat", envelope);
+    /// // entryId = "1609459200000-0"
+    /// </code>
+    /// </example>
     public async Task<string> Add(string streamKey, IDictionary<string, string> envelope)
     {
         try
@@ -41,6 +91,56 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Starts a background listener for a Redis Stream using consumer groups.
+    /// 
+    /// Consumer groups allow multiple instances to process messages from the same stream
+    /// without duplicates. Each message is delivered to exactly one consumer in the group.
+    /// Messages must be acknowledged after successful processing.
+    /// 
+    /// Features:
+    /// - Automatic consumer group creation if missing
+    /// - Claims pending messages from failed consumers on startup
+    /// - Configurable concurrency and batch sizes
+    /// - Automatic retry with dead letter support
+    /// </summary>
+    /// <param name="streamKey">The Redis Stream key to listen to (e.g., "jobs:chat").</param>
+    /// <param name="group">The consumer group name (e.g., "executor", "signalr").</param>
+    /// <param name="consumerName">Unique name for this consumer instance (e.g., "executor-host1-abc123").</param>
+    /// <param name="handler">
+    /// Async callback invoked for each message. Return true to acknowledge (success),
+    /// false to trigger retry. After max retries, message moves to dead letter stream.
+    /// </param>
+    /// <param name="options">Optional configuration for batch size, concurrency, retries, etc.</param>
+    /// <returns>A handle to control the listener (use with <see cref="StopListen"/>).</returns>
+    /// <example>
+    /// <code>
+    /// // Start listening for chat jobs in the Executor service
+    /// var options = new ListenOptions
+    /// {
+    ///     BatchSize = 10,
+    ///     Concurrency = 3,
+    ///     MaxRetries = 3
+    /// };
+    /// 
+    /// var consumerName = $"executor-{Environment.MachineName}-{Guid.NewGuid().ToString()[..8]}";
+    /// 
+    /// var handle = queueService.Listen(
+    ///     streamKey: "jobs:chat",
+    ///     group: "executor",
+    ///     consumerName: consumerName,
+    ///     handler: async (envelope, ct) =>
+    ///     {
+    ///         var chatId = envelope.Fields["chatId"];
+    ///         // Process the chat message...
+    ///         return true; // Acknowledge on success
+    ///     },
+    ///     options: options);
+    /// 
+    /// // Later, to stop listening:
+    /// await queueService.StopListen(handle);
+    /// </code>
+    /// </example>
     public ListenHandle Listen(string streamKey, string group, string consumerName,
         Func<MessageEnvelope, CancellationToken, Task<bool>> handler, ListenOptions? options = null)
     {
@@ -146,6 +246,9 @@ public class RedisService : IRedisService
         return handle;
     }
 
+    /// <summary>
+    /// Processes a single message from the stream, calling the handler and managing acknowledgment/retry.
+    /// </summary>
     private async Task ProcessMessage(IDatabase db, string streamKey, string group, 
         StreamEntry entry, Func<MessageEnvelope, CancellationToken, Task<bool>> handler,
         ListenOptions options, CancellationToken cancellationToken)
@@ -215,6 +318,10 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Moves a failed message to the dead letter stream for manual inspection.
+    /// The dead letter stream key is the original stream key with ":dead" suffix.
+    /// </summary>
     private async Task MoveToDeadLetter(IDatabase db, string streamKey, string group, StreamEntry entry)
     {
         try
@@ -240,6 +347,23 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Acknowledges a message in a Redis Stream, marking it as successfully processed.
+    /// 
+    /// Acknowledged messages are removed from the consumer's pending list but remain
+    /// in the stream until explicitly trimmed. This enables reliable message delivery
+    /// with at-least-once semantics.
+    /// </summary>
+    /// <param name="streamKey">The Redis Stream key.</param>
+    /// <param name="group">The consumer group name.</param>
+    /// <param name="entryId">The entry ID of the message to acknowledge.</param>
+    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
+    /// <example>
+    /// <code>
+    /// // Manually acknowledge a message after successful processing
+    /// await queueService.Acknowledge("jobs:chat", "executor", "1609459200000-0");
+    /// </code>
+    /// </example>
     public async Task Acknowledge(string streamKey, string group, string entryId)
     {
         try
@@ -258,6 +382,32 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Claims pending messages that have been idle (unacknowledged) for too long.
+    /// 
+    /// When a consumer crashes or fails to acknowledge messages, those messages remain
+    /// in the pending entries list (PEL). This method allows other consumers to claim
+    /// ownership of those messages and retry processing them.
+    /// 
+    /// This is typically called on consumer startup to recover from previous failures.
+    /// </summary>
+    /// <param name="streamKey">The Redis Stream key.</param>
+    /// <param name="group">The consumer group name.</param>
+    /// <param name="consumerName">The name of the consumer claiming the messages.</param>
+    /// <param name="idleThresholdMs">Minimum idle time in milliseconds before a message can be claimed.</param>
+    /// <returns>The number of messages successfully claimed.</returns>
+    /// <example>
+    /// <code>
+    /// // Claim messages that have been pending for more than 60 seconds
+    /// var claimedCount = await queueService.ClaimPending(
+    ///     "jobs:chat", 
+    ///     "executor", 
+    ///     "executor-host1-abc123", 
+    ///     idleThresholdMs: 60000);
+    /// 
+    /// Console.WriteLine($"Claimed {claimedCount} pending messages");
+    /// </code>
+    /// </example>
     public async Task<int> ClaimPending(string streamKey, string group, string consumerName, int idleThresholdMs)
     {
         try
@@ -322,6 +472,21 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Trims a Redis Stream to approximately the specified maximum length.
+    /// 
+    /// Redis uses an approximate trimming strategy (~) for performance, which may leave
+    /// slightly more entries than specified. This helps manage stream size and memory usage.
+    /// </summary>
+    /// <param name="streamKey">The Redis Stream key to trim.</param>
+    /// <param name="maxLen">The approximate maximum number of entries to keep.</param>
+    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
+    /// <example>
+    /// <code>
+    /// // Keep approximately the last 10,000 messages in the stream
+    /// await queueService.Trim("jobs:chat", maxLen: 10000);
+    /// </code>
+    /// </example>
     public async Task Trim(string streamKey, long maxLen)
     {
         try
@@ -338,6 +503,30 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Gets information about a Redis Stream including length and pending message counts.
+    /// 
+    /// Useful for monitoring stream health, identifying stuck consumers, and debugging
+    /// message processing issues.
+    /// </summary>
+    /// <param name="streamKey">The Redis Stream key.</param>
+    /// <param name="group">Optional consumer group name to get pending message info.</param>
+    /// <returns>Stream information including length and per-consumer pending counts.</returns>
+    /// <exception cref="RedisException">Thrown when Redis operation fails.</exception>
+    /// <example>
+    /// <code>
+    /// // Get stream info with pending message counts per consumer
+    /// var info = await queueService.Info("jobs:chat", group: "executor");
+    /// 
+    /// Console.WriteLine($"Stream length: {info.Length}");
+    /// Console.WriteLine($"Total pending: {info.TotalPending}");
+    /// 
+    /// foreach (var consumer in info.ConsumerPending)
+    /// {
+    ///     Console.WriteLine($"  {consumer.Key}: {consumer.Value} pending");
+    /// }
+    /// </code>
+    /// </example>
     public async Task<RedisStreamInfo> Info(string streamKey, string? group = null)
     {
         try
@@ -359,7 +548,7 @@ public class RedisService : IRedisService
                     // Get per-consumer pending counts
                     foreach (var consumer in pendingInfo.Consumers)
                     {
-                        info.ConsumerPending[consumer.Name] = consumer.PendingMessageCount;
+                        info.ConsumerPending[consumer.Name!] = consumer.PendingMessageCount;
                     }
                 }
                 catch (Exception ex)
@@ -377,6 +566,22 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Stops a stream listener that was started with <see cref="Listen"/>.
+    /// 
+    /// Signals cancellation and waits up to 10 seconds for the background task to complete
+    /// gracefully. Any messages being processed will finish before the listener stops.
+    /// </summary>
+    /// <param name="handle">The listen handle returned by <see cref="Listen"/>.</param>
+    /// <example>
+    /// <code>
+    /// // Start listening
+    /// var handle = queueService.Listen("jobs:chat", "executor", "consumer1", handler);
+    /// 
+    /// // Later, stop the listener gracefully
+    /// await queueService.StopListen(handle);
+    /// </code>
+    /// </example>
     public async Task StopListen(ListenHandle handle)
     {
         if (handle == null)
@@ -405,6 +610,9 @@ public class RedisService : IRedisService
         }
     }
 
+    /// <summary>
+    /// Ensures a consumer group exists for a stream, creating it if necessary.
+    /// </summary>
     private async Task EnsureConsumerGroupExists(IDatabase db, string streamKey, string group)
     {
         try
@@ -416,139 +624,6 @@ public class RedisService : IRedisService
         {
             // Consumer group already exists, which is fine
             _logger.LogDebug($"Consumer group {group} already exists for stream {streamKey}");
-        }
-    }
-
-    // ============================================================
-    // Key-Value Operations for Memory (Summary and History)
-    // ============================================================
-
-    public async Task<string?> Get(string key)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            var value = await db.StringGetAsync(key);
-            
-            if (value.IsNull)
-            {
-                _logger.LogDebug("Key {Key} not found in Redis", key);
-                return null;
-            }
-            
-            return value.ToString();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting string from Redis: {Key}", key);
-            throw;
-        }
-    }
-
-    public async Task Set(string key, string value, TimeSpan? expiry = null)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            await db.StringSetAsync(key, value, expiry);
-            
-            _logger.LogDebug("Set string in Redis: {Key} = {ValueLength} chars", key, value.Length);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error setting string in Redis: {Key}", key);
-            throw;
-        }
-    }
-
-    public async Task<bool> Exists(string key)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            return await db.KeyExistsAsync(key);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error checking key existence in Redis: {Key}", key);
-            throw;
-        }
-    }
-
-    public async Task<bool> Remove(string key)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            return await db.KeyDeleteAsync(key);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting key from Redis: {Key}", key);
-            throw;
-        }
-    }
-
-    public async Task<long> Update(string key, string value)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            var length = await db.ListRightPushAsync(key, value);
-            
-            _logger.LogDebug("Pushed to list in Redis: {Key}, new length: {Length}", key, length);
-            return length;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error pushing to list in Redis: {Key}", key);
-            throw;
-        }
-    }
-
-    public async Task<List<string>> Range(string key, long start = 0, long stop = -1)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            var values = await db.ListRangeAsync(key, start, stop);
-            
-            return values.Select(v => v.ToString()).ToList();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting list range from Redis: {Key}", key);
-            throw;
-        }
-    }
-
-    public async Task TrimList(string key, long start, long stop)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            await db.ListTrimAsync(key, start, stop);
-            
-            _logger.LogDebug("Trimmed list in Redis: {Key} to range [{Start}, {Stop}]", key, start, stop);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error trimming list in Redis: {Key}", key);
-            throw;
-        }
-    }
-
-    public async Task<long> Length(string key)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            return await db.ListLengthAsync(key);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting list length from Redis: {Key}", key);
-            throw;
         }
     }
 }
