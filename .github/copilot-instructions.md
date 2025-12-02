@@ -4,6 +4,81 @@ This file consolidates all copilot instructions from across the NodPT repository
 
 ---
 
+## 🚀 Bootstrap and Build Commands
+
+### Frontend (Vue 3 + Vite)
+
+```bash
+# Navigate to Frontend source directory
+cd Frontend/src
+
+# Install dependencies
+npm install
+
+# Run development server (available at http://localhost:5173)
+npm run dev
+
+# Build for production
+npm run build
+
+# Lint code
+npm run lint
+
+# Preview production build
+npm run preview
+```
+
+### WebAPI (.NET 8)
+
+```bash
+# Navigate to WebAPI source directory
+cd WebAPI/src
+
+# Restore dependencies
+dotnet restore
+
+# Build the project
+dotnet build
+
+# Run the API (available at http://localhost:8846)
+dotnet run
+
+# Build for production
+dotnet build -c Release
+
+# Run tests (if available)
+dotnet test
+```
+
+### Data Layer (.NET 8 Library)
+
+```bash
+# Navigate to Data source directory
+cd Data/src
+
+# Restore dependencies
+dotnet restore
+
+# Build the project
+dotnet build
+```
+
+### Docker Deployment
+
+```bash
+# Create Docker networks (first time only)
+docker network create frontend_network
+docker network create backend_network
+
+# Build and deploy Frontend
+cd Frontend && docker-compose build && docker-compose up -d
+
+# Build and deploy WebAPI
+cd WebAPI && docker-compose build && docker-compose up -d
+```
+
+---
+
 ## 📦 NodPT Repository Structure
 
 ```
@@ -22,13 +97,10 @@ NodPT/
 │   ├── Dockerfile
 │   ├── docker-compose.yml
 │   └── src/
+│       ├── Controllers/
+│       ├── Hubs/          # SignalR hub (real-time communication)
+│       ├── Services/
 │       └── ... (C# .NET Web API)
-│
-├── SignalR/
-│   ├── Dockerfile
-│   ├── docker-compose.yml
-│   └── src/
-│       └── ... (Real-time communication hub)
 │
 ├── Executor/
 │   ├── Dockerfile
@@ -47,9 +119,8 @@ NodPT/
 └── .github/
     ├── workflows/
     │   ├── Frontend-deploy.yml
-    │   ├── Backend-deploy.yml
-    │   ├── SignalR-deploy.yml
-    │   └── (Executor-deploy.yml - to be added)
+    │   ├── WebAPI-deploy.yml
+    │   └── Redis-deploy.yml
 ```
 
 ---
@@ -419,6 +490,7 @@ var nodes = user.Projects
 6. **Validation**: Validate data before saving
 7. **Indexes**: Add indexes to frequently queried columns
 8. **Relationships**: Use XPO associations for foreign keys
+9. **No interfaces**: Do not use C# interfaces in service files - use concrete classes directly
 
 ### Naming Conventions
 
