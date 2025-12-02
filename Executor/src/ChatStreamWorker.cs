@@ -222,18 +222,20 @@ public class ChatStreamWorker : BackgroundService
             // Add current user message
             messages.Add(new OllamaMessage { role = "user", content = userMessage });
             
-            // This is a pre-existing issue in the data model. When the property is added to AIModel,
+            // Build Ollama request with options from AIModel
             var ollamaRequest = new OllamaRequest
             {
                 model = modelName,
                 messages = messages,
+                options = LlmChatService.BuildOptionsFromAIModel(matchingAiModel)
             };
 
             _logger.LogInformation("Prepared Ollama request with {MessageCount} messages for chatId {ChatId} (including memory context)", 
                 messages.Count, chatId);
 
             //! STEP 12-13: SEND MESSAGE TO OLLAMA AND WAIT FOR RESPONSE
-            var aiResponse = await _llmChatService.SendChatRequestAsync(ollamaRequest, cancellationToken);
+            // Use AIModel's endpoint and options if available
+            var aiResponse = await _llmChatService.SendChatRequestAsync(ollamaRequest, matchingAiModel, cancellationToken);
 
             _logger.LogInformation("Received AI response with {Length} chars for chatId {ChatId}", 
                 aiResponse.Length, chatId);

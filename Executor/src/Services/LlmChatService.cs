@@ -1,5 +1,6 @@
 using BackendExecutor.Config;
 using NodPT.Data.DTOs;
+using NodPT.Data.Models;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -58,10 +59,81 @@ public class LlmChatService
     }
 
     /// <summary>
-    /// Send a structured Ollama request to the LLM endpoint
+    /// Build OllamaOptions from AIModel properties with optimistic defaults
+    /// </summary>
+    public static OllamaOptions BuildOptionsFromAIModel(AIModel? aiModel)
+    {
+        // Default optimistic values for Ollama options
+        const double DefaultTemperature = 0.7;      // Balanced creativity and coherence
+        const int DefaultNumPredict = 2048;         // Reasonable response length
+        const int DefaultTopK = 40;                 // Common default for top-k sampling
+        const double DefaultTopP = 0.9;             // Nucleus sampling default
+        const int DefaultNumCtx = 4096;             // Good context window size
+        const double DefaultRepeatPenalty = 1.1;    // Slight penalty to reduce repetition
+
+        var options = new OllamaOptions
+        {
+            Temperature = aiModel?.Temperature ?? DefaultTemperature,
+            NumPredict = aiModel?.NumPredict ?? DefaultNumPredict,
+            TopK = aiModel?.TopK ?? DefaultTopK,
+            TopP = aiModel?.TopP ?? DefaultTopP,
+            NumCtx = aiModel?.NumCtx ?? DefaultNumCtx,
+            RepeatPenalty = aiModel?.RepeatPenalty ?? DefaultRepeatPenalty,
+            // These don't have universal defaults - use AIModel values if set
+            Seed = aiModel?.Seed,
+            NumGpu = aiModel?.NumGpu,
+            NumThread = aiModel?.NumThread
+        };
+
+        // Parse stop sequences from comma-separated string
+        if (!string.IsNullOrEmpty(aiModel?.Stop))
+        {
+            options.Stop = aiModel.Stop
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList();
+        }
+
+        return options;
+    }
+
+    /// <summary>
+    /// Send a structured Ollama request to the LLM endpoint using AIModel settings
     /// </summary>
     public async Task<string> SendChatRequestAsync(
         OllamaRequest request,
+        AIModel? aiModel,
+        CancellationToken cancellationToken = default)
+    {
+        // Use endpoint from AIModel if available, otherwise use default
+        var endpoint = !string.IsNullOrEmpty(aiModel?.EndpointAddress) 
+            ? aiModel.EndpointAddress 
+            : _options.LlmEndpoint;
+
+        // Build options from AIModel if not already set (always returns optimistic defaults)
+        if (request.options == null)
+        {
+            request.options = BuildOptionsFromAIModel(aiModel);
+        }
+
+        return await SendChatRequestAsync(request, endpoint, cancellationToken);
+    }
+
+    /// <summary>
+    /// Send a structured Ollama request to the LLM endpoint (uses default endpoint from config)
+    /// </summary>
+    public async Task<string> SendChatRequestAsync(
+        OllamaRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return await SendChatRequestAsync(request, _options.LlmEndpoint, cancellationToken);
+    }
+
+    /// <summary>
+    /// Send a structured Ollama request to a specific endpoint
+    /// </summary>
+    public async Task<string> SendChatRequestAsync(
+        OllamaRequest request,
+        string endpoint,
         CancellationToken cancellationToken = default)
     {
         try
@@ -70,9 +142,9 @@ public class LlmChatService
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             _logger.LogInformation("Sending chat request to LLM endpoint: {Endpoint}, Model: {Model}, Messages: {MessageCount}", 
-                _options.LlmEndpoint, request.model, request.messages.Count);
+                endpoint, request.model, request.messages?.Count ?? 0);
 
-            var response = await _httpClient.PostAsync(_options.LlmEndpoint, content, cancellationToken);
+            var response = await _httpClient.PostAsync(endpoint, content, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -91,7 +163,7 @@ public class LlmChatService
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "HTTP error while calling LLM endpoint: {Endpoint}", _options.LlmEndpoint);
+            _logger.LogError(ex, "HTTP error while calling LLM endpoint: {Endpoint}", endpoint);
             throw;
         }
         catch (JsonException ex)
