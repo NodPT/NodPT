@@ -97,13 +97,10 @@ NodPT/
 │   ├── Dockerfile
 │   ├── docker-compose.yml
 │   └── src/
+│       ├── Controllers/
+│       ├── Hubs/          # SignalR hub (real-time communication)
+│       ├── Services/
 │       └── ... (C# .NET Web API)
-│
-├── SignalR/
-│   ├── Dockerfile
-│   ├── docker-compose.yml
-│   └── src/
-│       └── ... (Real-time communication hub)
 │
 ├── Executor/
 │   ├── Dockerfile
@@ -122,9 +119,8 @@ NodPT/
 └── .github/
     ├── workflows/
     │   ├── Frontend-deploy.yml
-    │   ├── Backend-deploy.yml
-    │   ├── SignalR-deploy.yml
-    │   └── (Executor-deploy.yml - to be added)
+    │   ├── WebAPI-deploy.yml
+    │   └── Redis-deploy.yml
 ```
 
 ---
@@ -494,6 +490,7 @@ var nodes = user.Projects
 6. **Validation**: Validate data before saving
 7. **Indexes**: Add indexes to frequently queried columns
 8. **Relationships**: Use XPO associations for foreign keys
+9. **No interfaces**: Do not use C# interfaces in service files - use concrete classes directly
 
 ### Naming Conventions
 
