@@ -15,6 +15,19 @@ namespace NodPT.Data.Models
         private DateTime _updatedAt = DateTime.UtcNow;
         private Template? _template;
 
+        // Ollama API endpoint and parameters
+        private string? _endpointAddress;
+        private double? _temperature;
+        private int? _numPredict;
+        private int? _topK;
+        private double? _topP;
+        private int? _seed;
+        private int? _numCtx;
+        private int? _numGpu;
+        private int? _numThread;
+        private double? _repeatPenalty;
+        private string? _stop;
+
         public AIModel(Session session) : base(session) { }
         public AIModel() : base(Session.DefaultSession) { }
 
@@ -91,6 +104,107 @@ namespace NodPT.Data.Models
         {
             get => _updatedAt;
             set => SetPropertyValue(nameof(UpdatedAt), ref _updatedAt, value);
+        }
+
+        /// <summary>
+        /// Ollama API endpoint address (e.g., "http://localhost:11434/api/chat")
+        /// </summary>
+        [Size(500)]
+        public string? EndpointAddress
+        {
+            get => _endpointAddress;
+            set => SetPropertyValue(nameof(EndpointAddress), ref _endpointAddress, value);
+        }
+
+        /// <summary>
+        /// Temperature for sampling (0.0-2.0). Higher values make output more random.
+        /// </summary>
+        public double? Temperature
+        {
+            get => _temperature;
+            set => SetPropertyValue(nameof(Temperature), ref _temperature, value);
+        }
+
+        /// <summary>
+        /// Maximum number of tokens to predict.
+        /// </summary>
+        public int? NumPredict
+        {
+            get => _numPredict;
+            set => SetPropertyValue(nameof(NumPredict), ref _numPredict, value);
+        }
+
+        /// <summary>
+        /// Top-K sampling: limits token selection to K most likely tokens.
+        /// </summary>
+        public int? TopK
+        {
+            get => _topK;
+            set => SetPropertyValue(nameof(TopK), ref _topK, value);
+        }
+
+        /// <summary>
+        /// Top-P (nucleus) sampling: limits token selection to cumulative probability P.
+        /// </summary>
+        public double? TopP
+        {
+            get => _topP;
+            set => SetPropertyValue(nameof(TopP), ref _topP, value);
+        }
+
+        /// <summary>
+        /// Random seed for reproducibility. Set to 0 for random.
+        /// </summary>
+        public int? Seed
+        {
+            get => _seed;
+            set => SetPropertyValue(nameof(Seed), ref _seed, value);
+        }
+
+        /// <summary>
+        /// Context window size (number of tokens).
+        /// </summary>
+        public int? NumCtx
+        {
+            get => _numCtx;
+            set => SetPropertyValue(nameof(NumCtx), ref _numCtx, value);
+        }
+
+        /// <summary>
+        /// Number of GPU layers to use.
+        /// </summary>
+        public int? NumGpu
+        {
+            get => _numGpu;
+            set => SetPropertyValue(nameof(NumGpu), ref _numGpu, value);
+        }
+
+        /// <summary>
+        /// Number of threads to use for computation.
+        /// </summary>
+        public int? NumThread
+        {
+            get => _numThread;
+            set => SetPropertyValue(nameof(NumThread), ref _numThread, value);
+        }
+
+        /// <summary>
+        /// Repeat penalty for reducing repetition (1.0 = no penalty).
+        /// </summary>
+        public double? RepeatPenalty
+        {
+            get => _repeatPenalty;
+            set => SetPropertyValue(nameof(RepeatPenalty), ref _repeatPenalty, value);
+        }
+
+        /// <summary>
+        /// Stop sequences (comma-separated) that signal the model to stop generating.
+        /// </summary>
+        [Size(SizeAttribute.Unlimited)]
+        public string? Stop
+        {
+            get => _stop;
+            set => SetPropertyValue(nameof(Stop), ref _stop, value);
         }
 
         /// <summary>

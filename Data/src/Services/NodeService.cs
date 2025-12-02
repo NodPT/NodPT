@@ -38,18 +38,30 @@ namespace NodPT.Data.Services
             // Map MatchingAIModel if available
             if (node.GetMatchingAIModel() != null)
             {
+                var aiModel = node.GetMatchingAIModel()!;
                 dto.MatchingAIModel = new AIModelDto
                 {
-                    Id = node.GetMatchingAIModel().Oid,
-                    Name = node.GetMatchingAIModel().Name,
-                    ModelIdentifier = node.GetMatchingAIModel().ModelIdentifier,
-                    MessageType = node.GetMatchingAIModel().MessageType,
-                    Level = node.GetMatchingAIModel().Level,
-                    Description = node.GetMatchingAIModel().Description,
-                    IsActive = node.GetMatchingAIModel().IsActive,
-                    CreatedAt = node.GetMatchingAIModel().CreatedAt,
-                    UpdatedAt = node.GetMatchingAIModel().UpdatedAt,
-                    TemplateId = node.GetMatchingAIModel().Template?.Oid
+                    Id = aiModel.Oid,
+                    Name = aiModel.Name,
+                    ModelIdentifier = aiModel.ModelIdentifier,
+                    MessageType = aiModel.MessageType,
+                    Level = aiModel.Level,
+                    Description = aiModel.Description,
+                    IsActive = aiModel.IsActive,
+                    CreatedAt = aiModel.CreatedAt,
+                    UpdatedAt = aiModel.UpdatedAt,
+                    TemplateId = aiModel.Template?.Oid,
+                    EndpointAddress = aiModel.EndpointAddress,
+                    Temperature = aiModel.Temperature,
+                    NumPredict = aiModel.NumPredict,
+                    TopK = aiModel.TopK,
+                    TopP = aiModel.TopP,
+                    Seed = aiModel.Seed,
+                    NumCtx = aiModel.NumCtx,
+                    NumGpu = aiModel.NumGpu,
+                    NumThread = aiModel.NumThread,
+                    RepeatPenalty = aiModel.RepeatPenalty,
+                    Stop = aiModel.Stop
                 };
             }
 
