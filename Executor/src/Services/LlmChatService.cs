@@ -59,43 +59,34 @@ public class LlmChatService
     }
 
     /// <summary>
-    /// Build OllamaOptions from AIModel properties
+    /// Build OllamaOptions from AIModel properties with optimistic defaults
     /// </summary>
-    public static OllamaOptions? BuildOptionsFromAIModel(AIModel? aiModel)
+    public static OllamaOptions BuildOptionsFromAIModel(AIModel? aiModel)
     {
-        if (aiModel == null)
-            return null;
-
-        // Check if any option is set
-        if (aiModel.Temperature == null && 
-            aiModel.NumPredict == null && 
-            aiModel.TopK == null && 
-            aiModel.TopP == null && 
-            aiModel.Seed == null && 
-            aiModel.NumCtx == null && 
-            aiModel.NumGpu == null && 
-            aiModel.NumThread == null && 
-            aiModel.RepeatPenalty == null && 
-            string.IsNullOrEmpty(aiModel.Stop))
-        {
-            return null;
-        }
+        // Default optimistic values for Ollama options
+        const double DefaultTemperature = 0.7;      // Balanced creativity and coherence
+        const int DefaultNumPredict = 2048;         // Reasonable response length
+        const int DefaultTopK = 40;                 // Common default for top-k sampling
+        const double DefaultTopP = 0.9;             // Nucleus sampling default
+        const int DefaultNumCtx = 4096;             // Good context window size
+        const double DefaultRepeatPenalty = 1.1;    // Slight penalty to reduce repetition
 
         var options = new OllamaOptions
         {
-            Temperature = aiModel.Temperature,
-            NumPredict = aiModel.NumPredict,
-            TopK = aiModel.TopK,
-            TopP = aiModel.TopP,
-            Seed = aiModel.Seed,
-            NumCtx = aiModel.NumCtx,
-            NumGpu = aiModel.NumGpu,
-            NumThread = aiModel.NumThread,
-            RepeatPenalty = aiModel.RepeatPenalty
+            Temperature = aiModel?.Temperature ?? DefaultTemperature,
+            NumPredict = aiModel?.NumPredict ?? DefaultNumPredict,
+            TopK = aiModel?.TopK ?? DefaultTopK,
+            TopP = aiModel?.TopP ?? DefaultTopP,
+            NumCtx = aiModel?.NumCtx ?? DefaultNumCtx,
+            RepeatPenalty = aiModel?.RepeatPenalty ?? DefaultRepeatPenalty,
+            // These don't have universal defaults - use AIModel values if set
+            Seed = aiModel?.Seed,
+            NumGpu = aiModel?.NumGpu,
+            NumThread = aiModel?.NumThread
         };
 
         // Parse stop sequences from comma-separated string
-        if (!string.IsNullOrEmpty(aiModel.Stop))
+        if (!string.IsNullOrEmpty(aiModel?.Stop))
         {
             options.Stop = aiModel.Stop
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -118,8 +109,8 @@ public class LlmChatService
             ? aiModel.EndpointAddress 
             : _options.LlmEndpoint;
 
-        // Build options from AIModel if not already set
-        if (request.options == null && aiModel != null)
+        // Build options from AIModel if not already set (always returns optimistic defaults)
+        if (request.options == null)
         {
             request.options = BuildOptionsFromAIModel(aiModel);
         }
