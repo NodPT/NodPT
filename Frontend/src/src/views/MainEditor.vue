@@ -33,6 +33,7 @@ import { useTheme } from '../composables/useTheme';
 
 const route = useRoute();
 const api = inject('api');
+const toast = inject('toast');
 const { isDarkTheme, loadTheme } = useTheme();
 projectApiService.setApi(api);
 const minimapVisible = ref(false);
@@ -202,6 +203,11 @@ const handleSignalRStatusChange = (status) => {
         connectionStatus.value = status;
 };
 
+const handleSignalRHello = (message) => {
+        // Display the Hello message from the server
+        toast.info(message);
+};
+
 const handleSignalRToggle = async () => {
         try {
                 if (connectionStatus.value === 'connected' || connectionStatus.value === 'connecting') {
@@ -295,6 +301,7 @@ onMounted(async () => {
         cleanupFns.push(listenEvent(EVENT_TYPES.TOGGLE_MINIMAP, toggleMinimap));
         cleanupFns.push(listenEvent(EVENT_TYPES.TOGGLE_RIGHT_PANEL, toggleRightPanel));
         cleanupFns.push(listenEvent(EVENT_TYPES.SIGNALR_STATUS_CHANGED, handleSignalRStatusChange));
+        cleanupFns.push(listenEvent(EVENT_TYPES.SIGNALR_HELLO_RECEIVED, handleSignalRHello));
         cleanupFns.push(listenEvent(EVENT_TYPES.SIGNALR_TOGGLE_CONNECTION, handleSignalRToggle));
         cleanupFns.push(listenEvent(EVENT_TYPES.NODE_SELECTED, handleNodeSelected));
         cleanupFns.push(listenEvent(EVENT_TYPES.DELETE_NODE, handleDeleteNode));
@@ -306,6 +313,8 @@ onMounted(async () => {
                 connectionStatus.value = signalRService.getConnectionStatus();
         } catch (error) {
                 console.error('Failed to initialize SignalR:', error);
+                // Display error toast when connection fails
+                toast.error(`SignalR connection failed: ${error.message || 'Unknown error'}`);
         }
 
         // Add beforeunload confirmation to prevent accidental page refresh

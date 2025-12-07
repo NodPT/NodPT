@@ -30,6 +30,9 @@ public class NodptHub : Hub
             _logger.LogInformation($"Client {Context.ConnectionId} automatically joined user group: {userGroup}");
         }
 
+        // Send welcome message to the connected client
+        await Clients.Caller.SendAsync("Hello", "Welcome! SignalR connection established successfully.");
+
         await base.OnConnectedAsync();
     }
 
