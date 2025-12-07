@@ -56,6 +56,7 @@ export const EVENT_TYPES = {
 	// SignalR events
 	SIGNALR_STATUS_CHANGED: 'signalr:status-changed',
 	SIGNALR_TOGGLE_CONNECTION: 'signalr:toggle-connection',
+	SIGNALR_HELLO_RECEIVED: 'signalr:hello-received',
 	NODE_UPDATED_FROM_SERVER: 'signalr:node-updated',
 	EDITOR_COMMAND_FROM_SERVER: 'signalr:editor-command',
 

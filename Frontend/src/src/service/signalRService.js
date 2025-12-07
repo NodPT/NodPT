@@ -202,6 +202,12 @@ class SignalRService {
       this.retryCount = 0; // Reset retry count on successful reconnect
     });
 
+    // Listen for Hello message from server
+    this.connection.on('Hello', (message) => {
+      console.log('Received Hello from server:', message);
+      triggerEvent(EVENT_TYPES.SIGNALR_HELLO_RECEIVED, message);
+    });
+
     // Listen to server messages (examples - customize based on your needs)
     this.connection.on('NodeUpdated', (nodeData) => {
       console.log('Node updated from server:', nodeData);
