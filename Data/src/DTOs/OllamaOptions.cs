@@ -47,5 +47,38 @@ namespace NodPT.Data.DTOs
         [JsonPropertyName("stop")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public List<string>? Stop { get; set; }
+
+        /// <summary>
+        /// Frequency penalty for TensorRT-LLM (OpenAI-style)
+        /// Penalizes tokens based on their frequency in the text so far
+        /// Default: 0.0
+        /// </summary>
+        [JsonPropertyName("frequency_penalty")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public double? frequency_penalty { get; set; }
+
+        /// <summary>
+        /// Presence penalty for TensorRT-LLM (OpenAI-style)
+        /// Penalizes tokens that have already appeared in the text
+        /// Default: 0.0
+        /// </summary>
+        [JsonPropertyName("presence_penalty")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public double? presence_penalty { get; set; }
+
+        /// <summary>
+        /// Whether to return log probabilities for TensorRT-LLM
+        /// </summary>
+        [JsonPropertyName("logprobs")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? logprobs { get; set; }
+
+        /// <summary>
+        /// Metadata object for TensorRT-LLM pipeline
+        /// Transparent passthrough for additional values
+        /// </summary>
+        [JsonPropertyName("metadata")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Dictionary<string, object>? metadata { get; set; }
     }
 }
