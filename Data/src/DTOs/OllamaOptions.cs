@@ -55,7 +55,7 @@ namespace NodPT.Data.DTOs
         /// </summary>
         [JsonPropertyName("frequency_penalty")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public double? FrequencyPenalty { get; set; }
+        public double? frequency_penalty { get; set; }
 
         /// <summary>
         /// Presence penalty for TensorRT-LLM (OpenAI-style)
@@ -64,14 +64,14 @@ namespace NodPT.Data.DTOs
         /// </summary>
         [JsonPropertyName("presence_penalty")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public double? PresencePenalty { get; set; }
+        public double? presence_penalty { get; set; }
 
         /// <summary>
         /// Whether to return log probabilities for TensorRT-LLM
         /// </summary>
         [JsonPropertyName("logprobs")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public bool? Logprobs { get; set; }
+        public bool? logprobs { get; set; }
 
         /// <summary>
         /// Metadata object for TensorRT-LLM pipeline
@@ -79,6 +79,6 @@ namespace NodPT.Data.DTOs
         /// </summary>
         [JsonPropertyName("metadata")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public Dictionary<string, object>? Metadata { get; set; }
+        public Dictionary<string, object>? metadata { get; set; }
     }
 }

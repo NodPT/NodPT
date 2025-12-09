@@ -35,9 +35,9 @@ var request = new OllamaRequest
 var options = new OllamaOptions
 {
     Temperature = 0.7,
-    FrequencyPenalty = 0.5,  // Penalize frequently used tokens
-    PresencePenalty = 0.3,   // Penalize tokens that appeared
-    Logprobs = true          // Return log probabilities
+    frequency_penalty = 0.5,  // Penalize frequently used tokens
+    presence_penalty = 0.3,   // Penalize tokens that appeared
+    logprobs = true          // Return log probabilities
 };
 ```
 
@@ -192,7 +192,7 @@ var request = new OllamaRequest
 var options = new OllamaOptions
 {
     Temperature = 0.7,
-    Metadata = new Dictionary<string, object>
+    metadata = new Dictionary<string, object>
     {
         ["request_id"] = "req-123456",
         ["user_id"] = "user-789",
@@ -207,10 +207,10 @@ var options = new OllamaOptions
 
 | Property | Type | Description | Default |
 |----------|------|-------------|---------|
-| `FrequencyPenalty` | `double?` | Penalizes tokens based on frequency in text | 0.0 |
-| `PresencePenalty` | `double?` | Penalizes tokens that already appeared | 0.0 |
-| `Logprobs` | `bool?` | Return log probabilities per token | null |
-| `Metadata` | `Dictionary<string, object>?` | Passthrough metadata for pipeline | null |
+| `frequency_penalty` | `double?` | Penalizes tokens based on frequency in text | 0.0 |
+| `presence_penalty` | `double?` | Penalizes tokens that already appeared | 0.0 |
+| `logprobs` | `bool?` | Return log probabilities per token | null |
+| `metadata` | `Dictionary<string, object>?` | Passthrough metadata for pipeline | null |
 
 ### OllamaRequest - TensorRT-LLM Extensions
 
