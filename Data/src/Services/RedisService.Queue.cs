@@ -32,6 +32,38 @@ public class RedisQueueService
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<RedisQueueService> _logger;
     private readonly ConcurrentDictionary<string, int> _retryCounters = new();
+    
+    /// <summary>
+    /// Maximum time in milliseconds to wait for Redis connection to be established (30 seconds).
+    /// </summary>
+    private const int ConnectionWaitTimeoutMs = 30000;
+    
+    /// <summary>
+    /// Interval in milliseconds between Redis connection status checks (500ms).
+    /// </summary>
+    private const int ConnectionCheckIntervalMs = 500;
+    
+    /// <summary>
+    /// Interval in milliseconds between connection status log messages (5 seconds).
+    /// Used to reduce log noise during connection wait periods.
+    /// </summary>
+    private const int ConnectionLogIntervalMs = 5000;
+    
+    /// <summary>
+    /// Maximum number of retry attempts for Redis operations before failing.
+    /// </summary>
+    private const int MaxRetries = 5;
+    
+    /// <summary>
+    /// Initial delay in milliseconds for exponential backoff retry logic (1 second).
+    /// Subsequent delays: 2s, 4s, 8s, 16s for attempts 1-4.
+    /// </summary>
+    private const int InitialRetryDelayMs = 1000;
+    
+    /// <summary>
+    /// Maximum delay in milliseconds for exponential backoff to prevent overflow (32 seconds).
+    /// </summary>
+    private const int MaxRetryDelayMs = 32000;
 
     /// <summary>
     /// Initializes a new instance of the RedisQueueService.
@@ -72,6 +104,13 @@ public class RedisQueueService
     {
         try
         {
+            // Check if Redis is connected
+            if (!_redis.IsConnected)
+            {
+                _logger.LogWarning("Redis not connected when trying to add message to stream {StreamKey}", streamKey);
+                throw new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Redis connection is not available");
+            }
+
             var db = _redis.GetDatabase();
             
             // Convert dictionary to NameValueEntry array
@@ -80,9 +119,19 @@ public class RedisQueueService
             // Add to stream
             var entryId = await db.StreamAddAsync(streamKey, entries);
             
-            _logger.LogDebug($"Added message to Redis stream {streamKey}: {entryId}");
+            _logger.LogDebug("Added message to Redis stream {StreamKey}: {EntryId}", streamKey, entryId);
             
             return entryId.ToString();
+        }
+        catch (RedisConnectionException ex)
+        {
+            _logger.LogError(ex, "Redis connection error when adding message to stream: {StreamKey}", streamKey);
+            throw;
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogError(ex, "Timeout when adding message to Redis stream: {StreamKey}", streamKey);
+            throw;
         }
         catch (Exception ex)
         {
@@ -156,11 +205,22 @@ public class RedisQueueService
         // Start background task
         handle.BackgroundTask = Task.Run(async () =>
         {
-            var db = _redis.GetDatabase();
             var cancellationToken = handle.CancellationTokenSource.Token;
 
             try
             {
+                // Wait for Redis connection to be established
+                _logger.LogInformation("Waiting for Redis connection before starting listener for stream {StreamKey}...", streamKey);
+                var connected = await WaitForRedisConnection(ConnectionWaitTimeoutMs);
+                
+                if (!connected)
+                {
+                    _logger.LogError("Failed to establish Redis connection for stream {StreamKey}. Listener will not start.", streamKey);
+                    return;
+                }
+
+                var db = _redis.GetDatabase();
+
                 // Create consumer group if needed
                 if (options.CreateStreamIfMissing)
                 {
@@ -611,19 +671,156 @@ public class RedisQueueService
     }
 
     /// <summary>
+    /// Waits for Redis connection to be established with timeout.
+    /// </summary>
+    /// <param name="timeoutMs">Maximum time to wait for connection in milliseconds.</param>
+    /// <returns>True if connected, false if timeout reached.</returns>
+    private async Task<bool> WaitForRedisConnection(int timeoutMs = ConnectionWaitTimeoutMs)
+    {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var lastLogTime = 0L;
+        
+        while (stopwatch.ElapsedMilliseconds < timeoutMs)
+        {
+            if (_redis.IsConnected)
+            {
+                _logger.LogInformation("Redis connection established");
+                return true;
+            }
+            
+            // Log progress every 5 seconds instead of every 500ms
+            if (stopwatch.ElapsedMilliseconds - lastLogTime >= ConnectionLogIntervalMs)
+            {
+                _logger.LogDebug("Waiting for Redis connection... ({ElapsedMs}ms elapsed)", stopwatch.ElapsedMilliseconds);
+                lastLogTime = stopwatch.ElapsedMilliseconds;
+            }
+            
+            await Task.Delay(ConnectionCheckIntervalMs);
+        }
+        
+        _logger.LogWarning("Redis connection not established after {TimeoutMs}ms", timeoutMs);
+        return false;
+    }
+
+    /// <summary>
+    /// Calculates exponential backoff delay in milliseconds with overflow protection.
+    /// Uses bit shifting for efficiency: 1s, 2s, 4s, 8s, 16s...
+    /// Caps at MaxRetryDelayMs to prevent integer overflow.
+    /// </summary>
+    /// <param name="attempt">The attempt number (0-based, must be non-negative).</param>
+    /// <returns>Delay in milliseconds, capped at MaxRetryDelayMs.</returns>
+    private int CalculateExponentialBackoffDelay(int attempt)
+    {
+        // Validate attempt is non-negative to prevent invalid bit shift operations
+        if (attempt < 0)
+        {
+            _logger.LogWarning("Invalid attempt value {Attempt} for exponential backoff, using 0", attempt);
+            attempt = 0;
+        }
+        
+        // Prevent overflow: if attempt >= 31, bit shift would overflow
+        if (attempt >= 31)
+        {
+            return MaxRetryDelayMs;
+        }
+        
+        // Use bit shifting for efficient exponential calculation: InitialRetryDelayMs * 2^attempt
+        // Cap at MaxRetryDelayMs to prevent overflow for large attempt values
+        int delay = InitialRetryDelayMs << attempt;
+        return Math.Min(delay, MaxRetryDelayMs);
+    }
+
+    /// <summary>
     /// Ensures a consumer group exists for a stream, creating it if necessary.
+    /// Implements retry logic with exponential backoff to handle connection issues.
     /// </summary>
     private async Task EnsureConsumerGroupExists(IDatabase db, string streamKey, string group)
     {
-        try
+        
+        for (int attempt = 0; attempt < MaxRetries; attempt++)
         {
-            await db.StreamCreateConsumerGroupAsync(streamKey, group, StreamPosition.Beginning, createStream: true);
-            _logger.LogInformation($"Created consumer group {group} for stream {streamKey}");
+            try
+            {
+                // First, check if Redis is connected
+                if (!_redis.IsConnected)
+                {
+                    _logger.LogWarning("Redis not connected, waiting before retry (attempt {Attempt}/{MaxRetries})", attempt + 1, MaxRetries);
+                    await Task.Delay(CalculateExponentialBackoffDelay(attempt));
+                    continue;
+                }
+
+                // Attempt to create the consumer group
+                await db.StreamCreateConsumerGroupAsync(streamKey, group, StreamPosition.Beginning, createStream: true);
+                _logger.LogInformation("Created consumer group {Group} for stream {StreamKey}", group, streamKey);
+                return; // Success
+            }
+            catch (RedisServerException ex) when (ex.Message.Contains("BUSYGROUP"))
+            {
+                // Consumer group already exists, which is fine
+                _logger.LogDebug("Consumer group {Group} already exists for stream {StreamKey}", group, streamKey);
+                return; // Success - group exists
+            }
+            catch (RedisConnectionException ex)
+            {
+                _logger.LogWarning(ex, "Redis connection error while creating consumer group {Group} for stream {StreamKey} (attempt {Attempt}/{MaxRetries})", group, streamKey, attempt + 1, MaxRetries);
+                
+                if (attempt < MaxRetries - 1)
+                {
+                await HandleRetryableExceptionAsync(
+                    ex,
+                    attempt,
+                    MaxRetries,
+                    () => CalculateExponentialBackoffDelay(attempt),
+                    () => _logger.LogWarning(ex, "Redis connection error while creating consumer group {Group} for stream {StreamKey} (attempt {Attempt}/{MaxRetries})", group, streamKey, attempt + 1, MaxRetries),
+                    (delayMs) => _logger.LogInformation("Retrying in {DelayMs}ms...", delayMs),
+                    () => _logger.LogError(ex, "Failed to create consumer group {Group} for stream {StreamKey} after {MaxRetries} attempts. Redis may not be available.", group, streamKey, MaxRetries)
+                );
+            }
+            catch (TimeoutException ex)
+            {
+                await HandleRetryableExceptionAsync(
+                    ex,
+                    attempt,
+                    MaxRetries,
+                    () => CalculateExponentialBackoffDelay(attempt),
+                    () => _logger.LogWarning(ex, "Timeout while creating consumer group {Group} for stream {StreamKey} (attempt {Attempt}/{MaxRetries})", group, streamKey, attempt + 1, MaxRetries),
+                    (delayMs) => _logger.LogInformation("Retrying in {DelayMs}ms...", delayMs),
+                    () => _logger.LogError(ex, "Failed to create consumer group {Group} for stream {StreamKey} after {MaxRetries} attempts due to timeout.", group, streamKey, MaxRetries)
+                );
+            }
         }
-        catch (RedisServerException ex) when (ex.Message.Contains("BUSYGROUP"))
+    }
+    /// <summary>
+    /// Handles retry logic for retryable exceptions in Redis operations.
+    /// </summary>
+    /// <param name="ex">The exception that was caught.</param>
+    /// <param name="attempt">The current attempt number.</param>
+    /// <param name="maxRetries">The maximum number of retries allowed.</param>
+    /// <param name="getDelayMs">A function to calculate the delay in milliseconds.</param>
+    /// <param name="logWarning">An action to log the warning message.</param>
+    /// <param name="logRetry">An action to log the retry message, given the delay in ms.</param>
+    /// <param name="logError">An action to log the error message when retries are exhausted.</param>
+    private async Task HandleRetryableExceptionAsync(
+        Exception ex,
+        int attempt,
+        int maxRetries,
+        Func<int> getDelayMs,
+        Action logWarning,
+        Action<int> logRetry,
+        Action logError)
+    {
+        logWarning();
+
+        if (attempt < maxRetries - 1)
         {
-            // Consumer group already exists, which is fine
-            _logger.LogDebug($"Consumer group {group} already exists for stream {streamKey}");
+            int delayMs = getDelayMs();
+            logRetry(delayMs);
+            await Task.Delay(delayMs);
+        }
+        else
+        {
+            logError();
+            throw ex;
         }
     }
 }
