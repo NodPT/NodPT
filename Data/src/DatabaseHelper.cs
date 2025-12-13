@@ -11,14 +11,18 @@ using System.Runtime.CompilerServices;
 public static class DatabaseHelper
 {
     static string connectionString = string.Empty;
-    private static IHttpContextAccessor? _httpContextAccessor;
+    private static volatile IHttpContextAccessor? _httpContextAccessor;
 
     /// <summary>
     /// Set the IHttpContextAccessor for resolving request-scoped UnitOfWork instances.
     /// This should be called once during application startup.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when accessor is null</exception>
     public static void SetHttpContextAccessor(IHttpContextAccessor accessor)
     {
+        if (accessor == null)
+            throw new ArgumentNullException(nameof(accessor));
+        
         _httpContextAccessor = accessor;
     }
 
