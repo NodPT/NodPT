@@ -75,7 +75,7 @@ builder.Services.AddSingleton<MemoryOptions>(provider =>
 // Register Redis
 var redisConnection = builder.Configuration["Redis:ConnectionString"]
     ?? Environment.GetEnvironmentVariable("REDIS_CONNECTION")
-    ?? "localhost:6379";
+    ?? "localhost:8847";
 
 // Add abortConnect=false to allow retry behavior when Redis is unavailable
 var redisOptions = ConfigurationOptions.Parse(redisConnection);
@@ -85,21 +85,20 @@ redisOptions.SyncTimeout = 5000;
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
 {
-    try
+    var logger = provider.GetService<ILogger<Program>>();
+    logger?.LogInformation($"Connecting to Redis at {redisConnection}...");
+    var connection = ConnectionMultiplexer.Connect(redisOptions);
+    
+    if (connection.IsConnected)
     {
-        var logger = provider.GetService<ILogger<Program>>();
-        logger?.LogInformation($"Connecting to Redis at {redisConnection}...");
-        var connection = ConnectionMultiplexer.Connect(redisOptions);
         logger?.LogInformation("Successfully connected to Redis");
-        return connection;
     }
-    catch (Exception ex)
+    else
     {
-        var logger = provider.GetService<ILogger<Program>>();
-        logger?.LogWarning(ex, $"Failed to connect to Redis at {redisConnection}. Redis features will be unavailable. Ensure Redis is running and accessible.");
-        // Return a connection that won't break the app if Redis is down
-        return ConnectionMultiplexer.Connect(redisOptions);
+        logger?.LogWarning($"Redis connection created but not yet connected. Will retry in background.");
     }
+    
+    return connection;
 });
 
 builder.Services.AddSingleton<IDatabase>(provider =>
@@ -159,7 +158,7 @@ var summarizationOptions = host.Services.GetRequiredService<SummarizationOptions
 var memoryOptions = host.Services.GetRequiredService<MemoryOptions>();
 
 logger.LogInformation("BackendExecutor starting with configuration:");
-logger.LogInformation("  Redis Connection: {RedisConnection}", executorOptions.RedisConnection);
+logger.LogInformation("  Redis Connection: {RedisConnection}", redisConnection);
 logger.LogInformation("  LLM Endpoint: {LlmEndpoint}", executorOptions.LlmEndpoint);
 logger.LogInformation("  Max Manager: {MaxManager}", executorOptions.MaxManager == 0 ? "unlimited" : executorOptions.MaxManager);
 logger.LogInformation("  Max Inspector: {MaxInspector}", executorOptions.MaxInspector == 0 ? "unlimited" : executorOptions.MaxInspector);
