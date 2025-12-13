@@ -72,6 +72,13 @@ public class RedisQueueService
     {
         try
         {
+            // Check if Redis is connected
+            if (!_redis.IsConnected)
+            {
+                _logger.LogWarning($"Redis not connected when trying to add message to stream {streamKey}");
+                throw new InvalidOperationException("Redis connection is not available");
+            }
+
             var db = _redis.GetDatabase();
             
             // Convert dictionary to NameValueEntry array
@@ -83,6 +90,16 @@ public class RedisQueueService
             _logger.LogDebug($"Added message to Redis stream {streamKey}: {entryId}");
             
             return entryId.ToString();
+        }
+        catch (RedisConnectionException ex)
+        {
+            _logger.LogError(ex, "Redis connection error when adding message to stream: {StreamKey}", streamKey);
+            throw;
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogError(ex, "Timeout when adding message to Redis stream: {StreamKey}", streamKey);
+            throw;
         }
         catch (Exception ex)
         {
@@ -156,11 +173,22 @@ public class RedisQueueService
         // Start background task
         handle.BackgroundTask = Task.Run(async () =>
         {
-            var db = _redis.GetDatabase();
             var cancellationToken = handle.CancellationTokenSource.Token;
 
             try
             {
+                // Wait for Redis connection to be established
+                _logger.LogInformation($"Waiting for Redis connection before starting listener for stream {streamKey}...");
+                var connected = await WaitForRedisConnection(30000);
+                
+                if (!connected)
+                {
+                    _logger.LogError($"Failed to establish Redis connection for stream {streamKey}. Listener will not start.");
+                    return;
+                }
+
+                var db = _redis.GetDatabase();
+
                 // Create consumer group if needed
                 if (options.CreateStreamIfMissing)
                 {
@@ -611,19 +639,95 @@ public class RedisQueueService
     }
 
     /// <summary>
+    /// Waits for Redis connection to be established with timeout.
+    /// </summary>
+    /// <param name="timeoutMs">Maximum time to wait for connection in milliseconds.</param>
+    /// <returns>True if connected, false if timeout reached.</returns>
+    private async Task<bool> WaitForRedisConnection(int timeoutMs = 30000)
+    {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        
+        while (stopwatch.ElapsedMilliseconds < timeoutMs)
+        {
+            if (_redis.IsConnected)
+            {
+                _logger.LogInformation("Redis connection established");
+                return true;
+            }
+            
+            _logger.LogDebug($"Waiting for Redis connection... ({stopwatch.ElapsedMilliseconds}ms elapsed)");
+            await Task.Delay(500);
+        }
+        
+        _logger.LogWarning($"Redis connection not established after {timeoutMs}ms");
+        return false;
+    }
+
+    /// <summary>
     /// Ensures a consumer group exists for a stream, creating it if necessary.
+    /// Implements retry logic with exponential backoff to handle connection issues.
     /// </summary>
     private async Task EnsureConsumerGroupExists(IDatabase db, string streamKey, string group)
     {
-        try
+        const int maxRetries = 5;
+        const int initialDelayMs = 1000;
+        
+        for (int attempt = 0; attempt < maxRetries; attempt++)
         {
-            await db.StreamCreateConsumerGroupAsync(streamKey, group, StreamPosition.Beginning, createStream: true);
-            _logger.LogInformation($"Created consumer group {group} for stream {streamKey}");
-        }
-        catch (RedisServerException ex) when (ex.Message.Contains("BUSYGROUP"))
-        {
-            // Consumer group already exists, which is fine
-            _logger.LogDebug($"Consumer group {group} already exists for stream {streamKey}");
+            try
+            {
+                // First, check if Redis is connected
+                if (!_redis.IsConnected)
+                {
+                    _logger.LogWarning($"Redis not connected, waiting before retry (attempt {attempt + 1}/{maxRetries})");
+                    await Task.Delay(initialDelayMs * (int)Math.Pow(2, attempt));
+                    continue;
+                }
+
+                // Attempt to create the consumer group
+                await db.StreamCreateConsumerGroupAsync(streamKey, group, StreamPosition.Beginning, createStream: true);
+                _logger.LogInformation($"Created consumer group {group} for stream {streamKey}");
+                return; // Success
+            }
+            catch (RedisServerException ex) when (ex.Message.Contains("BUSYGROUP"))
+            {
+                // Consumer group already exists, which is fine
+                _logger.LogDebug($"Consumer group {group} already exists for stream {streamKey}");
+                return; // Success - group exists
+            }
+            catch (RedisConnectionException ex)
+            {
+                _logger.LogWarning(ex, $"Redis connection error while creating consumer group {group} for stream {streamKey} (attempt {attempt + 1}/{maxRetries})");
+                
+                if (attempt < maxRetries - 1)
+                {
+                    // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+                    int delayMs = initialDelayMs * (int)Math.Pow(2, attempt);
+                    _logger.LogInformation($"Retrying in {delayMs}ms...");
+                    await Task.Delay(delayMs);
+                }
+                else
+                {
+                    _logger.LogError(ex, $"Failed to create consumer group {group} for stream {streamKey} after {maxRetries} attempts. Redis may not be available.");
+                    throw; // Re-throw after all retries exhausted
+                }
+            }
+            catch (TimeoutException ex)
+            {
+                _logger.LogWarning(ex, $"Timeout while creating consumer group {group} for stream {streamKey} (attempt {attempt + 1}/{maxRetries})");
+                
+                if (attempt < maxRetries - 1)
+                {
+                    int delayMs = initialDelayMs * (int)Math.Pow(2, attempt);
+                    _logger.LogInformation($"Retrying in {delayMs}ms...");
+                    await Task.Delay(delayMs);
+                }
+                else
+                {
+                    _logger.LogError(ex, $"Failed to create consumer group {group} for stream {streamKey} after {maxRetries} attempts due to timeout.");
+                    throw;
+                }
+            }
         }
     }
 }
