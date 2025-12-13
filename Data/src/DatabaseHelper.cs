@@ -10,7 +10,6 @@ using System.Runtime.CompilerServices;
 public static class DatabaseHelper
 {
     static string connectionString = string.Empty;
-    private static IServiceProvider? _serviceProvider;
 
     /// <summary>
     /// get the unit of work from the Services. Get and use, do not dispose it, do not use `using`
@@ -29,11 +28,6 @@ public static class DatabaseHelper
         var dataStore = XpoDefault.GetConnectionProvider(connectionString, AutoCreateOption.SchemaAlreadyExists);
         var dl = new SimpleDataLayer(dataStore);
         return new UnitOfWork(dl);
-    }
-
-    public static void SetServiceProvider(IServiceProvider serviceProvider)
-    {
-        _serviceProvider = serviceProvider;
     }
 
     [Obsolete("use GetSession to get the unit of work")]

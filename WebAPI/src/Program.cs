@@ -234,9 +234,6 @@ builder.Services.AddAuthorization();
 // 🔹 Build and run app
 var app = builder.Build();
 
-// 🔹 Set the service provider for DatabaseHelper
-DatabaseHelper.SetServiceProvider(app.Services);
-
 app.UseRouting(); // 🔹 Enable routing
 app.UseCors("AllowAll"); // 🔹 Enable CORS
 app.UseAuthentication(); // 🔹 Enable authentication
