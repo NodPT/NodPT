@@ -234,6 +234,9 @@ builder.Services.AddAuthorization();
 // 🔹 Build and run app
 var app = builder.Build();
 
+// 🔹 Configure DatabaseHelper to use IHttpContextAccessor for request-scoped UnitOfWork
+DatabaseHelper.SetHttpContextAccessor(app.Services.GetRequiredService<IHttpContextAccessor>());
+
 app.UseRouting(); // 🔹 Enable routing
 app.UseCors("AllowAll"); // 🔹 Enable CORS
 app.UseAuthentication(); // 🔹 Enable authentication

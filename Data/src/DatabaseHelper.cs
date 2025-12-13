@@ -4,34 +4,57 @@ using DevExpress.Xpo.DB;
 using DevExpress.Xpo.Helpers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http;
 using NodPT.Data.Models;
 using System.Runtime.CompilerServices;
 
 public static class DatabaseHelper
 {
     static string connectionString = string.Empty;
-    public static WebApplicationBuilder? builder { get; set; }
+    private static volatile IHttpContextAccessor? _httpContextAccessor;
 
     /// <summary>
-    /// get the unit of work from the Services. Get and use, do not dispose it, do not use `using`
+    /// Set the IHttpContextAccessor for resolving request-scoped UnitOfWork instances.
+    /// This should be called once during application startup.
     /// </summary>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
-    public static UnitOfWork? GetSession()
+    /// <exception cref="ArgumentNullException">Thrown when accessor is null</exception>
+    public static void SetHttpContextAccessor(IHttpContextAccessor accessor)
     {
-        if (builder == null)
-            throw new InvalidOperationException("WebApplicationBuilder is not set. Please set it before getting a session.");
-
-        var app = builder.Build();
-
-        // Get the UnitOfWork from the service provider
-        var unitOfWork = app.Services.GetRequiredService<UnitOfWork>();
-        return unitOfWork;
+        if (accessor == null)
+            throw new ArgumentNullException(nameof(accessor));
+        
+        _httpContextAccessor = accessor;
     }
 
-    public static void SetBuilder(WebApplicationBuilder builder)
+    /// <summary>
+    /// Gets a <see cref="UnitOfWork"/> instance for data access.
+    /// <para>
+    /// <b>Web requests (when HttpContext is available):</b><br/>
+    /// Returns a request-scoped <c>UnitOfWork</c> from the DI container. <b>Do not dispose</b> or use <c>using</c>—the DI container manages its lifetime.
+    /// </para>
+    /// <para>
+    /// <b>Background services or when HttpContext is not available:</b><br/>
+    /// Creates a new <c>UnitOfWork</c> instance. <b>The caller is responsible for disposing</b> the returned object (e.g., via <c>using</c> or calling <c>Dispose()</c>).
+    /// </para>
+    /// </summary>
+    /// <returns>A <see cref="UnitOfWork"/> instance. Caller must dispose if not in web request context.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if connection string is not set.</exception>
+    public static UnitOfWork? GetSession()
     {
-        DatabaseHelper.builder = builder;
+        // Try to get UnitOfWork from request scope if HttpContext is available
+        if (_httpContextAccessor?.HttpContext != null)
+        {
+            return _httpContextAccessor.HttpContext.RequestServices.GetRequiredService<UnitOfWork>();
+        }
+
+        // Fallback to creating a UnitOfWork directly when HttpContext is not available
+        // This is needed for background services and console applications
+        if (string.IsNullOrEmpty(connectionString))
+            throw new InvalidOperationException("Connection string is not set. Please set it before creating a UnitOfWork.");
+
+        var dataStore = XpoDefault.GetConnectionProvider(connectionString, AutoCreateOption.SchemaAlreadyExists);
+        var dl = new SimpleDataLayer(dataStore);
+        return new UnitOfWork(dl);
     }
 
     [Obsolete("use GetSession to get the unit of work")]
