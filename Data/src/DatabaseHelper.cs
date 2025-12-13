@@ -27,12 +27,18 @@ public static class DatabaseHelper
     }
 
     /// <summary>
-    /// Get the unit of work from the Services. Get and use, do not dispose it, do not use `using`
-    /// NOTE: For web requests, this uses HttpContext.RequestServices to get request-scoped UnitOfWork.
-    /// For background services without HttpContext, it creates a new UnitOfWork from connection string.
+    /// Gets a <see cref="UnitOfWork"/> instance for data access.
+    /// <para>
+    /// <b>Web requests (when HttpContext is available):</b><br/>
+    /// Returns a request-scoped <c>UnitOfWork</c> from the DI container. <b>Do not dispose</b> or use <c>using</c>—the DI container manages its lifetime.
+    /// </para>
+    /// <para>
+    /// <b>Background services or when HttpContext is not available:</b><br/>
+    /// Creates a new <c>UnitOfWork</c> instance. <b>The caller is responsible for disposing</b> the returned object (e.g., via <c>using</c> or calling <c>Dispose()</c>).
+    /// </para>
     /// </summary>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
+    /// <returns>A <see cref="UnitOfWork"/> instance. Caller must dispose if not in web request context.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if connection string is not set.</exception>
     public static UnitOfWork? GetSession()
     {
         // Try to get UnitOfWork from request scope if HttpContext is available
