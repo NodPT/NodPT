@@ -32,6 +32,10 @@ public class RedisQueueService
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<RedisQueueService> _logger;
     private readonly ConcurrentDictionary<string, int> _retryCounters = new();
+    
+    // Connection timeout configuration
+    private const int ConnectionWaitTimeoutMs = 30000;
+    private const int ConnectionCheckIntervalMs = 500;
 
     /// <summary>
     /// Initializes a new instance of the RedisQueueService.
@@ -76,7 +80,7 @@ public class RedisQueueService
             if (!_redis.IsConnected)
             {
                 _logger.LogWarning($"Redis not connected when trying to add message to stream {streamKey}");
-                throw new InvalidOperationException("Redis connection is not available");
+                throw new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Redis connection is not available");
             }
 
             var db = _redis.GetDatabase();
@@ -179,7 +183,7 @@ public class RedisQueueService
             {
                 // Wait for Redis connection to be established
                 _logger.LogInformation($"Waiting for Redis connection before starting listener for stream {streamKey}...");
-                var connected = await WaitForRedisConnection(30000);
+                var connected = await WaitForRedisConnection(ConnectionWaitTimeoutMs);
                 
                 if (!connected)
                 {
@@ -643,9 +647,11 @@ public class RedisQueueService
     /// </summary>
     /// <param name="timeoutMs">Maximum time to wait for connection in milliseconds.</param>
     /// <returns>True if connected, false if timeout reached.</returns>
-    private async Task<bool> WaitForRedisConnection(int timeoutMs = 30000)
+    private async Task<bool> WaitForRedisConnection(int timeoutMs = ConnectionWaitTimeoutMs)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var lastLogTime = 0L;
+        const int logIntervalMs = 5000; // Log every 5 seconds to reduce log noise
         
         while (stopwatch.ElapsedMilliseconds < timeoutMs)
         {
@@ -655,8 +661,14 @@ public class RedisQueueService
                 return true;
             }
             
-            _logger.LogDebug($"Waiting for Redis connection... ({stopwatch.ElapsedMilliseconds}ms elapsed)");
-            await Task.Delay(500);
+            // Log progress every 5 seconds instead of every 500ms
+            if (stopwatch.ElapsedMilliseconds - lastLogTime >= logIntervalMs)
+            {
+                _logger.LogDebug($"Waiting for Redis connection... ({stopwatch.ElapsedMilliseconds}ms elapsed)");
+                lastLogTime = stopwatch.ElapsedMilliseconds;
+            }
+            
+            await Task.Delay(ConnectionCheckIntervalMs);
         }
         
         _logger.LogWarning($"Redis connection not established after {timeoutMs}ms");
