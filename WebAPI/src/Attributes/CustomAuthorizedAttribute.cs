@@ -42,7 +42,7 @@ public class CustomAuthorizedAttribute : Attribute, IAuthorizationFilter
         try
         {
             // Use HttpContext's RequestServices to get the scoped UnitOfWork
-            var session = context.HttpContext.RequestServices.GetRequiredService<UnitOfWork>();
+            var session = DatabaseHelper.GetSession();
             
             if (UserService.IsValidFirebaseUid(firebaseUid, context.HttpContext.User) == false)
             {
