@@ -793,5 +793,9 @@ public class RedisQueueService
                 }
             }
         }
+
+        // If we reach here, all retries were exhausted without success (e.g., Redis never connected)
+        _logger.LogError("Failed to create consumer group {Group} for stream {StreamKey} after {MaxRetries} attempts. Redis was not connected.", group, streamKey, MaxRetries);
+        throw new InvalidOperationException($"Failed to create consumer group '{group}' for stream '{streamKey}' after {MaxRetries} attempts. Redis was not connected.");
     }
 }
