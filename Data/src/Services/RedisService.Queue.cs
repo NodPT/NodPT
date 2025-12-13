@@ -707,10 +707,23 @@ public class RedisQueueService
     /// Uses bit shifting for efficiency: 1s, 2s, 4s, 8s, 16s...
     /// Caps at MaxRetryDelayMs to prevent integer overflow.
     /// </summary>
-    /// <param name="attempt">The attempt number (0-based).</param>
+    /// <param name="attempt">The attempt number (0-based, must be non-negative).</param>
     /// <returns>Delay in milliseconds, capped at MaxRetryDelayMs.</returns>
     private int CalculateExponentialBackoffDelay(int attempt)
     {
+        // Validate attempt is non-negative to prevent invalid bit shift operations
+        if (attempt < 0)
+        {
+            _logger.LogWarning("Invalid attempt value {Attempt} for exponential backoff, using 0", attempt);
+            attempt = 0;
+        }
+        
+        // Prevent overflow: if attempt >= 31, bit shift would overflow
+        if (attempt >= 31)
+        {
+            return MaxRetryDelayMs;
+        }
+        
         // Use bit shifting for efficient exponential calculation: InitialRetryDelayMs * 2^attempt
         // Cap at MaxRetryDelayMs to prevent overflow for large attempt values
         int delay = InitialRetryDelayMs << attempt;
