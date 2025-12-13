@@ -33,14 +33,37 @@ public class RedisQueueService
     private readonly ILogger<RedisQueueService> _logger;
     private readonly ConcurrentDictionary<string, int> _retryCounters = new();
     
-    // Connection timeout configuration
+    /// <summary>
+    /// Maximum time in milliseconds to wait for Redis connection to be established (30 seconds).
+    /// </summary>
     private const int ConnectionWaitTimeoutMs = 30000;
-    private const int ConnectionCheckIntervalMs = 500;
-    private const int ConnectionLogIntervalMs = 5000; // Log connection status every 5 seconds
     
-    // Retry configuration
+    /// <summary>
+    /// Interval in milliseconds between Redis connection status checks (500ms).
+    /// </summary>
+    private const int ConnectionCheckIntervalMs = 500;
+    
+    /// <summary>
+    /// Interval in milliseconds between connection status log messages (5 seconds).
+    /// Used to reduce log noise during connection wait periods.
+    /// </summary>
+    private const int ConnectionLogIntervalMs = 5000;
+    
+    /// <summary>
+    /// Maximum number of retry attempts for Redis operations before failing.
+    /// </summary>
     private const int MaxRetries = 5;
+    
+    /// <summary>
+    /// Initial delay in milliseconds for exponential backoff retry logic (1 second).
+    /// Subsequent delays: 2s, 4s, 8s, 16s for attempts 1-4.
+    /// </summary>
     private const int InitialRetryDelayMs = 1000;
+    
+    /// <summary>
+    /// Maximum delay in milliseconds for exponential backoff to prevent overflow (32 seconds).
+    /// </summary>
+    private const int MaxRetryDelayMs = 32000;
 
     /// <summary>
     /// Initializes a new instance of the RedisQueueService.
@@ -680,14 +703,18 @@ public class RedisQueueService
     }
 
     /// <summary>
-    /// Calculates exponential backoff delay in milliseconds.
+    /// Calculates exponential backoff delay in milliseconds with overflow protection.
     /// Uses bit shifting for efficiency: 1s, 2s, 4s, 8s, 16s...
+    /// Caps at MaxRetryDelayMs to prevent integer overflow.
     /// </summary>
     /// <param name="attempt">The attempt number (0-based).</param>
-    /// <returns>Delay in milliseconds.</returns>
+    /// <returns>Delay in milliseconds, capped at MaxRetryDelayMs.</returns>
     private int CalculateExponentialBackoffDelay(int attempt)
     {
-        return InitialRetryDelayMs << attempt; // Equivalent to InitialRetryDelayMs * 2^attempt
+        // Use bit shifting for efficient exponential calculation: InitialRetryDelayMs * 2^attempt
+        // Cap at MaxRetryDelayMs to prevent overflow for large attempt values
+        int delay = InitialRetryDelayMs << attempt;
+        return Math.Min(delay, MaxRetryDelayMs);
     }
 
     /// <summary>
