@@ -766,36 +766,61 @@ public class RedisQueueService
                 
                 if (attempt < MaxRetries - 1)
                 {
-                    int delayMs = CalculateExponentialBackoffDelay(attempt);
-                    _logger.LogInformation("Retrying in {DelayMs}ms...", delayMs);
-                    await Task.Delay(delayMs);
-                }
-                else
-                {
-                    _logger.LogError(ex, "Failed to create consumer group {Group} for stream {StreamKey} after {MaxRetries} attempts. Redis may not be available.", group, streamKey, MaxRetries);
-                    throw; // Re-throw after all retries exhausted
-                }
+                await HandleRetryableExceptionAsync(
+                    ex,
+                    attempt,
+                    MaxRetries,
+                    () => CalculateExponentialBackoffDelay(attempt),
+                    () => _logger.LogWarning(ex, "Redis connection error while creating consumer group {Group} for stream {StreamKey} (attempt {Attempt}/{MaxRetries})", group, streamKey, attempt + 1, MaxRetries),
+                    (delayMs) => _logger.LogInformation("Retrying in {DelayMs}ms...", delayMs),
+                    () => _logger.LogError(ex, "Failed to create consumer group {Group} for stream {StreamKey} after {MaxRetries} attempts. Redis may not be available.", group, streamKey, MaxRetries)
+                );
             }
             catch (TimeoutException ex)
             {
-                _logger.LogWarning(ex, "Timeout while creating consumer group {Group} for stream {StreamKey} (attempt {Attempt}/{MaxRetries})", group, streamKey, attempt + 1, MaxRetries);
-                
-                if (attempt < MaxRetries - 1)
-                {
-                    int delayMs = CalculateExponentialBackoffDelay(attempt);
-                    _logger.LogInformation("Retrying in {DelayMs}ms...", delayMs);
-                    await Task.Delay(delayMs);
-                }
-                else
-                {
-                    _logger.LogError(ex, "Failed to create consumer group {Group} for stream {StreamKey} after {MaxRetries} attempts due to timeout.", group, streamKey, MaxRetries);
-                    throw;
-                }
+                await HandleRetryableExceptionAsync(
+                    ex,
+                    attempt,
+                    MaxRetries,
+                    () => CalculateExponentialBackoffDelay(attempt),
+                    () => _logger.LogWarning(ex, "Timeout while creating consumer group {Group} for stream {StreamKey} (attempt {Attempt}/{MaxRetries})", group, streamKey, attempt + 1, MaxRetries),
+                    (delayMs) => _logger.LogInformation("Retrying in {DelayMs}ms...", delayMs),
+                    () => _logger.LogError(ex, "Failed to create consumer group {Group} for stream {StreamKey} after {MaxRetries} attempts due to timeout.", group, streamKey, MaxRetries)
+                );
             }
         }
+    }
+    /// <summary>
+    /// Handles retry logic for retryable exceptions in Redis operations.
+    /// </summary>
+    /// <param name="ex">The exception that was caught.</param>
+    /// <param name="attempt">The current attempt number.</param>
+    /// <param name="maxRetries">The maximum number of retries allowed.</param>
+    /// <param name="getDelayMs">A function to calculate the delay in milliseconds.</param>
+    /// <param name="logWarning">An action to log the warning message.</param>
+    /// <param name="logRetry">An action to log the retry message, given the delay in ms.</param>
+    /// <param name="logError">An action to log the error message when retries are exhausted.</param>
+    private async Task HandleRetryableExceptionAsync(
+        Exception ex,
+        int attempt,
+        int maxRetries,
+        Func<int> getDelayMs,
+        Action logWarning,
+        Action<int> logRetry,
+        Action logError)
+    {
+        logWarning();
 
-        // If we reach here, all retries were exhausted without success (e.g., Redis never connected)
-        _logger.LogError("Failed to create consumer group {Group} for stream {StreamKey} after {MaxRetries} attempts. Redis was not connected.", group, streamKey, MaxRetries);
-        throw new InvalidOperationException($"Failed to create consumer group '{group}' for stream '{streamKey}' after {MaxRetries} attempts. Redis was not connected.");
+        if (attempt < maxRetries - 1)
+        {
+            int delayMs = getDelayMs();
+            logRetry(delayMs);
+            await Task.Delay(delayMs);
+        }
+        else
+        {
+            logError();
+            throw ex;
+        }
     }
 }
