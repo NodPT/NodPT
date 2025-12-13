@@ -20,8 +20,6 @@ public static class DatabaseInitializer
         var password = Environment.GetEnvironmentVariable("DB_PASSWORD");
         connectionString = $"XpoProvider=MySql;server={host};port={port};user={user};password={password};database={db};SslMode=Preferred;Pooling=true;CharSet=utf8mb4;";
         DatabaseHelper.SetConnectionString(connectionString);
-        // set builder for database to use later
-        DatabaseHelper.SetBuilder(builder);
 
         builder.Services.AddXpoDefaultUnitOfWork(true, options =>
             options.UseConnectionString(connectionString)

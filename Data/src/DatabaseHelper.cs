@@ -10,28 +10,30 @@ using System.Runtime.CompilerServices;
 public static class DatabaseHelper
 {
     static string connectionString = string.Empty;
-    public static WebApplicationBuilder? builder { get; set; }
+    private static IServiceProvider? _serviceProvider;
 
     /// <summary>
     /// get the unit of work from the Services. Get and use, do not dispose it, do not use `using`
+    /// NOTE: This creates a new UnitOfWork from the fallback connection string.
+    /// Prefer using dependency injection or HttpContext.RequestServices.GetRequiredService<UnitOfWork>() instead.
     /// </summary>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
     public static UnitOfWork? GetSession()
     {
-        if (builder == null)
-            throw new InvalidOperationException("WebApplicationBuilder is not set. Please set it before getting a session.");
+        // Fallback to creating a UnitOfWork directly when service provider is not available
+        // This is needed for background services and console applications
+        if (string.IsNullOrEmpty(connectionString))
+            throw new InvalidOperationException("Connection string is not set. Please set it before creating a UnitOfWork.");
 
-        var app = builder.Build();
-
-        // Get the UnitOfWork from the service provider
-        var unitOfWork = app.Services.GetRequiredService<UnitOfWork>();
-        return unitOfWork;
+        var dataStore = XpoDefault.GetConnectionProvider(connectionString, AutoCreateOption.SchemaAlreadyExists);
+        var dl = new SimpleDataLayer(dataStore);
+        return new UnitOfWork(dl);
     }
 
-    public static void SetBuilder(WebApplicationBuilder builder)
+    public static void SetServiceProvider(IServiceProvider serviceProvider)
     {
-        DatabaseHelper.builder = builder;
+        _serviceProvider = serviceProvider;
     }
 
     [Obsolete("use GetSession to get the unit of work")]

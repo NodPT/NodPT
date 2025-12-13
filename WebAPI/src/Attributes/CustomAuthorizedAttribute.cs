@@ -6,6 +6,7 @@ using DevExpress.Xpo;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Principal; // Added for JwtRegisteredClaimNames
+using Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
 /// Custom authorization attribute that optionally checks if the user has admin privileges in the database
@@ -40,14 +41,16 @@ public class CustomAuthorizedAttribute : Attribute, IAuthorizationFilter
         // Check database for admin status
         try
         {
-            var session = DatabaseHelper.GetSession();
+            // Use HttpContext's RequestServices to get the scoped UnitOfWork
+            var session = context.HttpContext.RequestServices.GetRequiredService<UnitOfWork>();
+            
             if (UserService.IsValidFirebaseUid(firebaseUid, context.HttpContext.User) == false)
             {
                 context.Result = new UnauthorizedObjectResult(new { message = "User is not valid" });
                 return;
             }
 
-            var dbUser = session!.FindObject<User>(new BinaryOperator("FirebaseUid", firebaseUid));
+            var dbUser = session.FindObject<User>(new BinaryOperator("FirebaseUid", firebaseUid));
             if (dbUser == null)
             {
                 context.Result = new UnauthorizedObjectResult(new { message = "User not found" });
