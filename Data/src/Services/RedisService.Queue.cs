@@ -84,7 +84,7 @@ public class RedisQueueService
             // Check if Redis is connected
             if (!_redis.IsConnected)
             {
-                _logger.LogWarning($"Redis not connected when trying to add message to stream {streamKey}");
+                _logger.LogWarning("Redis not connected when trying to add message to stream {StreamKey}", streamKey);
                 throw new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Redis connection is not available");
             }
 
@@ -96,7 +96,7 @@ public class RedisQueueService
             // Add to stream
             var entryId = await db.StreamAddAsync(streamKey, entries);
             
-            _logger.LogDebug($"Added message to Redis stream {streamKey}: {entryId}");
+            _logger.LogDebug("Added message to Redis stream {StreamKey}: {EntryId}", streamKey, entryId);
             
             return entryId.ToString();
         }
@@ -187,12 +187,12 @@ public class RedisQueueService
             try
             {
                 // Wait for Redis connection to be established
-                _logger.LogInformation($"Waiting for Redis connection before starting listener for stream {streamKey}...");
+                _logger.LogInformation("Waiting for Redis connection before starting listener for stream {StreamKey}...", streamKey);
                 var connected = await WaitForRedisConnection(ConnectionWaitTimeoutMs);
                 
                 if (!connected)
                 {
-                    _logger.LogError($"Failed to establish Redis connection for stream {streamKey}. Listener will not start.");
+                    _logger.LogError("Failed to establish Redis connection for stream {StreamKey}. Listener will not start.", streamKey);
                     return;
                 }
 
