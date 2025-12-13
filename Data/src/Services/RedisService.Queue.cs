@@ -762,10 +762,6 @@ public class RedisQueueService
             }
             catch (RedisConnectionException ex)
             {
-                _logger.LogWarning(ex, "Redis connection error while creating consumer group {Group} for stream {StreamKey} (attempt {Attempt}/{MaxRetries})", group, streamKey, attempt + 1, MaxRetries);
-                
-                if (attempt < MaxRetries - 1)
-                {
                 await HandleRetryableExceptionAsync(
                     ex,
                     attempt,

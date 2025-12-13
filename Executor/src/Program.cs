@@ -73,10 +73,33 @@ builder.Services.AddSingleton<MemoryOptions>(provider =>
 });
 
 // Register Redis
+var redisConnection = builder.Configuration["Redis:ConnectionString"]
+    ?? Environment.GetEnvironmentVariable("REDIS_CONNECTION")
+    ?? "localhost:6379";
+
+// Add abortConnect=false to allow retry behavior when Redis is unavailable
+var redisOptions = ConfigurationOptions.Parse(redisConnection);
+redisOptions.AbortOnConnectFail = false;
+redisOptions.ConnectTimeout = 5000;
+redisOptions.SyncTimeout = 5000;
+
 builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
 {
-    var options = provider.GetRequiredService<ExecutorOptions>();
-    return ConnectionMultiplexer.Connect(options.RedisConnection);
+    try
+    {
+        var logger = provider.GetService<ILogger<Program>>();
+        logger?.LogInformation($"Connecting to Redis at {redisConnection}...");
+        var connection = ConnectionMultiplexer.Connect(redisOptions);
+        logger?.LogInformation("Successfully connected to Redis");
+        return connection;
+    }
+    catch (Exception ex)
+    {
+        var logger = provider.GetService<ILogger<Program>>();
+        logger?.LogWarning(ex, $"Failed to connect to Redis at {redisConnection}. Redis features will be unavailable. Ensure Redis is running and accessible.");
+        // Return a connection that won't break the app if Redis is down
+        return ConnectionMultiplexer.Connect(redisOptions);
+    }
 });
 
 builder.Services.AddSingleton<IDatabase>(provider =>
