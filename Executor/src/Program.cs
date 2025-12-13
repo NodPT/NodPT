@@ -11,11 +11,11 @@ using RedisService.Queue;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// Configure options
+// Configure options (Note: Redis connection is now configured separately from ExecutorOptions)
 builder.Services.Configure<ExecutorOptions>(options =>
 {
     // Read from environment variables with defaults
-    options.RedisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION") ?? "localhost:6379";
+    options.RedisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION") ?? "localhost:8847";
     options.MaxManager = int.TryParse(Environment.GetEnvironmentVariable("MAX_MANAGER"), out var maxManager) ? maxManager : 0;
     options.MaxInspector = int.TryParse(Environment.GetEnvironmentVariable("MAX_INSPECTOR"), out var maxInspector) ? maxInspector : 0;
     options.MaxAgent = int.TryParse(Environment.GetEnvironmentVariable("MAX_AGENT"), out var maxAgent) ? maxAgent : 0;
