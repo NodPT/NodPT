@@ -75,7 +75,7 @@ builder.Services.AddSingleton<MemoryOptions>(provider =>
 // Register Redis
 var redisConnection = builder.Configuration["Redis:ConnectionString"]
     ?? Environment.GetEnvironmentVariable("REDIS_CONNECTION")
-    ?? "localhost:8847";
+    ?? "localhost:6379";
 
 // Add abortConnect=false to allow retry behavior when Redis is unavailable
 var redisOptions = ConfigurationOptions.Parse(redisConnection);
@@ -86,19 +86,33 @@ redisOptions.SyncTimeout = 5000;
 builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
 {
     var logger = provider.GetService<ILogger<Program>>();
-    logger?.LogInformation($"Connecting to Redis at {redisConnection}...");
-    var connection = ConnectionMultiplexer.Connect(redisOptions);
     
-    if (connection.IsConnected)
+    try
     {
-        logger?.LogInformation("Successfully connected to Redis");
+        logger?.LogInformation("Connecting to Redis at {RedisConnection}...", redisConnection);
+        var connection = ConnectionMultiplexer.Connect(redisOptions);
+        
+        // Force an actual connection attempt by pinging Redis
+        // This ensures the connection is established before returning
+        try
+        {
+            var db = connection.GetDatabase();
+            db.Ping();
+            logger?.LogInformation("Successfully connected to Redis and verified with ping");
+        }
+        catch (Exception pingEx)
+        {
+            logger?.LogWarning(pingEx, "Redis connection created but ping failed. Connection will retry in background.");
+        }
+        
+        return connection;
     }
-    else
+    catch (Exception ex)
     {
-        logger?.LogWarning($"Redis connection created but not yet connected. Will retry in background.");
+        logger?.LogWarning(ex, "Failed to connect to Redis at {RedisConnection}. Redis features will be unavailable. Ensure Redis is running and accessible.", redisConnection);
+        // Return connection anyway - it will retry in background with AbortOnConnectFail=false
+        return ConnectionMultiplexer.Connect(redisOptions);
     }
-    
-    return connection;
 });
 
 builder.Services.AddSingleton<IDatabase>(provider =>
