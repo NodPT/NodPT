@@ -83,20 +83,37 @@ const initializeProjectContext = async () => {
         selectedNode.value = null;
 
         try {
-                // Load project data from backend
+                // Load project data from backend via GET /api/projects/{id}
+                // Expected response format (ProjectDto):
+                // {
+                //   Id: number,
+                //   Name: string,
+                //   Nodes: [
+                //     {
+                //       Id: string (GUID),
+                //       Name: string,
+                //       Level: string (enum: "Director", "Manager", "Inspector", "Agent"),
+                //       NodeType: string,
+                //       Status: string,
+                //       ...
+                //     }
+                //   ]
+                // }
                 const projectData = await projectApiService.getProject(projectId);
 
                 let initialNodes = [];
 
-                // Use nodes from the project if available
+                // Extract nodes from the project response
+                // Backend returns nodes in ProjectDto.Nodes property as NodeDto[]
                 if (projectData && projectData.Nodes && projectData.Nodes.length > 0) {
-                        // Map backend nodes to frontend node format
+                        // Map backend nodes (NodeDto) to frontend node format
+                        // Note: Backend uses PascalCase (C# convention), frontend uses camelCase
                         initialNodes = projectData.Nodes.map(node => ({
-                                id: node.Id,
-                                type: node.Level.toLowerCase(), // Convert level to lowercase type (Director -> director)
-                                name: node.Name,
-                                inputs: 0,
-                                outputs: 1
+                                id: node.Id,                              // GUID string from backend (REQUIRED)
+                                type: node.Level.toLowerCase(),           // Convert "Director" -> "director"
+                                name: node.Name,                          // Node display name
+                                inputs: 0,                                // Will be set by node type
+                                outputs: 1                                // Will be set by node type
                         }));
                 } else {
                         // No nodes found in project - this should not happen as backend creates default node

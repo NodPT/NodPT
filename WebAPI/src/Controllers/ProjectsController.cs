@@ -46,10 +46,18 @@ namespace NodPT.API.Controllers
         {
             try
             {
-                // Use the original method that doesn't require user validation
-                var projectService = new ProjectService(unitOfWork);
+                // Service validates user in constructor - user must own the project
+                var projectService = new ProjectService(unitOfWork, User);
                 var project = projectService.GetProject(id);
                 return project == null ? NotFound() : Ok(project);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { error = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { error = ex.Message });
             }
             catch (Exception ex)
             {

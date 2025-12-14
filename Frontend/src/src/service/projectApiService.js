@@ -63,7 +63,40 @@ class ProjectApiService {
 	/**
 	 * Get a project by ID
 	 * @param {number} id - Project ID
-	 * @returns {Promise<Object>} Project data
+	 * @returns {Promise<Object>} Project data (ProjectDto)
+	 * 
+	 * Response format (ProjectDto from backend):
+	 * {
+	 *   Id: number,
+	 *   Name: string,
+	 *   Description: string,
+	 *   IsActive: boolean,
+	 *   CreatedAt: DateTime,
+	 *   UpdatedAt: DateTime,
+	 *   UserId: number,
+	 *   TemplateId: number,
+	 *   TemplateName: string,
+	 *   UserEmail: string,
+	 *   Nodes: [                          // Array of NodeDto
+	 *     {
+	 *       Id: string,                   // GUID - Required for frontend node creation
+	 *       Name: string,                 // Node display name
+	 *       NodeType: string,             // "Default", etc.
+	 *       Level: string,                // Enum: "Director", "Manager", "Inspector", "Agent"
+	 *       MessageType: string,          // Enum value
+	 *       Status: string,               // "Active", etc.
+	 *       ParentId: string,             // Optional: Parent node GUID
+	 *       ProjectId: number,
+	 *       TemplateId: number,
+	 *       Properties: object,           // Key-value pairs
+	 *       CreatedAt: DateTime,
+	 *       UpdatedAt: DateTime,
+	 *       ...
+	 *     }
+	 *   ]
+	 * }
+	 * 
+	 * Note: Backend uses PascalCase (C# convention). Properties are case-sensitive.
 	 */
 	async getProject(id) {
 		try {
