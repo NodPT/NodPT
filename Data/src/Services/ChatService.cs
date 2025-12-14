@@ -20,9 +20,11 @@ namespace NodPT.Data.Services
             // Find the node
             var node = session.FindObject<Node>(CriteriaOperator.Parse("Id = ?", nodeId));
             
+            // If node doesn't exist in database yet, return empty list
+            // This allows frontend to work with nodes that haven't been persisted
             if (node == null)
             {
-                throw new ArgumentException($"Node with ID '{nodeId}' not found");
+                return new List<ChatMessageDto>();
             }
 
             // Verify the node belongs to a project owned by the user
@@ -73,9 +75,29 @@ namespace NodPT.Data.Services
             if (!string.IsNullOrEmpty(messageDto.NodeId))
             {
                 var node = session.FindObject<Node>(CriteriaOperator.Parse("Id = ?", messageDto.NodeId));
+                
+                // If node doesn't exist, create it
                 if (node == null)
                 {
-                    throw new ArgumentException($"Node with ID '{messageDto.NodeId}' not found");
+                    // Get the user's current project (assuming user has an active project)
+                    // If no project is found, we cannot associate the node with a project
+                    var userProject = user.Projects.FirstOrDefault(p => p.IsActive);
+                    if (userProject == null)
+                    {
+                        throw new InvalidOperationException($"Cannot create node '{messageDto.NodeId}': User has no active project");
+                    }
+
+                    node = new Node(session)
+                    {
+                        Id = messageDto.NodeId,
+                        Name = $"Node {messageDto.NodeId}",
+                        NodeType = NodeType.Default,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        Status = "active",
+                        Project = userProject
+                    };
+                    node.Save();
                 }
 
                 // Verify the node belongs to a project owned by the user
