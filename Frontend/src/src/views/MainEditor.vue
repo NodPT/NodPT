@@ -99,10 +99,10 @@ const initializeProjectContext = async () => {
                                 outputs: 1
                         }));
                 } else {
-                        // Fallback to default Director node if no nodes found
-                        initialNodes = [
-                                { type: 'director', name: 'Director', inputs: 0, outputs: 1 },
-                        ];
+                        // No nodes found in project - this should not happen as backend creates default node
+                        console.error('No nodes found in project. Backend should create a default Director node.');
+                        toast.error('Project has no nodes. Please contact support.');
+                        initialNodes = [];
                 }
 
                 const createdNodes = await leftPanelRef.value.resetNodes(initialNodes);
@@ -144,33 +144,13 @@ const initializeProjectContext = async () => {
                 });
         } catch (error) {
                 console.error('Error initializing project context:', error);
-                // Fallback to default behavior
-                const initialNodes = [
-                        { type: 'director', name: 'Director', inputs: 0, outputs: 1 },
-                ];
-
-                const createdNodes = await leftPanelRef.value.resetNodes(initialNodes);
-
-                const nodeManager = leftPanelRef.value.getNodeManager ? leftPanelRef.value.getNodeManager() : null;
-                if (nodeManager && nodeManager.editor && typeof nodeManager.editor.getNodes === 'function') {
-                        try {
-                                totalNodes.value = nodeManager.editor.getNodes().length;
-                        } catch (error) {
-                                totalNodes.value = createdNodes.length;
-                        }
-                } else {
-                        totalNodes.value = createdNodes.length;
-                }
-
+                // Show error to user - cannot create nodes without backend IDs
+                toast.error(`Failed to load project: ${error.message || 'Unknown error'}`);
+                
+                // Don't create any nodes - all nodes must come from backend
+                totalNodes.value = 0;
                 buildProgress.value = 0;
-
                 currentProjectId.value = projectId;
-
-                triggerEvent(EVENT_TYPES.PROJECT_CONTEXT_CHANGED, {
-                        projectId,
-                        projectName: queryParams.projectName || '',
-                        isNewProject: queryParams.isNewProject === 'true',
-                });
         }
 };
 

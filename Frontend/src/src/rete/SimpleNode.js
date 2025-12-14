@@ -5,13 +5,18 @@ import { triggerEvent, EVENT_TYPES } from './eventBus.js';
  */
 export class SimpleNode {
     constructor(nodeType, label, rootNode, inputsCount = 1, outputsCount = 1, editorManager, nodeId = null) {
+        // Validate that nodeId is provided
+        if (!nodeId) {
+            throw new Error(`nodeId is required when creating a SimpleNode. Node type: ${nodeType}, name: ${label}`);
+        }
+
         this.name = label;
         this.inputsCount = inputsCount;
         this.outputsCount = outputsCount;
         this.editorManager = editorManager;
         this.nodeType = nodeType; // Type of the node (director, manager, inspector, agent)
         this.panelRawNode = rootNode;
-        this.nodeId = nodeId; // Optional: Use existing node ID from backend
+        this.nodeId = nodeId; // Required: Use existing node ID from backend
 
         // Set tier-specific dimensions based on node name
         const dimensions = this._getNodeDimensions(nodeType);
@@ -48,12 +53,8 @@ export class SimpleNode {
         // Create a proper ClassicPreset node
         const node = new ClassicPreset.Node(this.name);
         
-        // Use backend node ID if provided, otherwise generate a new one
-        if (this.nodeId) {
-            node.id = this.nodeId;
-        } else {
-            node.id = `node_${(this.panelRawNode ? this.panelRawNode.id : 'director')}_${this.name}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-        }
+        // Use the backend node ID (required, validated in constructor)
+        node.id = this.nodeId;
         
         node.label = this.name.toUpperCase(); // Set the node label
         node.nodeType = this.nodeType; // Store the node type in the node data for styling
@@ -86,11 +87,15 @@ export class SimpleNode {
         return node;
     }
 
-    async addChild(nodeType, name, outputName = '', inputName = 'in') {
+    async addChild(nodeType, name, outputName = '', inputName = 'in', nodeId = null) {
         try {
+            // Validate that nodeId is provided
+            if (!nodeId) {
+                throw new Error(`nodeId is required when adding a child node. Node type: ${nodeType}, name: ${name}`);
+            }
 
-            // Create the node object directly
-            let childNode = new SimpleNode(nodeType, name, this.panelRawNode, 0, 0, this.editorManager);
+            // Create the node object directly with the required nodeId
+            let childNode = new SimpleNode(nodeType, name, this.panelRawNode, 0, 0, this.editorManager, nodeId);
 
             // Add it to the editor
             await this.editorManager.editor.addNode(childNode.node);
