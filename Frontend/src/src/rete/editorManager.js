@@ -447,7 +447,7 @@ export class EditorManager {
 	 * @param {string} name - Name of the node (default: 'Director')
 	 * @param {number} inputsCount - Number of inputs (default: 0)
 	 * @param {number} outputsCount - Number of outputs (default: 0)
-	 * @param {string} nodeId - Optional: Use existing node ID from backend (default: null, will generate new ID)
+	 * @param {string|null} nodeId - Optional: Use existing node ID from backend (default: null, will generate new ID)
 	 * @returns {Object} The created and added node
 	 */
 	async addNode(nodeType, name = 'Director', inputsCount = 0, outputsCount = 0, nodeId = null) {
