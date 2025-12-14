@@ -115,7 +115,7 @@ class ProjectApiService {
 	 */
 	async getUserProjects() {
 		try {
-			const data = await this.api.get('/projects')
+			const data = await this.api.get(this.baseURL)
 			return data
 		} catch (err) {
 			console.error('Failed to get user projects:', err)
