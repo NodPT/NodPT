@@ -118,6 +118,8 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     // Preserve original C# property names (PascalCase) in JSON output instead of converting to camelCase
     options.JsonSerializerOptions.PropertyNamingPolicy = null;
     options.JsonSerializerOptions.DictionaryKeyPolicy = null;
+    // Serialize enums as strings instead of integers
+    options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 
 // 🔹 CORS
