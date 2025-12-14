@@ -147,10 +147,10 @@ const initializeProjectContext = async () => {
                 // Show error to user - cannot create nodes without backend IDs
                 toast.error(`Failed to load project: ${error.message || 'Unknown error'}`);
                 
-                // Don't create any nodes - all nodes must come from backend
+                // Don't create any nodes or set project context - all nodes must come from backend
                 totalNodes.value = 0;
                 buildProgress.value = 0;
-                currentProjectId.value = projectId;
+                // Don't set currentProjectId to prevent inconsistent state
         }
 };
 

@@ -1140,7 +1140,7 @@ export class EditorManager {
 					// TODO: Adding nodes requires backend API call to create the node first
 					// and get the node ID from the backend before adding to frontend
 					console.warn('Add node action requires backend integration - nodes must be created via API first');
-					triggerEvent(EVENT_TYPES.TOAST_INFO, 'Adding nodes requires backend integration');
+					// Note: Toast notification should be triggered by the caller (TopBar) that has access to toast service
 					break;
 				case 'delete':
 					// Trigger DELETE_NODE event for confirmation dialog
