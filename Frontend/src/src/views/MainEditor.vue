@@ -108,13 +108,19 @@ const initializeProjectContext = async () => {
                 if (projectData && projectData.Nodes && projectData.Nodes.length > 0) {
                         // Map backend nodes (NodeDto) to frontend node format
                         // Note: Backend uses PascalCase (C# convention), frontend uses camelCase
-                        initialNodes = projectData.Nodes.map(node => ({
-                                id: node.Id,                              // GUID string from backend (REQUIRED)
-                                type: node.Level.toLowerCase(),           // Convert "Director" -> "director"
-                                name: node.Name,                          // Node display name
-                                inputs: 0,                                // Will be set by node type
-                                outputs: 1                                // Will be set by node type
-                        }));
+                        initialNodes = projectData.Nodes.map(node => {
+                                // Defensive check for Level property
+                                const level = node.Level || 'Director'; // Default to Director if missing
+                                const type = typeof level === 'string' ? level.toLowerCase() : 'director';
+                                
+                                return {
+                                        id: node.Id,                              // GUID string from backend (REQUIRED)
+                                        type: type,                               // Convert "Director" -> "director"
+                                        name: node.Name,                          // Node display name
+                                        inputs: 0,                                // Will be set by node type
+                                        outputs: 1                                // Will be set by node type
+                                };
+                        });
                 } else {
                         // No nodes found in project - this should not happen as backend creates default node
                         console.error('No nodes found in project. Backend should create a default Director node.');
