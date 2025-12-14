@@ -447,17 +447,22 @@ export class EditorManager {
 	 * @param {string} name - Name of the node (default: 'Director')
 	 * @param {number} inputsCount - Number of inputs (default: 0)
 	 * @param {number} outputsCount - Number of outputs (default: 0)
-	 * @param {string|null} nodeId - Optional: Use existing node ID from backend (default: null, will generate new ID)
+	 * @param {string} nodeId - Required: Node ID from backend (must be provided)
 	 * @returns {Object} The created and added node
 	 */
-	async addNode(nodeType, name = 'Director', inputsCount = 0, outputsCount = 0, nodeId = null) {
+	async addNode(nodeType, name = 'Director', inputsCount = 0, outputsCount = 0, nodeId) {
 		if (!this.editor) {
 			console.warn('Editor instance not initialized');
 			return null;
 		}
 
+		// Validate that nodeId is provided (required parameter)
+		if (!nodeId) {
+			throw new Error(`nodeId is required when adding a node. Node type: ${nodeType}, name: ${name}`);
+		}
+
 		try {
-			// Create the node object directly, passing the optional nodeId
+			// Create the node object directly, passing the required nodeId
 			let childNode = new SimpleNode(nodeType, name, null, inputsCount, outputsCount, this, nodeId);
 
 			// Add it to the editor
@@ -478,7 +483,7 @@ export class EditorManager {
 			return childNode;
 		} catch (error) {
 			console.error('Failed to add node:', error);
-			return null;
+			throw error; // Re-throw to let caller handle the error
 		}
 	}
 
@@ -517,14 +522,25 @@ export class EditorManager {
 			const { type, name, inputs = 0, outputs = 0, id = null } = nodeConfig || {};
 
 			if (!type || !name) {
+				console.warn('Skipping node with missing type or name:', nodeConfig);
 				continue;
 			}
 
-			// Pass the backend node ID if available
-			const createdNode = await this.addNode(type, name, inputs, outputs, id);
+			// Validate that backend node ID is provided
+			if (!id) {
+				console.error('Skipping node without ID - all nodes must have backend IDs:', nodeConfig);
+				continue;
+			}
 
-			if (createdNode) {
-				createdNodes.push(createdNode);
+			try {
+				// Pass the backend node ID (required)
+				const createdNode = await this.addNode(type, name, inputs, outputs, id);
+
+				if (createdNode) {
+					createdNodes.push(createdNode);
+				}
+			} catch (error) {
+				console.error(`Failed to create node ${name} (${type}):`, error);
 			}
 		}
 
@@ -1121,8 +1137,10 @@ export class EditorManager {
 		try {
 			switch (action) {
 				case 'add':
-					// Add a new node with 1 input and 1 output as specified in the issue
-					await this.addNode('director', 'New Node', 1, 1);
+					// TODO: Adding nodes requires backend API call to create the node first
+					// and get the node ID from the backend before adding to frontend
+					console.warn('Add node action requires backend integration - nodes must be created via API first');
+					// Note: Toast notification should be triggered by the caller (TopBar) that has access to toast service
 					break;
 				case 'delete':
 					// Trigger DELETE_NODE event for confirmation dialog

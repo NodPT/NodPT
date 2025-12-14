@@ -83,26 +83,43 @@ const initializeProjectContext = async () => {
         selectedNode.value = null;
 
         try {
-                // Load project data from backend
+                // Load project data from backend via GET /api/projects/{id}
+                // Expected response format (ProjectDto):
+                // {
+                //   Id: number,
+                //   Name: string,
+                //   Nodes: [
+                //     {
+                //       Id: string (GUID),
+                //       Name: string,
+                //       Level: string (enum: "Director", "Manager", "Inspector", "Agent"),
+                //       NodeType: string,
+                //       Status: string,
+                //       ...
+                //     }
+                //   ]
+                // }
                 const projectData = await projectApiService.getProject(projectId);
 
                 let initialNodes = [];
 
-                // Use nodes from the project if available
+                // Extract nodes from the project response
+                // Backend returns nodes in ProjectDto.Nodes property as NodeDto[]
                 if (projectData && projectData.Nodes && projectData.Nodes.length > 0) {
-                        // Map backend nodes to frontend node format
+                        // Map backend nodes (NodeDto) to frontend node format
+                        // Note: Backend uses PascalCase (C# convention), frontend uses camelCase
                         initialNodes = projectData.Nodes.map(node => ({
-                                id: node.Id,
-                                type: node.Level.toLowerCase(), // Convert level to lowercase type (Director -> director)
-                                name: node.Name,
-                                inputs: 0,
-                                outputs: 1
+                                id: node.Id,                              // GUID string from backend (REQUIRED)
+                                type: node.Level.toLowerCase(),           // Convert "Director" -> "director"
+                                name: node.Name,                          // Node display name
+                                inputs: 0,                                // Will be set by node type
+                                outputs: 1                                // Will be set by node type
                         }));
                 } else {
-                        // Fallback to default Director node if no nodes found
-                        initialNodes = [
-                                { type: 'director', name: 'Director', inputs: 0, outputs: 1 },
-                        ];
+                        // No nodes found in project - this should not happen as backend creates default node
+                        console.error('No nodes found in project. Backend should create a default Director node.');
+                        toast.error('Project has no nodes. Please contact support.');
+                        initialNodes = [];
                 }
 
                 const createdNodes = await leftPanelRef.value.resetNodes(initialNodes);
@@ -144,33 +161,13 @@ const initializeProjectContext = async () => {
                 });
         } catch (error) {
                 console.error('Error initializing project context:', error);
-                // Fallback to default behavior
-                const initialNodes = [
-                        { type: 'director', name: 'Director', inputs: 0, outputs: 1 },
-                ];
-
-                const createdNodes = await leftPanelRef.value.resetNodes(initialNodes);
-
-                const nodeManager = leftPanelRef.value.getNodeManager ? leftPanelRef.value.getNodeManager() : null;
-                if (nodeManager && nodeManager.editor && typeof nodeManager.editor.getNodes === 'function') {
-                        try {
-                                totalNodes.value = nodeManager.editor.getNodes().length;
-                        } catch (error) {
-                                totalNodes.value = createdNodes.length;
-                        }
-                } else {
-                        totalNodes.value = createdNodes.length;
-                }
-
+                // Show error to user - cannot create nodes without backend IDs
+                toast.error(`Failed to load project: ${error.message || 'Unknown error'}`);
+                
+                // Don't create any nodes or set project context - all nodes must come from backend
+                totalNodes.value = 0;
                 buildProgress.value = 0;
-
-                currentProjectId.value = projectId;
-
-                triggerEvent(EVENT_TYPES.PROJECT_CONTEXT_CHANGED, {
-                        projectId,
-                        projectName: queryParams.projectName || '',
-                        isNewProject: queryParams.isNewProject === 'true',
-                });
+                // Don't set currentProjectId to prevent inconsistent state
         }
 };
 
