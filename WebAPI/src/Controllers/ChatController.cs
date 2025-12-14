@@ -89,9 +89,6 @@ namespace NodPT.API.Controllers
                 // Ensure DB commit before publishing to Redis
                 await _session.CommitChangesAsync();
 
-                // Get node details for context (should exist after AddMessage creates it if needed)
-                var node = _session.FindObject<Node>(CriteriaOperator.Parse("Id = ?", userMessage.NodeId));
-
                 // Prepare minimal envelope for Redis stream (jobs:chat)
                 var envelope = new Dictionary<string, string>
                 {

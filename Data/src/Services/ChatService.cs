@@ -7,6 +7,27 @@ namespace NodPT.Data.Services
 {
     public class ChatService
     {
+        /// <summary>
+        /// Extract a meaningful name from a node ID
+        /// Format: node_<parent>_<name>_<timestamp>_<random>
+        /// </summary>
+        private string ExtractNodeNameFromId(string nodeId)
+        {
+            if (string.IsNullOrEmpty(nodeId))
+                return "Unknown Node";
+
+            var parts = nodeId.Split('_');
+            
+            // If we have at least 3 parts (node, parent, name, ...), extract the name
+            if (parts.Length >= 3)
+            {
+                // The name is typically the 3rd part (index 2)
+                return parts[2];
+            }
+            
+            // Fallback to using the full ID
+            return nodeId;
+        }
 
         /// <summary>
         /// Get chat messages for a specific node, ensuring the node belongs to a project owned by the user
@@ -79,18 +100,24 @@ namespace NodPT.Data.Services
                 // If node doesn't exist, create it
                 if (node == null)
                 {
-                    // Get the user's current project (assuming user has an active project)
-                    // If no project is found, we cannot associate the node with a project
-                    var userProject = user.Projects.FirstOrDefault(p => p.IsActive);
+                    // Get the user's active project using XPO query for better performance
+                    var userProject = session.FindObject<Project>(
+                        CriteriaOperator.Parse("User.Oid = ? AND IsActive = ?", user.Oid, true)
+                    );
+                    
                     if (userProject == null)
                     {
                         throw new InvalidOperationException($"Cannot create node '{messageDto.NodeId}': User has no active project");
                     }
 
+                    // Extract a more meaningful name from the node ID
+                    // Format: node_<parent>_<name>_<timestamp>_<random>
+                    var nodeName = ExtractNodeNameFromId(messageDto.NodeId);
+
                     node = new Node(session)
                     {
                         Id = messageDto.NodeId,
-                        Name = $"Node {messageDto.NodeId}",
+                        Name = nodeName,
                         NodeType = NodeType.Default,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow,
