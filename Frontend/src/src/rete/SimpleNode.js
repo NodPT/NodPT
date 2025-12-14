@@ -4,13 +4,14 @@ import { triggerEvent, EVENT_TYPES } from './eventBus.js';
  * Simple node factory class that follows Rete.js 2.0.6 API
  */
 export class SimpleNode {
-    constructor(nodeType, label, rootNode, inputsCount = 1, outputsCount = 1, editorManager) {
+    constructor(nodeType, label, rootNode, inputsCount = 1, outputsCount = 1, editorManager, nodeId = null) {
         this.name = label;
         this.inputsCount = inputsCount;
         this.outputsCount = outputsCount;
         this.editorManager = editorManager;
         this.nodeType = nodeType; // Type of the node (director, manager, inspector, agent)
         this.panelRawNode = rootNode;
+        this.nodeId = nodeId; // Optional: Use existing node ID from backend
 
         // Set tier-specific dimensions based on node name
         const dimensions = this._getNodeDimensions(nodeType);
@@ -46,7 +47,14 @@ export class SimpleNode {
 
         // Create a proper ClassicPreset node
         const node = new ClassicPreset.Node(this.name);
-        node.id = `node_${(this.panelRawNode ? this.panelRawNode.id : 'director')}_${this.name}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+        
+        // Use backend node ID if provided, otherwise generate a new one
+        if (this.nodeId) {
+            node.id = this.nodeId;
+        } else {
+            node.id = `node_${(this.panelRawNode ? this.panelRawNode.id : 'director')}_${this.name}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+        }
+        
         node.label = this.name.toUpperCase(); // Set the node label
         node.nodeType = this.nodeType; // Store the node type in the node data for styling
 

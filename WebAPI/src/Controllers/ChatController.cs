@@ -41,6 +41,11 @@ namespace NodPT.API.Controllers
                 var messages = _chatService.GetMessagesByNodeId(nodeId, user, _session);
                 return Ok(messages);
             }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, $"Node not found: {nodeId}");
+                return NotFound(new { error = ex.Message });
+            }
             catch (UnauthorizedAccessException ex)
             {
                 _logger.LogWarning(ex, $"Unauthorized access to node: {nodeId}");
@@ -89,6 +94,13 @@ namespace NodPT.API.Controllers
                 // Ensure DB commit before publishing to Redis
                 await _session.CommitChangesAsync();
 
+                // Get node details for context
+                var node = _session.FindObject<Node>(CriteriaOperator.Parse("Id = ?", userMessage.NodeId));
+                if (node == null)
+                {
+                    return NotFound(new { error = "Node not found" });
+                }
+
                 // Prepare minimal envelope for Redis stream (jobs:chat)
                 var envelope = new Dictionary<string, string>
                 {
@@ -117,9 +129,9 @@ namespace NodPT.API.Controllers
                     status = "queued"
                 });
             }
-            catch (InvalidOperationException ex)
+            catch (ArgumentException ex)
             {
-                _logger.LogWarning(ex, "Invalid operation in SendMessage");
+                _logger.LogWarning(ex, "Invalid argument in SendMessage");
                 return BadRequest(new { error = ex.Message });
             }
             catch (UnauthorizedAccessException ex)

@@ -447,17 +447,18 @@ export class EditorManager {
 	 * @param {string} name - Name of the node (default: 'Director')
 	 * @param {number} inputsCount - Number of inputs (default: 0)
 	 * @param {number} outputsCount - Number of outputs (default: 0)
+	 * @param {string} nodeId - Optional: Use existing node ID from backend (default: null, will generate new ID)
 	 * @returns {Object} The created and added node
 	 */
-	async addNode(nodeType, name = 'Director', inputsCount = 0, outputsCount = 0) {
+	async addNode(nodeType, name = 'Director', inputsCount = 0, outputsCount = 0, nodeId = null) {
 		if (!this.editor) {
 			console.warn('Editor instance not initialized');
 			return null;
 		}
 
 		try {
-			// Create the node object directly
-			let childNode = new SimpleNode(nodeType, name, null, inputsCount, outputsCount, this);
+			// Create the node object directly, passing the optional nodeId
+			let childNode = new SimpleNode(nodeType, name, null, inputsCount, outputsCount, this, nodeId);
 
 			// Add it to the editor
 			await this.editor.addNode(childNode.node);
@@ -513,13 +514,14 @@ export class EditorManager {
 		const createdNodes = [];
 
 		for (const nodeConfig of initialNodes) {
-			const { type, name, inputs = 0, outputs = 0 } = nodeConfig || {};
+			const { type, name, inputs = 0, outputs = 0, id = null } = nodeConfig || {};
 
 			if (!type || !name) {
 				continue;
 			}
 
-			const createdNode = await this.addNode(type, name, inputs, outputs);
+			// Pass the backend node ID if available
+			const createdNode = await this.addNode(type, name, inputs, outputs, id);
 
 			if (createdNode) {
 				createdNodes.push(createdNode);

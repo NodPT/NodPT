@@ -7,27 +7,6 @@ namespace NodPT.Data.Services
 {
     public class ChatService
     {
-        /// <summary>
-        /// Extract a meaningful name from a node ID
-        /// Format: node_<parent>_<name>_<timestamp>_<random>
-        /// </summary>
-        private string ExtractNodeNameFromId(string nodeId)
-        {
-            if (string.IsNullOrEmpty(nodeId))
-                return "Unknown Node";
-
-            var parts = nodeId.Split('_');
-            
-            // If we have at least 3 parts (node, parent, name, ...), extract the name
-            if (parts.Length >= 3)
-            {
-                // The name is typically the 3rd part (index 2)
-                return parts[2];
-            }
-            
-            // Fallback to using the full ID
-            return nodeId;
-        }
 
         /// <summary>
         /// Get chat messages for a specific node, ensuring the node belongs to a project owned by the user
@@ -41,11 +20,9 @@ namespace NodPT.Data.Services
             // Find the node
             var node = session.FindObject<Node>(CriteriaOperator.Parse("Id = ?", nodeId));
             
-            // If node doesn't exist in database yet, return empty list
-            // This allows frontend to work with nodes that haven't been persisted
             if (node == null)
             {
-                return new List<ChatMessageDto>();
+                throw new ArgumentException($"Node with ID '{nodeId}' not found");
             }
 
             // Verify the node belongs to a project owned by the user
@@ -96,35 +73,9 @@ namespace NodPT.Data.Services
             if (!string.IsNullOrEmpty(messageDto.NodeId))
             {
                 var node = session.FindObject<Node>(CriteriaOperator.Parse("Id = ?", messageDto.NodeId));
-                
-                // If node doesn't exist, create it
                 if (node == null)
                 {
-                    // Get the user's active project using XPO query for better performance
-                    var userProject = session.FindObject<Project>(
-                        CriteriaOperator.Parse("User.Oid = ? AND IsActive = ?", user.Oid, true)
-                    );
-                    
-                    if (userProject == null)
-                    {
-                        throw new InvalidOperationException($"Cannot create node '{messageDto.NodeId}': User has no active project");
-                    }
-
-                    // Extract a more meaningful name from the node ID
-                    // Format: node_<parent>_<name>_<timestamp>_<random>
-                    var nodeName = ExtractNodeNameFromId(messageDto.NodeId);
-
-                    node = new Node(session)
-                    {
-                        Id = messageDto.NodeId,
-                        Name = nodeName,
-                        NodeType = NodeType.Default,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                        Status = "active",
-                        Project = userProject
-                    };
-                    node.Save();
+                    throw new ArgumentException($"Node with ID '{messageDto.NodeId}' not found");
                 }
 
                 // Verify the node belongs to a project owned by the user
