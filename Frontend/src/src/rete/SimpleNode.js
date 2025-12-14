@@ -4,8 +4,8 @@ import { triggerEvent, EVENT_TYPES } from './eventBus.js';
  * Simple node factory class that follows Rete.js 2.0.6 API
  */
 export class SimpleNode {
-    constructor(nodeType, label, rootNode, inputsCount = 1, outputsCount = 1, editorManager, nodeId = null) {
-        // Validate that nodeId is provided
+    constructor(nodeType, label, rootNode, inputsCount = 1, outputsCount = 1, editorManager, nodeId) {
+        // Validate that nodeId is provided (required parameter)
         if (!nodeId) {
             throw new Error(`nodeId is required when creating a SimpleNode. Node type: ${nodeType}, name: ${label}`);
         }
@@ -87,9 +87,9 @@ export class SimpleNode {
         return node;
     }
 
-    async addChild(nodeType, name, outputName = '', inputName = 'in', nodeId = null) {
+    async addChild(nodeType, name, outputName = '', inputName = 'in', nodeId) {
         try {
-            // Validate that nodeId is provided
+            // Validate that nodeId is provided (required parameter)
             if (!nodeId) {
                 throw new Error(`nodeId is required when adding a child node. Node type: ${nodeType}, name: ${name}`);
             }

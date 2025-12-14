@@ -450,13 +450,13 @@ export class EditorManager {
 	 * @param {string} nodeId - Required: Node ID from backend (must be provided)
 	 * @returns {Object} The created and added node
 	 */
-	async addNode(nodeType, name = 'Director', inputsCount = 0, outputsCount = 0, nodeId = null) {
+	async addNode(nodeType, name = 'Director', inputsCount = 0, outputsCount = 0, nodeId) {
 		if (!this.editor) {
 			console.warn('Editor instance not initialized');
 			return null;
 		}
 
-		// Validate that nodeId is provided
+		// Validate that nodeId is provided (required parameter)
 		if (!nodeId) {
 			throw new Error(`nodeId is required when adding a node. Node type: ${nodeType}, name: ${name}`);
 		}
