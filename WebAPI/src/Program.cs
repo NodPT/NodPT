@@ -66,19 +66,22 @@ redisOptions.SyncTimeout = 5000;
 // Configure Redis connection with error handling and logging
 builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
 {
+    var logger = provider.GetService<ILogger<Program>>();
+    
     try
     {
-        var logger = provider.GetService<ILogger<Program>>();
-        logger?.LogInformation($"Connecting to Redis at {redisConnection}...");
+        logger?.LogInformation("Connecting to Redis at {RedisConnection}...", redisConnection);
         var connection = ConnectionMultiplexer.Connect(redisOptions);
-        logger?.LogInformation("Successfully connected to Redis");
+        
+        // ConnectionMultiplexer will handle reconnects in the background (AbortOnConnectFail=false)
+        // No need to force a ping here; rely on built-in retry behavior.
+        
         return connection;
     }
     catch (Exception ex)
     {
-        var logger = provider.GetService<ILogger<Program>>();
-        logger?.LogWarning(ex, $"Failed to connect to Redis at {redisConnection}. Redis features will be unavailable. Ensure Redis is running and accessible.");
-        // Return a dummy connection that won't break the app if Redis is down
+        logger?.LogWarning(ex, "Failed to connect to Redis at {RedisConnection}. Redis features will be unavailable. Ensure Redis is running and accessible.", redisConnection);
+        // Return connection anyway - it will retry in background with AbortOnConnectFail=false
         return ConnectionMultiplexer.Connect(redisOptions);
     }
 });

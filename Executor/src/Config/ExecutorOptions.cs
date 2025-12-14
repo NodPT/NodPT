@@ -8,9 +8,9 @@ public class ExecutorOptions
     public const string SectionName = "Executor";
 
     /// <summary>
-    /// Redis connection string
+    /// Redis connection string (Legacy - prefer using Redis:ConnectionString in appsettings.json)
     /// </summary>
-    public string RedisConnection { get; set; } = "localhost:8847";
+    public string RedisConnection { get; set; } = "localhost:6379";
 
     /// <summary>
     /// Maximum concurrent manager jobs (0 = unlimited)
