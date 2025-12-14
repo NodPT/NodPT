@@ -73,22 +73,8 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
         logger?.LogInformation("Connecting to Redis at {RedisConnection}...", redisConnection);
         var connection = ConnectionMultiplexer.Connect(redisOptions);
         
-        // Force an actual connection attempt by pinging Redis asynchronously
-        // This ensures the connection is established before returning
-        // Note: Using Task.Run to avoid blocking startup thread
-        Task.Run(async () =>
-        {
-            try
-            {
-                var db = connection.GetDatabase();
-                await db.PingAsync();
-                logger?.LogInformation("Successfully connected to Redis and verified with ping");
-            }
-            catch (Exception pingEx)
-            {
-                logger?.LogWarning(pingEx, "Redis connection created but ping failed. Connection will retry in background.");
-            }
-        });
+        // ConnectionMultiplexer will handle reconnects in the background (AbortOnConnectFail=false)
+        // No need to force a ping here; rely on built-in retry behavior.
         
         return connection;
     }
