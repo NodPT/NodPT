@@ -344,8 +344,9 @@ If upgrading from manual SignalR initialization:
    // OLD - Remove this
    await signalRService.initialize('/editorHub')
    
-   // NEW - Automatic via auth lifecycle
-   // No code needed
+   // NEW - SignalR hub path is configured via environment variables
+   // Hub automatically connects to /signalr when user authenticates
+   await signalRService.initialize()
    ```
 
 2. **Update logout calls**:

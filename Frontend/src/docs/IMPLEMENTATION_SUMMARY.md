@@ -168,7 +168,7 @@ public class EditorHub : Hub
 2. **Hub Configuration**:
 ```csharp
 // Program.cs or Startup.cs
-app.MapHub<EditorHub>("/editorHub");
+app.MapHub<NodptHub>("/signalr");
 ```
 
 3. **CORS Configuration** (if frontend and backend are on different domains)
@@ -177,10 +177,11 @@ app.MapHub<EditorHub>("/editorHub");
 
 ### For Developers
 
-1. **Enable SignalR** (when backend is ready):
-   - Uncomment line in `src/views/MainEditor.vue`:
+1. **Enable SignalR** (automatically initialized when user authenticates):
+   - SignalR is configured via environment variables in `.env`:
    ```javascript
-   await signalRService.initialize('/editorHub');
+   // Initializes automatically when entering MainEditor
+   await signalRService.initialize();
    ```
 
 2. **Customize PWA**:

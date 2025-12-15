@@ -84,7 +84,7 @@ This implementation adds Firebase token-based authentication to the SignalR hub 
 **Environment Variables:**
 ```env
 VITE_SIGNALR_BASE_URL=http://localhost:8446
-VITE_SIGNALR_HUB_PATH=/nodpt_hub
+VITE_SIGNALR_HUB_PATH=/signalr
 VITE_API_BASE_URL=http://localhost:5049/api
 VITE_ENV=QA
 ```
@@ -233,7 +233,7 @@ For this frontend to work with backend:
 
 4. **Hub Endpoint:**
    ```csharp
-   app.MapHub<NodptHub>("/nodpt_hub");
+   app.MapHub<NodptHub>("/signalr");
    ```
 
 ## Testing Checklist
@@ -264,8 +264,8 @@ If upgrading from manual SignalR initialization:
    // OLD - Remove this
    await signalRService.initialize('/editorHub')
    
-   // NEW - Automatic via auth lifecycle
-   // No code needed
+   // NEW - Hub path configured via environment variables
+   await signalRService.initialize()
    ```
 
 2. **Update logout:**

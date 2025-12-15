@@ -55,7 +55,7 @@
 │                         Backend Server                       │
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │                 SignalR Hub                           │  │
-│  │                 (/editorHub)                          │  │
+│  │                 (/signalr)                            │  │
 │  │                                                        │  │
 │  │  • Receives client messages                           │  │
 │  │  • Broadcasts to other clients                        │  │
