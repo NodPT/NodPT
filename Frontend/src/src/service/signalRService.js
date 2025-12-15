@@ -51,7 +51,7 @@ class SignalRService {
    */
   getHubUrl() {
     const baseUrl = import.meta.env.VITE_SIGNALR_BASE_URL || 'http://localhost:8848';
-    const hubPath = import.meta.env.VITE_SIGNALR_HUB_PATH || '/nodpt_hub';
+    const hubPath = import.meta.env.VITE_SIGNALR_HUB_PATH || '/signalr';
     return `${baseUrl}${hubPath}`;
   }
 
