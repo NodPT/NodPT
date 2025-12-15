@@ -206,8 +206,11 @@ export default {
    VITE_FIREBASE_APP_ID=your-app-id
    
    # API Configuration
-   VITE_API_BASE_URL=http://localhost:8846
-   VITE_SIGNALR_URL=http://localhost:8848/nodpt_hub
+   VITE_API_BASE_URL=http://localhost:8846/api
+   
+   # SignalR Configuration
+   VITE_SIGNALR_BASE_URL=http://localhost:8846
+   VITE_SIGNALR_HUB_PATH=/signalr
    ```
 
 4. **Run development server**:
@@ -252,8 +255,11 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
 VITE_FIREBASE_APP_ID=your-app-id
 
 # API Endpoints
-VITE_API_BASE_URL=http://nodpt-api:8846
-VITE_SIGNALR_URL=http://nodpt-signalr:8848/nodpt_hub
+VITE_API_BASE_URL=http://nodpt-api:8846/api
+
+# SignalR Configuration
+VITE_SIGNALR_BASE_URL=http://nodpt-signalr:8846
+VITE_SIGNALR_HUB_PATH=/signalr
 ```
 
 ### Build and Run with Docker
@@ -295,12 +301,12 @@ The frontend will be accessible at `http://localhost:8443`
 The frontend connects to SignalR for real-time updates:
 
 ```javascript
-// SignalR is configured in src/plugins/signalr-plugin.js
-// Access in components:
-const signalR = inject('signalR');
+// SignalR is configured in src/service/signalRService.js
+// It automatically connects when user is authenticated
+import signalRService from '@/service/signalRService';
 
 // Listen for node updates
-signalR.on('ReceiveNodeUpdate', (data) => {
+signalRService.on('ReceiveNodeUpdate', (data) => {
   console.log('Node update:', data);
 });
 

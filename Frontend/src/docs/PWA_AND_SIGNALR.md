@@ -121,7 +121,7 @@ Update the hub URL in `src/views/MainEditor.vue`:
 
 ```javascript
 // Initialize SignalR connection
-await signalRService.initialize('/editorHub'); // Change to your hub URL
+await signalRService.initialize(); // Uses /signalr hub path by default
 ```
 
 #### Server-Side Requirements
@@ -145,7 +145,7 @@ public class EditorHub : Hub
 And configure it in your Startup/Program.cs:
 
 ```csharp
-app.MapHub<EditorHub>("/editorHub");
+app.MapHub<EditorHub>("/signalr");
 ```
 
 ### Connection Status Display
@@ -258,7 +258,7 @@ The SignalR service is designed to fail gracefully. If no backend is available:
 
 ```javascript
 // In MainEditor.vue onMounted()
-await signalRService.initialize('/editorHub'); // Uncomment this line
+await signalRService.initialize(); // SignalR is initialized automatically
 ```
 
 ### Security Considerations
