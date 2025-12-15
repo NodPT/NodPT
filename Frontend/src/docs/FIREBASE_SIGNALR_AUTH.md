@@ -133,7 +133,7 @@ Create a `.env` file based on `.env.example`:
 ```env
 # SignalR Configuration
 VITE_SIGNALR_BASE_URL=http://localhost:8446
-VITE_SIGNALR_HUB_PATH=/nodpt_hub
+VITE_SIGNALR_HUB_PATH=/signalr
 
 # API Configuration
 VITE_API_BASE_URL=http://localhost:5049/api
@@ -344,8 +344,9 @@ If upgrading from manual SignalR initialization:
    // OLD - Remove this
    await signalRService.initialize('/editorHub')
    
-   // NEW - Automatic via auth lifecycle
-   // No code needed
+   // NEW - SignalR hub path is configured via environment variables
+   // Hub automatically connects to /signalr when user authenticates
+   await signalRService.initialize()
    ```
 
 2. **Update logout calls**:

@@ -167,6 +167,7 @@ try
                 {
                     Credential = GoogleCredential.FromJson(credentialJson)
                 });
+                Console.WriteLine("Firebase Admin SDK initialized successfully.");
             }
             catch (Exception ex)
             {
@@ -178,10 +179,14 @@ try
             Console.WriteLine("WARNING: GOOGLE_APPLICATION_CREDENTIALS env var not set (expects JSON content).");
         }
     }
+    else
+    {
+        Console.WriteLine("Firebase Admin SDK already initialized. Skipping initialization.");
+    }
 }
 catch (Exception ex)
 {
-    Console.WriteLine($"To enable Firebase authentication, set GOOGLE_APPLICATION_CREDENTIALS environment variable. Error: {ex.Message}");
+    Console.WriteLine($"Error checking Firebase initialization status: {ex.Message}");
 }
 
 // Add authentication using Firebase JWTs via JWT Bearer
