@@ -206,10 +206,10 @@ export default {
    VITE_FIREBASE_APP_ID=your-app-id
    
    # API Configuration
-   VITE_API_BASE_URL=http://localhost:8846/api
+   VITE_API_BASE_URL=http://localhost:5049/api
    
    # SignalR Configuration
-   VITE_SIGNALR_BASE_URL=http://localhost:8846
+   VITE_SIGNALR_BASE_URL=http://localhost:5049
    VITE_SIGNALR_HUB_PATH=/signalr
    ```
 
