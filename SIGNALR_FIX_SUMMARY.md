@@ -50,7 +50,7 @@ Updated all documentation to reflect the correct SignalR configuration:
 
 **Frontend (.env files):**
 ```env
-VITE_SIGNALR_BASE_URL=http://localhost:8846
+VITE_SIGNALR_BASE_URL=http://localhost:5049
 VITE_SIGNALR_HUB_PATH=/signalr
 ```
 
