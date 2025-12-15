@@ -309,13 +309,9 @@ export default {
 						performance: null // Can be extended later
 					});
 
-					// Trigger event to notify DeepChatComponent about node selection
-					triggerEvent(EVENT_TYPES.NODE_SELECTED, {
-						id: nodeData.Id,
-						name: nodeData.Name,
-						level: nodeData.Level,
-						nodeData: nodeData
-					});
+					// NOTE: Do NOT trigger NODE_SELECTED event here to avoid infinite loop
+					// The event is already triggered by editorManager when user clicks a node
+					// RightPanel should only react to node selection, not re-trigger it
 				}
 			} catch (error) {
 				console.error('Error loading node data:', error);
