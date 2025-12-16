@@ -7,7 +7,7 @@ services:
     container_name: nodpt-redis
 
     ports:
-      - "8847:6379" # FIXED
+      - "6379:6379" # FIXED
 
     volumes:
       - redis-data:/data
