@@ -69,7 +69,7 @@ jobs:
            run: |
               echo "Waiting for SignalR health endpoint..."
               for i in {1..3}; do
-                if curl -fsS http://localhost:8847/signalR/ping > /dev/null; then
+                if curl -fsS http://localhost:6379/signalR/ping > /dev/null; then
                   echo "SignalR is healthy"
                   exit 0
                 fi

@@ -5,13 +5,13 @@ This directory contains the Docker configuration for the NodPT Redis instance.
 ## Features
 
 - Based on official Redis 7 Alpine image (ARM64 compatible)
-- Custom port configuration (8847)
+- Custom port configuration (6379)
 - Persistent data storage
 - Optimized for ARM64 Linux servers
 
 ## Port Configuration
 
-- **Redis Port**: 8847 (exposed on host)
+- **Redis Port**: 6379 (exposed on host)
 
 ## Prerequisites
 
@@ -68,7 +68,7 @@ docker compose logs -f
 
 ### Test Connection
 ```bash
-docker exec nodpt-redis redis-cli -p 8847 ping
+docker exec nodpt-redis redis-cli -p 6379 ping
 ```
 
 Expected output: `PONG`

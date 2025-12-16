@@ -25,7 +25,7 @@ NodPT is built using a modern microservices architecture with Docker containers.
        ▼
 ┌─────────────┐         ┌─────────────┐
 │   WebAPI    │◄───────►│    Redis    │
-│   Port 8846 │  Write  │   Port 8847 │
+│   Port 8846 │  Write  │   Port 6379 │
 └─────────────┘         └──────┬──────┘
                                │
                                │ Read/Write
@@ -69,7 +69,7 @@ NodPT is built using a modern microservices architecture with Docker containers.
 | **SignalR** | .NET 8, SignalR Core | Real-time communication hub | 8848 |
 | **Executor** | .NET 8, Worker Service | Background job processor | N/A |
 | **AI** | Ollama | LLM inference engine (requires GPU) | 11434 |
-| **Redis** | Redis 7 Alpine | Message broker and caching | 8847 |
+| **Redis** | Redis 7 Alpine | Message broker and caching | 6379 |
 | **Data** | DevExpress XPO, MySQL/MariaDB | Data access layer and ORM | N/A |
 
 ## 🚀 Quick Start with Docker
@@ -154,7 +154,7 @@ NodPT/
 ├── AI/               # Ollama AI service (Port 11434)
 │   ├── docker-compose.yml
 │   └── README.md     # AI service documentation
-├── Redis/            # Redis message broker (Port 8847)
+├── Redis/            # Redis message broker (Port 6379)
 │   ├── src/          # Redis configuration
 │   ├── Dockerfile    # Redis container
 │   └── README.md     # Redis documentation
