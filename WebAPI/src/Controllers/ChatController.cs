@@ -79,7 +79,7 @@ namespace NodPT.API.Controllers
                     // Fallback to header for backward compatibility
                     connectionId = Request.Headers["X-SignalR-ConnectionId"].FirstOrDefault();
                 }
-                
+
                 if (string.IsNullOrEmpty(connectionId))
                 {
                     _logger.LogWarning("Missing SignalR ConnectionId in request");
@@ -94,12 +94,6 @@ namespace NodPT.API.Controllers
                 // Ensure DB commit before publishing to Redis
                 await _session.CommitChangesAsync();
 
-                // Get node details for context
-                var node = _session.FindObject<Node>(CriteriaOperator.Parse("Id = ?", userMessage.NodeId));
-                if (node == null)
-                {
-                    return NotFound(new { error = "Node not found" });
-                }
 
                 // Prepare minimal envelope for Redis stream (jobs:chat)
                 var envelope = new Dictionary<string, string>
@@ -112,8 +106,8 @@ namespace NodPT.API.Controllers
 
                 _logger.LogInformation($"Chat message queued for processing: ChatId={savedMessage.Oid}, ConnectionId={connectionId}, EntryId={entryId}");
 
-                return Ok(new 
-                { 
+                return Ok(new
+                {
                     userMessage = new ChatMessageDto
                     {
                         Id = savedMessage.Oid,
@@ -203,7 +197,7 @@ namespace NodPT.API.Controllers
         public IActionResult LikeMessage([FromBody] ChatResponseDto chatResponse)
         {
             if (chatResponse == null) return BadRequest("ChatResponse cannot be null");
-            
+
             try
             {
                 var user = UserService.GetUser(User, _session);
@@ -241,7 +235,7 @@ namespace NodPT.API.Controllers
         public IActionResult DislikeMessage([FromBody] ChatResponseDto chatResponse)
         {
             if (chatResponse == null) return BadRequest("ChatResponse cannot be null");
-            
+
             try
             {
                 var user = UserService.GetUser(User, _session);

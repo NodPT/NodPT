@@ -2,7 +2,6 @@
 import axios from 'axios';
 import { getToken } from '../service/tokenStorage';
 
-
 /**
  * Read the access token from storage using the existing tokenStorage service
  * The tokenStorage service automatically checks both localStorage and sessionStorage
@@ -24,7 +23,7 @@ export default {
 		const baseURL = options.baseURL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:5049/api';
 		const apiAxios = axios.create({
 			baseURL,
-			timeout: options.timeout || 15000,
+			timeout: options.timeout || 600000, // extend timeout to 10 minutes
 		});
 
 		// Attach Bearer token automatically for every request
@@ -70,6 +69,5 @@ export default {
 
 		app.config.globalProperties.$api = exposed;
 		app.provide('api', exposed);
-
 	},
 };

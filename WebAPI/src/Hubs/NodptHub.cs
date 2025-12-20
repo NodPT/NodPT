@@ -13,6 +13,7 @@ public class NodptHub : Hub
     public NodptHub(ILogger<NodptHub> logger)
     {
         _logger = logger;
+        _logger.LogInformation($"signalR started");
     }
 
     public override async Task OnConnectedAsync()

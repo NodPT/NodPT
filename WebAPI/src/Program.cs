@@ -45,6 +45,9 @@ builder.Configuration.AddEnvironmentVariables();
 // 🔹 Database initialization
 DatabaseInitializer.Initialize(builder);
 
+// 🔹 Add IHttpContextAccessor for HTTP context access
+builder.Services.AddHttpContextAccessor();
+
 // 🔹 Redis
 #region Redis Configuration
 var redisConnection = builder.Configuration["Redis:ConnectionString"]
@@ -230,9 +233,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             OnMessageReceived = context =>
             {
                 var accessToken = context.Request.Query["access_token"];
+                if (string.IsNullOrEmpty(accessToken))
+                    accessToken = context.Request.Query["token"];
                 var path = context.HttpContext.Request.Path;
 
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/signalr"))
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/signalr", StringComparison.OrdinalIgnoreCase))
                 {
                     context.Token = accessToken;
                 }
@@ -259,11 +264,39 @@ app.UseAuthentication(); // 🔹 Enable authentication
 app.UseAuthorization(); // 🔹 Enable authorization
 
 // 🔹 Map the SignalR hub
+Console.WriteLine("Mapping SignalR hub to /signalr and /signalR endpoints...");
 app.MapHub<NodptHub>("/signalr").RequireAuthorization();
+Console.WriteLine("SignalR hub mapped successfully to /signalr and /signalR");
 
 app.MapControllers(); // 🔹 Map controllers
 
+// Log all registered endpoints
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+logger.LogInformation("Application configured. SignalR hub available at /signalr and /signalR");
+
 app.Run();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

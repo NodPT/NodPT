@@ -23,7 +23,11 @@ public static class DatabaseInitializer
 
         builder.Services.AddXpoDefaultUnitOfWork(true, options =>
             options.UseConnectionString(connectionString)
+#if DEBUG
                 .UseAutoCreationOption(AutoCreateOption.DatabaseAndSchema)
+#else
+                .UseAutoCreationOption(AutoCreateOption.SchemaAlreadyExists)
+#endif
                 // Register known entity types used by the application so XPO can discover mappings.
                 // StatisticInfo was not defined in the project; explicitly register the real model types.
                 .UseEntityTypes(new Type[] {
@@ -45,7 +49,36 @@ public static class DatabaseInitializer
         builder.Services.AddSingleton(typeof(IModelMetadataProvider), typeof(XpoMetadataProvider));
 
         // Create sample data
-        //CreateSampleData();
+#if DEBUG
+        CreateSampleData();
+#endif
+    }
+
+    static void CreateSampleData()
+    {
+        var session = DatabaseHelper.GetSession();
+        if (session == null) return;
+
+        if (session.Query<Template>().Any())
+        {
+            Console.WriteLine("Sample data was created");
+            return;
+        }
+
+        // create template
+        var template = new Template(session)
+        {
+            Category = "code",
+            CreatedAt = DateTime.Now,
+            Description = "for coding",
+            Name = "Coding",
+            IsActive = true,
+            Version = "1.0",
+        };
+
+        template.Save();
+        session.CommitChanges();
+
     }
 
 
