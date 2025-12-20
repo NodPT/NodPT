@@ -3,42 +3,42 @@
 		<div class="chat-messages" ref="chatMessages">
 			<div v-for="message in chatData.messages" :key="message.id"
 				:class="['message', message.type === 'ai' ? 'ai-message' : 'user-message']">
-				<div class="message-content" v-html="renderMarkdown(message.content)"></div>
+				<!-- message content -->
+				<div class="message-content" :class="['thinking', message.thinking]"
+					v-html="renderMarkdown(message.content)"></div>
 				<!-- Copy button available for user messages -->
 				<div v-if="message.type !== 'ai'"
 					class="message-controls d-flex justify-content-start align-items-center mt-1">
-					<button @click="copyMessage(message)"
-						class="action-btn"
-						:disabled="isLoading" :title="message._copied ? 'Copied' : 'Copy to clipboard'">
+					<button @click="copyMessage(message)" class="action-btn" :disabled="isLoading"
+						:title="message._copied ? 'Copied' : 'Copy to clipboard'">
 						<i :class="['bi', message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold']"></i>
 					</button>
 				</div>
 				<div class="message-actions" v-if="message.type === 'ai'">
 					<!-- Chat response buttons -->
-					<div class="chat-response-buttons">
-						<button @click="likeMessage(message)"
-							class="action-btn"
-							:disabled="isLoading" title="Like this response">
+					<div class="chat-response-buttons" v-if="!message.thinking">
+						<button @click="likeMessage(message)" class="action-btn" :disabled="isLoading"
+							title="Like this response">
 							<i :class="['bi', 'bi-hand-thumbs-up', 'fw-bold', message.Liked ? 'text-success' : '']"></i>
 						</button>
-						<button @click="dislikeMessage(message)"
-							class="action-btn"
-							:disabled="isLoading" title="Dislike this response">
-							<i :class="['bi', 'bi-hand-thumbs-down', 'fw-bold', message.Disliked ? 'text-danger' : '']"></i>
+						<button @click="dislikeMessage(message)" class="action-btn" :disabled="isLoading"
+							title="Dislike this response">
+							<i
+								:class="['bi', 'bi-hand-thumbs-down', 'fw-bold', message.Disliked ? 'text-danger' : '']"></i>
 						</button>
-						<button @click="copyMessage(message)"
-							class="action-btn"
-							:disabled="isLoading" :title="message._copied ? 'Copied' : 'Copy to clipboard'">
+						<button @click="copyMessage(message)" class="action-btn" :disabled="isLoading"
+							:title="message._copied ? 'Copied' : 'Copy to clipboard'">
 							<i :class="['bi', message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold']"></i>
 						</button>
 					</div>
 					<!-- Build Solution button - shown when message content contains solution=true -->
-					<button v-if="hasSolution(message) && !message.markedAsSolution" @click="buildSolution(message)"
-						class="action-btn ms-2" :disabled="isLoading" title="Build Solution">
+					<button v-if="hasSolution(message) && !message.markedAsSolution && !message.thinking"
+						@click="buildSolution(message)" class="action-btn ms-2" :disabled="isLoading"
+						title="Build Solution">
 						<i class="bi bi-tools fw-bold"></i>
 						<span class="ms-1">Build Solution</span>
 					</button>
-					<span v-if="message.markedAsSolution" class="badge bg-success ms-2">
+					<span v-if="message.markedAsSolution && !message.thinking" class="badge bg-success ms-2">
 						<i class="bi bi-check2-square me-1 fw-bold"></i>
 						<span>Solution</span>
 					</span>
@@ -50,15 +50,9 @@
 		</div>
 		<div class="chat-input-container">
 			<div class="chat-input-wrapper">
-				<textarea 
-					v-model="newMessage" 
-					@keydown.enter.exact="handleEnter"
-					ref="messageTextarea"
-					class="chat-textarea form-control"
-					placeholder="Type your message... (Shift+Enter for new line)"
-					:disabled="isLoading"
-					rows="1"
-				></textarea>
+				<textarea v-model="newMessage" @keydown.enter.exact="handleEnter" ref="messageTextarea"
+					class="chat-textarea form-control" placeholder="Type your message... (Shift+Enter for new line)"
+					:disabled="isLoading" rows="1"></textarea>
 				<button @click="sendMessage" class="btn btn-primary send-btn" :disabled="isSendDisabled">
 					<span v-if="isLoading" class="spinner-border spinner-border-sm"></span>
 					<i v-else class="bi bi-send fw-bold"></i>
@@ -248,10 +242,10 @@ export default {
 		// Auto-resize textarea based on content
 		const autoResizeTextarea = () => {
 			if (!messageTextarea.value) return;
-			
+
 			// Reset height to auto to get the correct scrollHeight
 			messageTextarea.value.style.height = 'auto';
-			
+
 			// Set height based on scrollHeight, with max height constant
 			const newHeight = Math.min(messageTextarea.value.scrollHeight, MAX_TEXTAREA_HEIGHT);
 			messageTextarea.value.style.height = `${newHeight}px`;
@@ -312,6 +306,21 @@ export default {
 				// AI response will come through SignalR, not in HTTP response
 				console.log('Message sent and queued for AI processing:', response);
 
+				// add a temporary AI message indicating thinking
+				const aiThinkingMessage = {
+					id: Date.now() + 1,
+					type: 'ai',
+					content: 'thinking...',
+					timestamp: new Date().toISOString(),
+					markedAsSolution: false,
+					liked: false,
+					disliked: false,
+					thinking: true,
+				};
+
+				chatData.messages.push(aiThinkingMessage);
+				scrollToBottom();
+
 			} catch (error) {
 				console.error('Error sending message:', error);
 				// Show error to user
@@ -347,7 +356,7 @@ export default {
 			try {
 				// Call the mark as solution API
 				await chatApiService.markAsSolution(message.id, currentNodeId.value);
-				
+
 				// Update UI to reflect the change
 				message.markedAsSolution = true;
 
