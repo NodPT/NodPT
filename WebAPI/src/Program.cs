@@ -1,22 +1,15 @@
-using System;
-using System.Linq;
-using System.Net.Http;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using NodPT.Data.Services;
-using NodPT.API.Services;
-using NodPT.API.Hubs;
-using NodPT.API.BackgroundServices;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using StackExchange.Redis;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using NodPT.API.BackgroundServices;
+using NodPT.API.Hubs;
+using NodPT.Data.Services;
 using RedisService.Cache;
 using RedisService.Queue;
+using StackExchange.Redis;
+using System;
+using System.Linq;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args); // 🔹 Create builder
 
@@ -53,6 +46,7 @@ builder.Configuration.AddEnvironmentVariables();
 DatabaseInitializer.Initialize(builder);
 
 // 🔹 Redis
+#region Redis Configuration
 var redisConnection = builder.Configuration["Redis:ConnectionString"]
     ?? Environment.GetEnvironmentVariable("REDIS_CONNECTION")
     ?? "localhost:6379";
@@ -67,15 +61,15 @@ redisOptions.SyncTimeout = 5000;
 builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
 {
     var logger = provider.GetService<ILogger<Program>>();
-    
+
     try
     {
         logger?.LogInformation("Connecting to Redis at {RedisConnection}...", redisConnection);
         var connection = ConnectionMultiplexer.Connect(redisOptions);
-        
+
         // ConnectionMultiplexer will handle reconnects in the background (AbortOnConnectFail=false)
         // No need to force a ping here; rely on built-in retry behavior.
-        
+
         return connection;
     }
     catch (Exception ex)
@@ -101,6 +95,9 @@ builder.Services.AddSingleton<RedisQueueService>(provider =>
     return new RedisQueueService(multiplexer, logger);
 });
 
+#endregion
+
+
 // 🔹 Log Services
 builder.Services.AddScoped<LogService>();
 
@@ -123,6 +120,7 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 });
 
 // 🔹 CORS
+#region CORS Setup
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 Console.WriteLine($"Configuring CORS:. allowed origins: {string.Join(", ", allowedOrigins ?? Array.Empty<string>())}");
 builder.Services.AddCors(options =>
@@ -139,8 +137,11 @@ builder.Services.AddCors(options =>
         }
     });
 });
+#endregion
 
 // 🔹 Firebase Authentication setup
+#region Firebase Helper Class
+
 string? firebaseProjectId = builder.Configuration["Firebase:ProjectId"]
  ?? Environment.GetEnvironmentVariable("VITE_FIREBASE_PROJECT_ID")
  ?? Environment.GetEnvironmentVariable("FIREBASE_PROJECT_ID")
@@ -152,7 +153,7 @@ if (string.IsNullOrWhiteSpace(firebaseProjectId))
     throw new InvalidOperationException("Firebase project id not configured");
 }
 
-// Initialize Firebase Admin SDK
+//! Initialize Firebase Admin SDK
 // Note: For production, you should set GOOGLE_APPLICATION_CREDENTIALS environment variable
 try
 {
@@ -189,7 +190,9 @@ catch (Exception ex)
     Console.WriteLine($"Error checking Firebase initialization status: {ex.Message}");
 }
 
-// Add authentication using Firebase JWTs via JWT Bearer
+
+
+//! Add authentication using Firebase JWTs via JWT Bearer
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -220,7 +223,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
         // Include error details in development
         options.IncludeErrorDetails = builder.Environment.IsDevelopment();
-        
+
         // Configure for SignalR to use query string token
         options.Events = new JwtBearerEvents
         {
@@ -228,17 +231,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
-                
+
                 if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/signalr"))
                 {
                     context.Token = accessToken;
                 }
-                
+
                 return Task.CompletedTask;
             }
         };
     });
 
+#endregion
+
+// 🔹 Add authorization services
 builder.Services.AddAuthorization();
 
 // 🔹 Build and run app
