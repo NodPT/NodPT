@@ -26,7 +26,7 @@ class ChatApiService {
 			if (!message.nodeId) {
 				throw new Error('nodeId is required for sending messages');
 			}
-
+			this.connectionId = localStorage.getItem('connectionId'); // Optional SignalR connection ID
 			const messageDto = {
 				Sender: 'user',
 				Message: message.content,

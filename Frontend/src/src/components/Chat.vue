@@ -4,7 +4,7 @@
 			<div v-for="message in chatData.messages" :key="message.id"
 				:class="['message', message.type === 'ai' ? 'ai-message' : 'user-message']">
 				<!-- message content -->
-				<div class="message-content" :class="['thinking', message.thinking]"
+				<div class="message-content" :class="[message.thinking ? 'thinking' : '']"
 					v-html="renderMarkdown(message.content)"></div>
 				<!-- Copy button available for user messages -->
 				<div v-if="message.type !== 'ai'"
@@ -51,11 +51,11 @@
 		<div class="chat-input-container">
 			<div class="chat-input-wrapper">
 				<textarea v-model="newMessage" @keydown.enter.exact="handleEnter" ref="messageTextarea"
-					class="chat-textarea form-control" placeholder="Type your message... (Shift+Enter for new line)"
-					:disabled="isLoading" rows="1"></textarea>
-				<button @click="sendMessage" class="btn btn-primary send-btn" :disabled="isSendDisabled">
+					class="chat-textarea form-control" placeholder="Ask anything..." :disabled="isLoading"
+					rows="1"></textarea>
+				<button @click="sendMessage" class="btn btn-primary send-btn">
 					<span v-if="isLoading" class="spinner-border spinner-border-sm"></span>
-					<i v-else class="bi bi-send fw-bold"></i>
+					<i v-else class="bi fw-bold" :class="[thinking ? 'bi-square-fill' : 'bi-send']"></i>
 				</button>
 			</div>
 		</div>
@@ -80,6 +80,7 @@ export default {
 		const chatData = reactive({ messages: [] });
 		const newMessage = ref('');
 		const isLoading = ref(false);
+		const thinking = ref(false);
 
 		// Computed properties
 		const isSendDisabled = computed(() => isLoading.value || !newMessage.value.trim());
@@ -266,8 +267,23 @@ export default {
 			});
 		});
 
-		// Chat functions
+		const removeThinkingMessage = () => {
+			const thinkingIndex = chatData.messages.findIndex(msg => msg.thinking);
+			if (thinkingIndex !== -1) {
+				chatData.messages.splice(thinkingIndex, 1);
+			}
+		};
+
+		// Chat functions	
 		const sendMessage = async () => {
+
+			if (thinking.value) {
+				thinking.value = false;
+				removeThinkingMessage();
+				return;
+			}
+
+
 			if (!newMessage.value.trim() || isLoading.value) return;
 
 			// Validate that we have a nodeId
@@ -317,7 +333,7 @@ export default {
 					disliked: false,
 					thinking: true,
 				};
-
+				thinking.value = true;
 				chatData.messages.push(aiThinkingMessage);
 				scrollToBottom();
 
@@ -467,7 +483,7 @@ export default {
 			chatData,
 			newMessage,
 			isLoading,
-
+			thinking,
 			// Refs
 			chatMessages,
 			messageTextarea,
