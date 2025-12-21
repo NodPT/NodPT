@@ -91,9 +91,8 @@ class SignalRService {
 			console.warn('Cannot initialize SignalR: user not authenticated');
 			return;
 		}
+		const hubUrl = this.getHubUrl();
 		try {
-			const hubUrl = this.getHubUrl();
-
 			// Build the connection with automatic reconnection and auth token
 			this.connection = new signalR.HubConnectionBuilder()
 				.withUrl(hubUrl, {
@@ -119,6 +118,19 @@ class SignalRService {
 		} catch (error) {
 			console.error('Error initializing SignalR:', error);
 			this.updateConnectionStatus('disconnected');
+
+			// Emit a popup event including the hub url so UI can show the address
+			try {
+				triggerEvent(EVENT_TYPES.SIGNALR_CONNECTION_FAILED, {
+					title: 'SignalR initialization failed',
+					message: `Failed to initialize SignalR connection to ${hubUrl}.`,
+					hubUrl,
+					error,
+				});
+			} catch (evtErr) {
+				// ignore event bus errors
+				console.error('Failed to trigger SIGNALR_CONNECTION_FAILED event:', evtErr);
+			}
 
 			// Handle 401/403 errors with retry
 			if (this.isAuthError(error)) {
@@ -183,9 +195,23 @@ class SignalRService {
 			console.log('SignalR connection closed', error);
 			this.updateConnectionStatus('disconnected');
 
-			// Check if closure was due to auth error
-			if (error && this.isAuthError(error)) {
-				this.handleAuthError(error);
+			// Include hub URL in non-auth close errors so UI can display address
+			const hubUrl = this.getHubUrl();
+			if (error) {
+				if (this.isAuthError(error)) {
+					this.handleAuthError(error);
+				} else {
+					try {
+						triggerEvent(EVENT_TYPES.SIGNALR_CONNECTION_FAILED, {
+							title: 'SignalR connection closed',
+							message: `Connection to ${hubUrl} was closed.`,
+							hubUrl,
+							error,
+						});
+					} catch (evtErr) {
+						console.error('Failed to trigger SIGNALR_CONNECTION_FAILED event on close:', evtErr);
+					}
+				}
 			}
 		});
 
@@ -239,6 +265,19 @@ class SignalRService {
 		} catch (error) {
 			console.error('Error starting SignalR connection:', error);
 			this.updateConnectionStatus('disconnected');
+
+			// Emit popup with hub url to help user identify which address failed
+			const hubUrl = this.getHubUrl();
+			try {
+				triggerEvent(EVENT_TYPES.SIGNALR_CONNECTION_FAILED, {
+					title: 'SignalR connection failed',
+					message: `Failed to start SignalR connection to ${hubUrl}.`,
+					hubUrl,
+					error,
+				});
+			} catch (evtErr) {
+				console.error('Failed to trigger SIGNALR_CONNECTION_FAILED event on start:', evtErr);
+			}
 
 			// Handle auth errors
 			if (this.isAuthError(error)) {
