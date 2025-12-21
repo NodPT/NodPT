@@ -529,4 +529,8 @@ export default {
 [data-theme="dark"] .resize-handle:hover i {
 	color: rgba(255, 255, 255, 0.8);
 }
+
+.tab-pane {
+	height: 100%;
+}
 </style>

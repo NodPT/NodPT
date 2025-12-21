@@ -429,24 +429,12 @@ export default {
 			}
 		};
 
-		// Function to trigger START_Request event
-		const triggerStartRequest = () => {
-			const sampleData = JSON.stringify({
-				type: 'START_Request',
-				timestamp: new Date().toISOString(),
-				data: {
-					message: 'AI processing request initiated',
-					context: 'chat_interface',
-					requestId: Date.now()
-				}
-			});
-
-			eventBus.emit('START_Request', sampleData);
-			console.log('START_Request event triggered with data:', sampleData);
-		};
-
 		// Listen for node selection changes
 		const handleNodeSelection = (nodeData) => {
+			if (currentNodeId.value === nodeData.id) {
+				// Same node selected, no action needed
+				return;
+			}
 			currentNodeId.value = nodeData.id;
 			console.log('Node selected for chat context:', nodeData);
 			// Reload chat data for this node
@@ -495,7 +483,6 @@ export default {
 			likeMessage,
 			dislikeMessage,
 			copyMessage,
-			triggerStartRequest,
 			renderMarkdown,
 			handleEnter,
 		};

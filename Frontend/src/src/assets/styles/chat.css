@@ -22,6 +22,7 @@
   background-color: var(--bs-light, #f8f9fa);
   height: calc(100% - var(--chat-input-min-height));
   min-height: 0; /* Important for flex scrolling */
+
 }
 
 /* Always visible scrollbar */
@@ -275,7 +276,7 @@
   
   .chat-messages {
     padding: 0.75rem;
-  }
+   }
   
   .chat-input-container {
     padding: 0.5rem;
