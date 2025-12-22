@@ -240,6 +240,27 @@ npm run lint
 
 ## 🐳 Docker Deployment
 
+### ⚠️ IMPORTANT: Understanding Vite Environment Variables
+
+**Vite environment variables (prefixed with `VITE_`) are embedded at BUILD TIME, not at runtime.**
+
+This means:
+- ✅ Variables are read from `.env.production` during `npm run build` (inside Dockerfile)
+- ❌ Runtime environment files (like docker-compose `env_file`) **DO NOT** affect `VITE_*` variables
+- ❌ Changing runtime environment files will **NOT** update the built JavaScript bundle
+- ✅ To change `VITE_*` variables, you **MUST** update `.env.production` and **rebuild the Docker image**
+
+**To update environment variables:**
+1. Edit `Frontend/src/.env.production` in the repository
+2. Commit and push changes to trigger GitHub Actions rebuild
+3. The new values will be embedded during the Docker build process
+4. Deploy the new Docker image
+
+**Key Files:**
+- `Frontend/src/.env.production` - Production environment variables (embedded at build time)
+- `Frontend/src/.env.example` - Example environment variables for local development
+- `/home/runner_user/envs/frontend.env` - Runtime environment (does NOT affect VITE_ variables)
+
 ### Environment Setup
 
 Create the environment file at `/home/runner_user/envs/frontend.env`:
@@ -263,6 +284,8 @@ VITE_API_BASE_URL=http://nodpt-api:8846/api
 VITE_SIGNALR_BASE_URL=http://nodpt-signalr:8846
 VITE_SIGNALR_HUB_PATH=/signalr
 ```
+
+**Note:** The above runtime environment file is mainly for documentation. For `VITE_*` variables to take effect, they must be in `Frontend/src/.env.production` before building.
 
 ### Build and Run with Docker
 
@@ -390,6 +413,13 @@ Currently, no automated tests are configured. When adding tests:
 
 ### Common Issues
 
+**Environment variables not updating after Docker rebuild**:
+- Vite variables are embedded at build time, not runtime
+- Update `Frontend/src/.env.production` in the repository
+- Commit and push to trigger rebuild with `--no-cache`
+- Verify the values in `.env.production` match your requirements
+- Check that the Dockerfile COPY commands include the `.env.production` file
+
 **Build fails with module errors**:
 ```bash
 rm -rf node_modules package-lock.json
@@ -398,18 +428,20 @@ npm ci
 
 **SignalR connection fails**:
 - Verify SignalR service is running
-- Check VITE_SIGNALR_URL in environment
+- Check VITE_SIGNALR_BASE_URL in `.env.production` (for production) or `.env.local` (for development)
 - Ensure Firebase token is valid
+- Check browser console for the actual URL being used (SignalR service logs the URL)
 
 **API requests fail**:
 - Verify WebAPI service is running
-- Check VITE_API_BASE_URL in environment
+- Check VITE_API_BASE_URL in `.env.production` (for production) or `.env.local` (for development)
 - Check browser console for CORS errors
 
 **Docker build fails**:
 - Ensure VITE_FIREBASE_SHIT build arg is provided
 - Check environment file path in docker-compose.yml
 - Verify network exists: `docker network create frontend_network`
+- Use `--no-cache` flag to force fresh build: `docker compose build --no-cache`
 
 ## 📞 Support
 
