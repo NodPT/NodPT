@@ -1,5 +1,7 @@
 # NodPT Frontend
 
+version 1.0.1
+
 Visual workflow editor built with Vue.js 3, Rete.js, and Bootstrap 5. This is the user-facing web application that provides an intuitive drag-and-drop interface for creating AI-powered workflows.
 
 ## 🛠️ Technology Stack
