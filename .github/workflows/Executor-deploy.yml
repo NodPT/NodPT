@@ -1,0 +1,90 @@
+name: Executor Build and Deploy (Self-Hosted)
+
+on:
+   push:
+      branches: [main, master]
+      paths:
+         - 'Executor/**'
+
+jobs:
+   build-and-deploy:
+      runs-on: self-hosted
+      permissions:
+         contents: read
+
+      steps:
+         # 1️⃣ Checkout repository
+         - name: 1. Checkout repository
+           uses: actions/checkout@v4
+
+         # 2️⃣ Verify directory layout
+         - name: 2. Verify directory layout
+           working-directory: .
+           run: |
+              echo "Workspace content:"
+              pwd
+              ls
+              echo ""
+              echo "Executor contents:"
+              ls Executor/src
+              echo ""
+              echo "Data contents:"
+              ls Data/src
+              test -f Executor/src/BackendExecutor.csproj
+              test -f Data/src/NodPT.Data.csproj
+
+         # 3️⃣ Setup Docker Buildx
+         - name: 3. Set up Docker Buildx
+           uses: docker/setup-buildx-action@v3
+
+         # 4️⃣ Pull latest .NET base images
+         - name: 4. Pull latest .NET base images
+           run: |
+              docker pull mcr.microsoft.com/dotnet/sdk:8.0
+              docker pull mcr.microsoft.com/dotnet/runtime:8.0
+
+         # 5️⃣ Build Docker image
+         - name: 5. Build Docker image
+           working-directory: Executor
+           run: |
+              docker compose build --pull --no-cache
+
+         # 6️⃣ Remove old container (required because container_name is fixed)
+         - name: 6. Remove old container
+           working-directory: Executor
+           run: |
+              docker rm -f nodpt-executor || true
+
+         # 7️⃣ Stop current deployment
+         - name: 7. Stop current deployment
+           working-directory: Executor
+           run: |
+              docker compose down || true
+
+         # 8️⃣ Deploy new version
+         - name: 8. Deploy new version
+           working-directory: Executor
+           run: |
+              docker compose up -d --build --pull always
+
+         # 9️⃣ Verify deployment
+         - name: 9. Verify deployment
+           working-directory: Executor
+           run: |
+              echo "Checking if Executor container is running..."
+              sleep 5
+              if docker ps --filter "name=nodpt-executor" --filter "status=running" | grep -q nodpt-executor; then
+                echo "Executor container is running"
+                docker ps --filter "name=nodpt-executor"
+                exit 0
+              else
+                echo "Executor container is not running"
+                docker compose logs
+                exit 1
+              fi
+
+         # 🔟 Show logs on failure
+         - name: 10. Show logs on failure
+           if: failure()
+           working-directory: Executor
+           run: docker compose logs

@@ -1,33 +1,29 @@
-# Use the official .NET 8 runtime as base image
-FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
-WORKDIR /app
-
-# Use the .NET 8 SDK for building
+# ===== Build stage =====
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy project file and restore dependencies from the src folder
-COPY src/BackendExecutor.csproj ./
-RUN dotnet restore "BackendExecutor.csproj"
+# Copy Executor and Data project files from the repository root layout
+COPY Executor/src/BackendExecutor.csproj Executor/src/
+COPY Data/src/NodPT.Data.csproj Data/src/
 
-# Copy source code and build
-COPY src/. ./
-RUN dotnet build "BackendExecutor.csproj" -c Release -o /app/build
+# Restore dependencies for the Executor (will also restore the Data project reference)
+RUN dotnet restore Executor/src/BackendExecutor.csproj
 
-# Publish the application
+# Copy the remaining source code for both projects
+COPY Executor/src/ Executor/src/
+COPY Data/src/ Data/src/
+
+# Build the Executor project
+RUN dotnet build Executor/src/BackendExecutor.csproj -c Release -o /app/build
+
+# ===== Publish stage =====
 FROM build AS publish
-RUN dotnet publish "BackendExecutor.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish Executor/src/BackendExecutor.csproj -c Release -o /app/publish /p:UseAppHost=false
 
-# Create final runtime image
-FROM base AS final
+# ===== Runtime stage =====
+FROM mcr.microsoft.com/dotnet/runtime:8.0 AS final
 WORKDIR /app
-COPY --from=publish /app/publish ./
 
-# Set environment variables with defaults
-ENV REDIS_CONNECTION=nodpt-redis:6379
-ENV MAX_MANAGER=0
-ENV MAX_INSPECTOR=0
-ENV MAX_AGENT=0
-ENV MAX_TOTAL=0
+COPY --from=publish /app/publish ./
 
 ENTRYPOINT ["dotnet", "BackendExecutor.dll"]
