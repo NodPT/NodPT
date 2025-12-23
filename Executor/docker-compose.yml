@@ -30,4 +30,4 @@ services:
       - backend_network
 
     # 🔹 Auto restart on failure
-    restart: always
+    # restart: always
