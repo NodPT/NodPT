@@ -6,6 +6,8 @@ public static class DatabaseInitializer
 {
     public static void Initialize(HostApplicationBuilder builder)
     {
+        // Parameter kept for API consistency with WebAPI's DatabaseInitializer, which uses the builder for DI.
+        _ = builder;
         // Do NOT use defaults. Require all parts to be provided via env vars or configuration.
         var host = Environment.GetEnvironmentVariable("DB_HOST");
         var port = Environment.GetEnvironmentVariable("DB_PORT");
