@@ -7,8 +7,6 @@ namespace BackendExecutor.Services;
 
 public static class DatabaseInitializer
 {
-    static string connectionString = string.Empty;
-    
     public static void Initialize(HostApplicationBuilder builder)
     {
         // Do NOT use defaults. Require all parts to be provided via env vars or configuration.
@@ -27,7 +25,7 @@ public static class DatabaseInitializer
                 "Database configuration is incomplete. Required environment variables: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD");
         }
         
-        connectionString = $"XpoProvider=MySql;server={host};port={port};user={user};password={password};database={db};SslMode=Preferred;Pooling=true;CharSet=utf8mb4;";
+        var connectionString = $"XpoProvider=MySql;server={host};port={port};user={user};password={password};database={db};SslMode=Preferred;Pooling=true;CharSet=utf8mb4;";
         DatabaseHelper.SetConnectionString(connectionString);
     }
 }
