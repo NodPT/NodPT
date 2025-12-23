@@ -122,23 +122,38 @@ Executor/
    dotnet restore
    ```
 
-4. **Configure appsettings.Development.json**:
-   ```json
-   {
-     "Redis": {
-       "ConnectionString": "localhost:6379"
-     },
-     "Concurrency": {
-       "MaxManager": 5,
-       "MaxInspector": 10,
-       "MaxAgent": 20,
-       "MaxTotal": 50
-     },
-     "LLM": {
-       "Endpoint": "http://localhost:11434/v1/chat/completions"
-     }
-   }
-   ```
+4. **Configure appsettings.Development.json or set environment variables**:
+    
+    **Option 1: Using environment variables** (recommended):
+    ```bash
+    export DB_HOST=localhost
+    export DB_PORT=3306
+    export DB_NAME=nodpt
+    export DB_USER=your_user
+    export DB_PASSWORD=your_password
+    export REDIS_CONNECTION=localhost:6379
+    export LLM_ENDPOINT=http://localhost:11434/v1/chat/completions
+    ```
+    
+    **Option 2: Using appsettings.Development.json**:
+    ```json
+    {
+      "Redis": {
+        "ConnectionString": "localhost:6379"
+      },
+      "Concurrency": {
+        "MaxManager": 5,
+        "MaxInspector": 10,
+        "MaxAgent": 20,
+        "MaxTotal": 50
+      },
+      "LLM": {
+        "Endpoint": "http://localhost:11434/v1/chat/completions"
+      }
+    }
+    ```
+    
+    Note: Database configuration must be set via environment variables as shown in Option 1.
 
 5. **Run the application**:
    ```bash
@@ -159,6 +174,13 @@ dotnet publish -c Release -o ./publish
 Create or update environment file at `/home/runner_user/envs/backend.env`:
 
 ```env
+# Database Configuration
+DB_HOST=your_db_host_here
+DB_PORT=your_db_port_here
+DB_NAME=your_db_name_here
+DB_USER=your_db_user_here
+DB_PASSWORD=your_db_password_here
+
 # Redis Configuration
 REDIS_CONNECTION=nodpt-redis:6379
 
@@ -209,6 +231,11 @@ Multi-stage build optimized for .NET 8:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `DB_HOST` | - | Database host (required) |
+| `DB_PORT` | - | Database port (required) |
+| `DB_NAME` | - | Database name (required) |
+| `DB_USER` | - | Database username (required) |
+| `DB_PASSWORD` | - | Database password (required) |
 | `REDIS_CONNECTION` | `localhost:6379` | Redis connection string |
 | `MAX_MANAGER` | `0` | Max concurrent manager jobs (0 = unlimited) |
 | `MAX_INSPECTOR` | `0` | Max concurrent inspector jobs (0 = unlimited) |

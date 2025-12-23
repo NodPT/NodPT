@@ -11,6 +11,33 @@ using RedisService.Queue;
 
 var builder = Host.CreateApplicationBuilder(args);
 
+// 🔹 Load environment variables
+#if DEBUG // 🔹 Load .env in development
+var dotenvPath = Path.Combine(AppContext.BaseDirectory, ".env");
+if (File.Exists(dotenvPath))
+{
+    Console.WriteLine($"Loading .env from {dotenvPath}");
+    foreach (var line in File.ReadAllLines(dotenvPath))
+    {
+        if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#"))
+            continue;
+        var parts = line.Split('=', 2);
+        if (parts.Length == 2)
+        {
+            var key = parts[0].Trim();
+            var value = parts[1].Trim().Trim('"');
+            Environment.SetEnvironmentVariable(key, value);
+        }
+    }
+}
+#else
+// In production, load environment variables from system environment
+builder.Configuration.AddEnvironmentVariables();
+#endif
+
+// 🔹 Database initialization
+DatabaseInitializer.Initialize(builder);
+
 // Configure options (Note: Redis connection is now configured separately from ExecutorOptions)
 builder.Services.Configure<ExecutorOptions>(options =>
 {
