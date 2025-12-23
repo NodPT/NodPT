@@ -1,6 +1,3 @@
-using DevExpress.Xpo;
-using DevExpress.Xpo.DB;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace BackendExecutor.Services;
