@@ -11,6 +11,15 @@ using RedisService.Queue;
 
 var builder = Host.CreateApplicationBuilder(args);
 
+// 🔹 Database initialization - Set connection string from environment variables
+var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
+var dbPort = Environment.GetEnvironmentVariable("DB_PORT");
+var dbName = Environment.GetEnvironmentVariable("DB_NAME");
+var dbUser = Environment.GetEnvironmentVariable("DB_USER");
+var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+var connectionString = $"XpoProvider=MySql;server={dbHost};port={dbPort};user={dbUser};password={dbPassword};database={dbName};SslMode=Preferred;Pooling=true;CharSet=utf8mb4;";
+DatabaseHelper.SetConnectionString(connectionString);
+
 // Configure options (Note: Redis connection is now configured separately from ExecutorOptions)
 builder.Services.Configure<ExecutorOptions>(options =>
 {
