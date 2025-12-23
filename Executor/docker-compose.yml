@@ -1,3 +1,5 @@
+version: "3.9"
+
 networks:
   backend_network:
     external: true
@@ -19,14 +21,13 @@ services:
     ports:
       - "8848:8848"
 
-    # 🔹 Environment variables specific to ASP.NET Core
+    # 🔹 Environment variables for .NET Worker Service
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://0.0.0.0:8848
-      - ASPNETCORE_HTTP_PORTS=8848
+      - DOTNET_ENVIRONMENT=Production
 
     # 🔹 Docker networks for DB, backend & frontend
     networks:
       - backend_network
+
     # 🔹 Auto restart on failure
-    # restart: always
+    restart: always
