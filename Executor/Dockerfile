@@ -21,7 +21,7 @@ FROM build AS publish
 RUN dotnet publish Executor/src/BackendExecutor.csproj -c Release -o /app/publish /p:UseAppHost=false
 
 # ===== Runtime stage =====
-FROM mcr.microsoft.com/dotnet/runtime:8.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
 COPY --from=publish /app/publish ./
