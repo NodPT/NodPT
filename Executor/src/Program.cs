@@ -17,6 +17,16 @@ var dbPort = Environment.GetEnvironmentVariable("DB_PORT");
 var dbName = Environment.GetEnvironmentVariable("DB_NAME");
 var dbUser = Environment.GetEnvironmentVariable("DB_USER");
 var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+
+// Validate required database environment variables
+if (string.IsNullOrEmpty(dbHost) || string.IsNullOrEmpty(dbPort) || 
+    string.IsNullOrEmpty(dbName) || string.IsNullOrEmpty(dbUser) || 
+    string.IsNullOrEmpty(dbPassword))
+{
+    throw new InvalidOperationException(
+        "Database configuration is incomplete. Required environment variables: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD");
+}
+
 var connectionString = $"XpoProvider=MySql;server={dbHost};port={dbPort};user={dbUser};password={dbPassword};database={dbName};SslMode=Preferred;Pooling=true;CharSet=utf8mb4;";
 DatabaseHelper.SetConnectionString(connectionString);
 
