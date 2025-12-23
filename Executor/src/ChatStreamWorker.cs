@@ -41,21 +41,18 @@ public class ChatStreamWorker : BackgroundService
     private readonly RedisQueueService _redisService;
     private readonly LlmChatService _llmChatService;
     private readonly MemoryService _memoryService;
-    private readonly ServiceProvider _serviceProvider;
     private ListenHandle? _listenHandle;
 
     public ChatStreamWorker(
         ILogger<ChatStreamWorker> logger,
         RedisQueueService redisService,
         LlmChatService llmChatService,
-        MemoryService memoryService,
-        ServiceProvider serviceProvider)
+        MemoryService memoryService)
     {
         _logger = logger;
         _redisService = redisService;
         _llmChatService = llmChatService;
         _memoryService = memoryService;
-        _serviceProvider = serviceProvider;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
