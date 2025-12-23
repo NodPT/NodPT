@@ -11,24 +11,32 @@ using RedisService.Queue;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// 🔹 Database initialization - Set connection string from environment variables
-var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
-var dbPort = Environment.GetEnvironmentVariable("DB_PORT");
-var dbName = Environment.GetEnvironmentVariable("DB_NAME");
-var dbUser = Environment.GetEnvironmentVariable("DB_USER");
-var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
-
-// Validate required database environment variables
-if (string.IsNullOrEmpty(dbHost) || string.IsNullOrEmpty(dbPort) || 
-    string.IsNullOrEmpty(dbName) || string.IsNullOrEmpty(dbUser) || 
-    string.IsNullOrEmpty(dbPassword))
+// 🔹 Load environment variables
+#if DEBUG // 🔹 Load .env in development
+var dotenvPath = Path.Combine(AppContext.BaseDirectory, ".env");
+if (File.Exists(dotenvPath))
 {
-    throw new InvalidOperationException(
-        "Database configuration is incomplete. Required environment variables: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD");
+    Console.WriteLine($"Loading .env from {dotenvPath}");
+    foreach (var line in File.ReadAllLines(dotenvPath))
+    {
+        if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#"))
+            continue;
+        var parts = line.Split('=', 2);
+        if (parts.Length == 2)
+        {
+            var key = parts[0].Trim();
+            var value = parts[1].Trim().Trim('"');
+            Environment.SetEnvironmentVariable(key, value);
+        }
+    }
 }
+#else
+// In production, load environment variables from system environment
+builder.Configuration.AddEnvironmentVariables();
+#endif
 
-var connectionString = $"XpoProvider=MySql;server={dbHost};port={dbPort};user={dbUser};password={dbPassword};database={dbName};SslMode=Preferred;Pooling=true;CharSet=utf8mb4;";
-DatabaseHelper.SetConnectionString(connectionString);
+// 🔹 Database initialization
+DatabaseInitializer.Initialize(builder);
 
 // Configure options (Note: Redis connection is now configured separately from ExecutorOptions)
 builder.Services.Configure<ExecutorOptions>(options =>
