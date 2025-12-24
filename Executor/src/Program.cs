@@ -155,9 +155,6 @@ builder.Services.AddSingleton<RedisQueueService>(provider =>
 // Register HttpClient for LLM service
 builder.Services.AddHttpClient<LlmChatService, LlmChatService>();
 
-// Register HttpClient for OllamaVerificationService
-builder.Services.AddHttpClient<OllamaVerificationService, OllamaVerificationService>();
-
 // Register HttpClient for SummarizationService
 builder.Services.AddHttpClient<SummarizationService, SummarizationService>((provider, client) =>
 {
@@ -200,22 +197,5 @@ logger.LogInformation("  Max Total: {MaxTotal}", executorOptions.MaxTotal == 0 ?
 logger.LogInformation("  Summarization Base URL: {BaseUrl}", summarizationOptions.BaseUrl);
 logger.LogInformation("  Summarization Model: {Model}", summarizationOptions.Model);
 logger.LogInformation("  Memory History Limit: {HistoryLimit}", memoryOptions.HistoryLimit);
-
-// Verify Ollama endpoint before starting workers
-logger.LogInformation("=== Verifying Ollama Endpoint Connectivity ===");
-var verificationService = host.Services.GetRequiredService<OllamaVerificationService>();
-var verificationResult = await verificationService.VerifyConnectionWithRetryAsync(maxRetries: 3, retryDelaySeconds: 5);
-
-if (!verificationResult)
-{
-    logger.LogWarning("=== WARNING: Ollama Endpoint Verification Failed ===");
-    logger.LogWarning("Executor will continue to start, but chat functionality may not work properly.");
-    logger.LogWarning("Please check Ollama container status and network connectivity.");
-}
-else
-{
-    logger.LogInformation("=== Ollama Endpoint Verified Successfully ===");
-    logger.LogInformation("Executor is ready to process chat requests.");
-}
 
 host.Run();
