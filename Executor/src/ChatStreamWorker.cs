@@ -55,6 +55,18 @@ public class ChatStreamWorker : BackgroundService
         _memoryService = memoryService;
     }
 
+    /// <summary>
+    /// Get endpoint source description for logging
+    /// </summary>
+    private static string GetEndpointSource(string? nodeEndpoint, string? aiModelEndpoint)
+    {
+        if (!string.IsNullOrEmpty(nodeEndpoint))
+            return "Node";
+        if (!string.IsNullOrEmpty(aiModelEndpoint))
+            return "Template AIModel";
+        return "Config Default";
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("ChatStreamWorker starting...");
@@ -248,10 +260,10 @@ public class ChatStreamWorker : BackgroundService
                 : !string.IsNullOrEmpty(matchingAiModel?.EndpointAddress) 
                     ? matchingAiModel.EndpointAddress 
                     : "default endpoint from config";
+            
+            var endpointSource = GetEndpointSource(nodeEndpoint, matchingAiModel?.EndpointAddress);
             _logger.LogInformation("Using LLM Endpoint: {Endpoint} (Source: {EndpointSource})", 
-                endpoint, 
-                !string.IsNullOrEmpty(nodeEndpoint) ? "Node" : 
-                !string.IsNullOrEmpty(matchingAiModel?.EndpointAddress) ? "Template AIModel" : "Config Default");
+                endpoint, endpointSource);
 
             //! STEP 12-13: SEND MESSAGE TO OLLAMA AND WAIT FOR RESPONSE
             // Use Node's endpoint, AIModel's endpoint and options if available

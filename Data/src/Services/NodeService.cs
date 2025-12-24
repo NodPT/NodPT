@@ -37,15 +37,13 @@ namespace NodPT.Data.Services
             };
 
             // If AIModelEndpoint is not set on the node, get it from the matching AIModel in template
+            // This is read-only - the DTO will contain the template endpoint, but we don't modify the entity
             if (string.IsNullOrEmpty(dto.AIModelEndpoint))
             {
                 var matchingAIModel = node.GetMatchingAIModel();
                 if (matchingAIModel != null && !string.IsNullOrEmpty(matchingAIModel.EndpointAddress))
                 {
                     dto.AIModelEndpoint = matchingAIModel.EndpointAddress;
-                    
-                    // Update the node with the endpoint from template
-                    node.AIModelEndpoint = matchingAIModel.EndpointAddress;
                 }
             }
 

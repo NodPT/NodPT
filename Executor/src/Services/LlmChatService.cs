@@ -60,7 +60,10 @@ public class LlmChatService
 
     /// <summary>
     /// Build OllamaOptions from AIModel properties with optimistic defaults
+    /// If aiModel is null, returns options with default values suitable for most use cases
     /// </summary>
+    /// <param name="aiModel">The AIModel to extract options from, or null to use all defaults</param>
+    /// <returns>OllamaOptions with either AIModel values or optimistic defaults</returns>
     public static OllamaOptions BuildOptionsFromAIModel(AIModel? aiModel)
     {
         // Default optimistic values for Ollama options
