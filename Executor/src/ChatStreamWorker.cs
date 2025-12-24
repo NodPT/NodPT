@@ -241,18 +241,24 @@ public class ChatStreamWorker : BackgroundService
             _logger.LogInformation("Ollama Request Details - Model: {Model}, SystemPrompts: {SystemPromptCount}, History: {HistoryCount}, UserMessage Length: {UserMessageLength}", 
                 modelName, promptContents.Count, history.Count, userMessage.Length);
             
-            // Log the endpoint being used
-            var endpoint = !string.IsNullOrEmpty(matchingAiModel?.EndpointAddress) 
-                ? matchingAiModel.EndpointAddress 
-                : "default endpoint from config";
-            _logger.LogInformation("Using LLM Endpoint: {Endpoint}", endpoint);
+            // Get endpoint with priority: Node.AIModelEndpoint > AIModel.EndpointAddress > default from config
+            var nodeEndpoint = node.AIModelEndpoint;
+            var endpoint = !string.IsNullOrEmpty(nodeEndpoint)
+                ? nodeEndpoint
+                : !string.IsNullOrEmpty(matchingAiModel?.EndpointAddress) 
+                    ? matchingAiModel.EndpointAddress 
+                    : "default endpoint from config";
+            _logger.LogInformation("Using LLM Endpoint: {Endpoint} (Source: {EndpointSource})", 
+                endpoint, 
+                !string.IsNullOrEmpty(nodeEndpoint) ? "Node" : 
+                !string.IsNullOrEmpty(matchingAiModel?.EndpointAddress) ? "Template AIModel" : "Config Default");
 
             //! STEP 12-13: SEND MESSAGE TO OLLAMA AND WAIT FOR RESPONSE
-            // Use AIModel's endpoint and options if available
+            // Use Node's endpoint, AIModel's endpoint and options if available
             _logger.LogInformation("=== Sending Request to LLM ===");
             _logger.LogInformation("ChatId: {ChatId}, NodeId: {NodeId}, Model: {Model}", chatId, nodeId, modelName);
             
-            var aiResponse = await _llmChatService.SendChatRequestAsync(ollamaRequest, matchingAiModel, cancellationToken);
+            var aiResponse = await _llmChatService.SendChatRequestAsync(ollamaRequest, nodeEndpoint, matchingAiModel, cancellationToken);
 
             _logger.LogInformation("=== Received AI Response ===");
             _logger.LogInformation("ChatId: {ChatId}, Response Length: {Length} chars", chatId, aiResponse.Length);

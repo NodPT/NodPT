@@ -32,8 +32,22 @@ namespace NodPT.Data.Services
                 MessageType = node.MessageType,
                 Level = node.Level,
                 AIModelId = node.AIModel?.Oid,
-                AIModelName = node.AIModel?.Name
+                AIModelName = node.AIModel?.Name,
+                AIModelEndpoint = node.AIModelEndpoint
             };
+
+            // If AIModelEndpoint is not set on the node, get it from the matching AIModel in template
+            if (string.IsNullOrEmpty(dto.AIModelEndpoint))
+            {
+                var matchingAIModel = node.GetMatchingAIModel();
+                if (matchingAIModel != null && !string.IsNullOrEmpty(matchingAIModel.EndpointAddress))
+                {
+                    dto.AIModelEndpoint = matchingAIModel.EndpointAddress;
+                    
+                    // Update the node with the endpoint from template
+                    node.AIModelEndpoint = matchingAIModel.EndpointAddress;
+                }
+            }
 
             // Map MatchingAIModel if available
             if (node.GetMatchingAIModel() != null)
@@ -135,7 +149,8 @@ namespace NodPT.Data.Services
                     Template = template,
                     MessageType = nodeDto.MessageType,
                     Level = nodeDto.Level,
-                    AIModel = aiModel
+                    AIModel = aiModel,
+                    AIModelEndpoint = nodeDto.AIModelEndpoint
                 };
 
                 session.Save(node);
@@ -181,6 +196,7 @@ namespace NodPT.Data.Services
                 node.MessageType = nodeDto.MessageType;
                 node.Level = nodeDto.Level;
                 node.AIModel = aiModel;
+                node.AIModelEndpoint = nodeDto.AIModelEndpoint;
 
                 session.Save(node);
                 session.CommitTransaction();

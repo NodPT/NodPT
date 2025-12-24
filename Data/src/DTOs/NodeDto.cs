@@ -20,6 +20,7 @@ namespace NodPT.Data.DTOs
         public LevelEnum Level { get; set; }
         public int? AIModelId { get; set; }
         public string? AIModelName { get; set; }
+        public string? AIModelEndpoint { get; set; }
         public AIModelDto? MatchingAIModel { get; set; }
         public List<PromptDto> MatchingPrompts { get; set; } = new();
     }

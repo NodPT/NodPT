@@ -19,6 +19,7 @@ namespace NodPT.Data.Models
         private MessageTypeEnum _messageType;
         private LevelEnum _level;
         private AIModel? _aiModel;
+        private string? _aiModelEndpoint;
 
         public Node(Session session) : base(session) { }
         public Node() : base(Session.DefaultSession) { }
@@ -129,6 +130,16 @@ namespace NodPT.Data.Models
         {
             get => _aiModel;
             set => SetPropertyValue(nameof(AIModel), ref _aiModel, value);
+        }
+
+        /// <summary>
+        /// LLM endpoint address for this specific node (can override template's AIModel endpoint)
+        /// </summary>
+        [Size(500)]
+        public string? AIModelEndpoint
+        {
+            get => _aiModelEndpoint;
+            set => SetPropertyValue(nameof(AIModelEndpoint), ref _aiModelEndpoint, value);
         }
 
         // Helper property to work with Properties as Dictionary

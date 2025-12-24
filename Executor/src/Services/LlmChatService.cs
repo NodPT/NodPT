@@ -119,6 +119,32 @@ public class LlmChatService
     }
 
     /// <summary>
+    /// Send a structured Ollama request to the LLM endpoint using node's endpoint and AIModel settings
+    /// Priority: nodeEndpoint > AIModel.EndpointAddress > default from config
+    /// </summary>
+    public async Task<string> SendChatRequestAsync(
+        OllamaRequest request,
+        string? nodeEndpoint,
+        AIModel? aiModel,
+        CancellationToken cancellationToken = default)
+    {
+        // Priority: nodeEndpoint > AIModel.EndpointAddress > default from config
+        var endpoint = !string.IsNullOrEmpty(nodeEndpoint)
+            ? nodeEndpoint
+            : !string.IsNullOrEmpty(aiModel?.EndpointAddress) 
+                ? aiModel.EndpointAddress 
+                : _options.LlmEndpoint;
+
+        // Build options from AIModel if not already set (always returns optimistic defaults)
+        if (request.options == null)
+        {
+            request.options = BuildOptionsFromAIModel(aiModel);
+        }
+
+        return await SendChatRequestAsync(request, endpoint, cancellationToken);
+    }
+
+    /// <summary>
     /// Send a structured Ollama request to the LLM endpoint (uses default endpoint from config)
     /// </summary>
     public async Task<string> SendChatRequestAsync(
