@@ -41,7 +41,6 @@ public static class DatabaseInitializer
             typeof(Log),
             typeof(UserAccessLog),
             typeof(NodeMemory),
-            typeof(SummarizePrompts),
             typeof(AIModel),
             typeof(ChatResponse),
             typeof(Prompt)
