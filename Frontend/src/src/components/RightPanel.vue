@@ -302,8 +302,8 @@ export default {
 					Object.assign(propertiesData, {
 						nodeId: nodeData.Id,
 						name: nodeData.Name || 'Unnamed Node',
-						type: nodeData.NodeType || 'Default',
-						description: `Node Level: ${nodeData.Level}`,
+						type: nodeData.NodeType || 'Worker',
+						description: `Node Type: ${nodeData.NodeType}`,
 						status: nodeData.Status || 'idle',
 						properties: nodeData.Properties || {},
 						performance: null // Can be extended later
