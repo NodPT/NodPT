@@ -25,7 +25,10 @@ namespace NodPT.Data.DTOs
         public bool done { get; set; }
 
         /// <summary>
-        /// Gets the content from either response (generate) or message.content (chat)
+        /// Gets the content from either response (generate) or message.content (chat).
+        /// Priority: response field takes precedence over message.content to support /api/generate endpoint first,
+        /// then falls back to message.content for /api/chat endpoint compatibility.
+        /// In practice, Ollama only populates one field based on which endpoint is called.
         /// </summary>
         [JsonIgnore]
         public string Content => response ?? message?.content ?? string.Empty;
