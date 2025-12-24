@@ -58,13 +58,13 @@ public class SummarizationService
             var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
             var responseObject = JsonSerializer.Deserialize<OllamaResponse>(responseJson);
 
-            if (responseObject == null || string.IsNullOrEmpty(responseObject.response))
+            if (responseObject == null || string.IsNullOrEmpty(responseObject.Content))
             {
                 _logger.LogWarning("Summarization response is empty, falling back to old summary");
                 return oldSummary;
             }
             // Extract the new summary
-            var newSummary = responseObject.response.Trim();
+            var newSummary = responseObject.Content.Trim();
 
             // Enforce max length
             if (newSummary.Length > _options.MaxSummaryLength)
