@@ -6,7 +6,7 @@ namespace NodPT.Data.DTOs
     {
         public string? Id { get; set; }
         public string? Name { get; set; }
-        public string NodeType { get; set; } = "Default";
+        public NodeType NodeType { get; set; } = NodeType.Worker;
         public Dictionary<string, string> Properties { get; set; } = new();
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
@@ -17,9 +17,6 @@ namespace NodPT.Data.DTOs
         public int? TemplateId { get; set; }
         public string? TemplateName { get; set; }
         public MessageTypeEnum MessageType { get; set; }
-        public LevelEnum Level { get; set; }
-        public int? AIModelId { get; set; }
-        public string? AIModelName { get; set; }
         public AIModelDto? MatchingAIModel { get; set; }
         public List<PromptDto> MatchingPrompts { get; set; } = new();
     }

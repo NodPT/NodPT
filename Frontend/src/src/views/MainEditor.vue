@@ -92,8 +92,7 @@ const initializeProjectContext = async () => {
                 //     {
                 //       Id: string (GUID),
                 //       Name: string,
-                //       Level: string (enum: "Director", "Manager", "Inspector", "Agent"),
-                //       NodeType: string,
+                //       NodeType: string (enum: "Director", "Manager", "Inspector", "Worker", etc.),
                 //       Status: string,
                 //       ...
                 //     }
@@ -109,9 +108,9 @@ const initializeProjectContext = async () => {
                         // Map backend nodes (NodeDto) to frontend node format
                         // Note: Backend uses PascalCase (C# convention), frontend uses camelCase
                         initialNodes = projectData.Nodes.map(node => {
-                                // Defensive check for Level property
-                                const level = node.Level || 'Director'; // Default to Director if missing
-                                const type = typeof level === 'string' ? level.toLowerCase() : 'director';
+                                // Defensive check for NodeType property
+                                const nodeType = node.NodeType || 'Director'; // Default to Director if missing
+                                const type = typeof nodeType === 'string' ? nodeType.toLowerCase() : 'director';
                                 
                                 return {
                                         id: node.Id,                              // GUID string from backend (REQUIRED)

@@ -180,10 +180,10 @@ public class ChatStreamWorker : BackgroundService
                 .Select(p => p.Content!)
                 .ToList();
 
-            _logger.LogInformation("Found {PromptCount} matching prompts for Level={Level}, MessageType={MessageType}", 
-                promptContents.Count, node.Level, node.MessageType);
+            _logger.LogInformation("Found {PromptCount} matching prompts for NodeType={NodeType}, MessageType={MessageType}", 
+                promptContents.Count, node.NodeType, node.MessageType);
 
-            // Step 9: Get model name from template data based on Node's level
+            // Step 9: Get model name from template data based on Node's type
             var matchingAiModel = node.GetMatchingAIModel();
             var modelName = matchingAiModel?.ModelIdentifier ?? "llama3.2:3b";
 
@@ -241,11 +241,16 @@ public class ChatStreamWorker : BackgroundService
             _logger.LogInformation("Ollama Request Details - Model: {Model}, SystemPrompts: {SystemPromptCount}, History: {HistoryCount}, UserMessage Length: {UserMessageLength}", 
                 modelName, promptContents.Count, history.Count, userMessage.Length);
             
-            // Log the endpoint being used
+            // Get endpoint from AIModel or use default from config
             var endpoint = !string.IsNullOrEmpty(matchingAiModel?.EndpointAddress) 
                 ? matchingAiModel.EndpointAddress 
                 : "default endpoint from config";
-            _logger.LogInformation("Using LLM Endpoint: {Endpoint}", endpoint);
+            
+            var endpointSource = !string.IsNullOrEmpty(matchingAiModel?.EndpointAddress) 
+                ? "Template AIModel" 
+                : "Config Default";
+            _logger.LogInformation("Using LLM Endpoint: {Endpoint} (Source: {EndpointSource})", 
+                endpoint, endpointSource);
 
             //! STEP 12-13: SEND MESSAGE TO OLLAMA AND WAIT FOR RESPONSE
             // Use AIModel's endpoint and options if available

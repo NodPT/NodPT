@@ -17,8 +17,6 @@ namespace NodPT.Data.Models
         private Project? _project;
         private Template? _template;
         private MessageTypeEnum _messageType;
-        private LevelEnum _level;
-        private AIModel? _aiModel;
 
         public Node(Session session) : base(session) { }
         public Node() : base(Session.DefaultSession) { }
@@ -111,26 +109,6 @@ namespace NodPT.Data.Models
             set => SetPropertyValue(nameof(MessageType), ref _messageType, value);
         }
 
-        /// <summary>
-        /// Level: Brain, Manager, Inspector, or Worker
-        /// </summary>
-        public LevelEnum Level
-        {
-            get => _level;
-            set => SetPropertyValue(nameof(Level), ref _level, value);
-        }
-
-        /// <summary>
-        /// Many-to-one relationship: Node can have an AIModel (nullable)
-        /// </summary>
-        [Association("AIModel-Nodes")]
-        [JsonIgnore]
-        public AIModel? AIModel
-        {
-            get => _aiModel;
-            set => SetPropertyValue(nameof(AIModel), ref _aiModel, value);
-        }
-
         // Helper property to work with Properties as Dictionary
         [Browsable(false)]
         public Dictionary<string, string> PropertiesDictionary
@@ -157,25 +135,80 @@ namespace NodPT.Data.Models
         }
 
         /// <summary>
-        /// Readonly property that returns the AIModel from Project.Template that matches this Node's MessageType and Level
+        /// Returns the AIModel from Project.Template that matches this Node's MessageType and NodeType.
+        /// If not found, creates a default AIModel and adds it to the Template's AIModels collection.
         /// </summary>
         public AIModel? GetMatchingAIModel()
         {
             if (Project?.Template == null) return null;
 
-            return Project.Template.AIModels
-                .FirstOrDefault(am => am.MessageType == MessageType && am.Level == Level && am.IsActive);
+            // Try to find existing matching AIModel
+            var matchingModel = Project.Template.AIModels
+                .FirstOrDefault(am => am.MessageType == MessageType && am.NodeType == NodeType && am.IsActive);
+
+            // If found, return it
+            if (matchingModel != null)
+                return matchingModel;
+
+            // No existing model found; create a default one with proper transaction handling
+            var session = Session;
+            var startedTransaction = false;
+
+            try
+            {
+                if (!session.InTransaction)
+                {
+                    session.BeginTransaction();
+                    startedTransaction = true;
+                }
+
+                var defaultModel = new AIModel(session)
+                {
+                    Name = $"Default {NodeType} {MessageType}",
+                    ModelIdentifier = "llama3.2:3b",
+                    MessageType = MessageType,
+                    NodeType = NodeType,
+                    Description = $"Default AI model for {NodeType} type with {MessageType} message type",
+                    IsActive = true,
+                    Template = Project.Template,
+                    EndpointAddress = null, // Will use system default
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                // Add to template's collection
+                Project.Template.AIModels.Add(defaultModel);
+
+                // Save the new model
+                defaultModel.Save();
+
+                if (startedTransaction)
+                {
+                    session.CommitTransaction();
+                }
+
+                return defaultModel;
+            }
+            catch
+            {
+                if (startedTransaction && session.InTransaction)
+                {
+                    session.RollbackTransaction();
+                }
+
+                throw;
+            }
         }
 
         /// <summary>
-        /// Readonly property that returns the list of Prompts from Project.Template that match this Node's MessageType and Level
+        /// Readonly property that returns the list of Prompts from Project.Template that match this Node's MessageType and NodeType
         /// </summary>
         public List<Prompt> GetMatchingPrompts()
         {
             if (Project?.Template == null) return new List<Prompt>();
 
             return Project.Template.Prompts
-                .Where(p => p.MessageType == MessageType && p.Level == Level)
+                .Where(p => p.MessageType == MessageType && p.NodeType == NodeType)
                 .ToList();
         }
     }

@@ -50,7 +50,7 @@ namespace NodPT.Data.Services
             {
                 Id = node.Id,
                 Name = node.Name,
-                NodeType = node.NodeType.ToString(),
+                NodeType = node.NodeType,
                 Properties = node.PropertiesDictionary,
                 CreatedAt = node.CreatedAt,
                 UpdatedAt = node.UpdatedAt,
@@ -60,10 +60,7 @@ namespace NodPT.Data.Services
                 ProjectName = node.Project?.Name,
                 TemplateId = node.Template?.Oid,
                 TemplateName = node.Template?.Name,
-                MessageType = node.MessageType,
-                Level = node.Level,
-                AIModelId = node.AIModel?.Oid,
-                AIModelName = node.AIModel?.Name
+                MessageType = node.MessageType
             };
 
             // Map MatchingAIModel if available
@@ -76,7 +73,7 @@ namespace NodPT.Data.Services
                     Name = aiModel.Name,
                     ModelIdentifier = aiModel.ModelIdentifier,
                     MessageType = aiModel.MessageType,
-                    Level = aiModel.Level,
+                    NodeType = aiModel.NodeType,
                     Description = aiModel.Description,
                     IsActive = aiModel.IsActive,
                     CreatedAt = aiModel.CreatedAt,
@@ -102,7 +99,7 @@ namespace NodPT.Data.Services
                 Id = p.Oid,
                 Content = p.Content,
                 MessageType = p.MessageType,
-                Level = p.Level,
+                NodeType = p.NodeType,
                 CreatedAt = p.CreatedAt,
                 UpdatedAt = p.UpdatedAt,
                 TemplateId = p.Template?.Oid
@@ -209,7 +206,7 @@ namespace NodPT.Data.Services
                 session.Save(project);
 
                 // Check if a default Director-level node exists for this project
-                var existingDirectorNode = project.Nodes.FirstOrDefault(n => n.Level == LevelEnum.Director);
+                var existingDirectorNode = project.Nodes.FirstOrDefault(n => n.NodeType == NodeType.Director);
 
                 if (existingDirectorNode == null)
                 {
@@ -218,8 +215,7 @@ namespace NodPT.Data.Services
                     {
                         Id = Guid.NewGuid().ToString(),
                         Name = "Director",
-                        NodeType = NodeType.Default,
-                        Level = LevelEnum.Director,
+                        NodeType = NodeType.Director,
                         MessageType = MessageTypeEnum.Discussion,
                         Project = project,
                         Template = template,

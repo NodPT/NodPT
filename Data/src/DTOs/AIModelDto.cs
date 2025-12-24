@@ -8,7 +8,7 @@ namespace NodPT.Data.DTOs
         public string? Name { get; set; }
         public string? ModelIdentifier { get; set; }
         public MessageTypeEnum MessageType { get; set; }
-        public LevelEnum Level { get; set; }
+        public NodeType NodeType { get; set; }
         public string? Description { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }

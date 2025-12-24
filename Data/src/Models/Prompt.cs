@@ -7,7 +7,7 @@ namespace NodPT.Data.Models
     {
         private string? _content;
         private MessageTypeEnum _messageType;
-        private LevelEnum _level;
+        private NodeType _nodeType;
         private DateTime _createdAt = DateTime.UtcNow;
         private DateTime _updatedAt = DateTime.UtcNow;
         private Template? _template;
@@ -35,12 +35,12 @@ namespace NodPT.Data.Models
         }
 
         /// <summary>
-        /// Level of the prompt: Brain, Manager, Inspector, or Worker
+        /// Node type: Director, Manager, Inspector, Worker, etc.
         /// </summary>
-        public LevelEnum Level
+        public NodeType NodeType
         {
-            get => _level;
-            set => SetPropertyValue(nameof(Level), ref _level, value);
+            get => _nodeType;
+            set => SetPropertyValue(nameof(NodeType), ref _nodeType, value);
         }
 
         /// <summary>
