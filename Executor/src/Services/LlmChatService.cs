@@ -181,7 +181,7 @@ public class LlmChatService
                 return string.Empty;
             }
 
-            var result = responseObject.response ?? string.Empty;
+            var result = responseObject.Content;
             _logger.LogInformation("=== LLM Response Processed ===");
             _logger.LogInformation("Response Content Length: {Length} characters", result.Length);
 

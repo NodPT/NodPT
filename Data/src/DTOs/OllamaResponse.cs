@@ -4,7 +4,7 @@ namespace NodPT.Data.DTOs
 {
 
     /// <summary>
-    /// Response model for Ollama generate API
+    /// Response model for Ollama API (supports both /api/generate and /api/chat endpoints)
     /// </summary>
     public class OllamaResponse
     {
@@ -12,8 +12,34 @@ namespace NodPT.Data.DTOs
 
         public string? created_at { get; set; }
 
+        /// <summary>
+        /// Response content from /api/generate endpoint
+        /// </summary>
         public string? response { get; set; }
 
+        /// <summary>
+        /// Message object from /api/chat endpoint
+        /// </summary>
+        public OllamaResponseMessage? message { get; set; }
+
         public bool done { get; set; }
+
+        /// <summary>
+        /// Gets the content from either response (generate) or message.content (chat).
+        /// Priority: response field takes precedence over message.content to support /api/generate endpoint first,
+        /// then falls back to message.content for /api/chat endpoint compatibility.
+        /// In practice, Ollama only populates one field based on which endpoint is called.
+        /// </summary>
+        [JsonIgnore]
+        public string Content => response ?? message?.content ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Message structure from /api/chat endpoint response
+    /// </summary>
+    public class OllamaResponseMessage
+    {
+        public string? role { get; set; }
+        public string? content { get; set; }
     }
 }
