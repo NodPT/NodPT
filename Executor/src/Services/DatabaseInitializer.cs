@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Hosting;
+using NodPT.Data.Models;
 
 namespace BackendExecutor.Services;
 
@@ -26,5 +27,24 @@ public static class DatabaseInitializer
         
         var connectionString = $"XpoProvider=MySql;server={host};port={port};user={user};password={password};database={db};SslMode=Preferred;Pooling=true;CharSet=utf8mb4;";
         DatabaseHelper.SetConnectionString(connectionString);
+        
+        // Update database schema to ensure all tables exist
+        DatabaseHelper.UpdateSchema(new Type[] {
+            typeof(User),
+            typeof(Node),
+            typeof(Template),
+            typeof(TemplateFile),
+            typeof(Project),
+            typeof(ProjectFile),
+            typeof(Folder),
+            typeof(ChatMessage),
+            typeof(Log),
+            typeof(UserAccessLog),
+            typeof(NodeMemory),
+            typeof(SummarizePrompts),
+            typeof(AIModel),
+            typeof(ChatResponse),
+            typeof(Prompt)
+        });
     }
 }

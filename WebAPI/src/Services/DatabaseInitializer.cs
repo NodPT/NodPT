@@ -40,7 +40,12 @@ public static class DatabaseInitializer
                         typeof(Folder),
                         typeof(ChatMessage),
                         typeof(Log),
-                        typeof(UserAccessLog)
+                        typeof(UserAccessLog),
+                        typeof(NodeMemory),
+                        typeof(SummarizePrompts),
+                        typeof(AIModel),
+                        typeof(ChatResponse),
+                        typeof(Prompt)
                 }));
 
         // Make IHttpContextAccessor available for ConfigureJsonOptions which requires it.

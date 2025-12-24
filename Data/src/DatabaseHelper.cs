@@ -78,4 +78,26 @@ public static class DatabaseHelper
     {
         connectionString = _connectionString;
     }
+
+    /// <summary>
+    /// Updates the database schema to match the registered entity types.
+    /// Creates missing tables and columns as needed.
+    /// </summary>
+    /// <param name="types">Array of entity types to create tables for</param>
+    /// <exception cref="InvalidOperationException">Thrown if connection string is not set</exception>
+    public static void UpdateSchema(Type[] types)
+    {
+        if (string.IsNullOrEmpty(connectionString))
+            throw new InvalidOperationException("Connection string is not set. Please set it before updating schema.");
+
+        var dataStore = XpoDefault.GetConnectionProvider(connectionString, AutoCreateOption.SchemaAlreadyExists);
+        using (var dataLayer = new SimpleDataLayer(dataStore))
+        {
+            using (var uow = new UnitOfWork(dataLayer))
+            {
+                uow.UpdateSchema(types);
+                uow.CreateObjectTypeRecords(types);
+            }
+        }
+    }
 }
