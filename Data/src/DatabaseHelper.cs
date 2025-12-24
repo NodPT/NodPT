@@ -90,7 +90,7 @@ public static class DatabaseHelper
         if (string.IsNullOrEmpty(connectionString))
             throw new InvalidOperationException("Connection string is not set. Please set it before updating schema.");
 
-        var dataStore = XpoDefault.GetConnectionProvider(connectionString, AutoCreateOption.SchemaAlreadyExists);
+        var dataStore = XpoDefault.GetConnectionProvider(connectionString, AutoCreateOption.DatabaseAndSchema);
         using (var dataLayer = new SimpleDataLayer(dataStore))
         {
             using (var uow = new UnitOfWork(dataLayer))
