@@ -217,12 +217,5 @@ namespace NodPT.Data.Models
             get => _template;
             set => SetPropertyValue(nameof(Template), ref _template, value);
         }
-
-        /// <summary>
-        /// One-to-many relationship: AIModel can have many Nodes
-        /// </summary>
-        [Association("AIModel-Nodes")]
-        [JsonIgnore]
-        public XPCollection<Node> Nodes => GetCollection<Node>(nameof(Nodes));
     }
 }

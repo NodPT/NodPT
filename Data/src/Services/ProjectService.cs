@@ -61,9 +61,7 @@ namespace NodPT.Data.Services
                 TemplateId = node.Template?.Oid,
                 TemplateName = node.Template?.Name,
                 MessageType = node.MessageType,
-                Level = node.Level,
-                AIModelId = node.AIModel?.Oid,
-                AIModelName = node.AIModel?.Name
+                Level = node.Level
             };
 
             // Map MatchingAIModel if available

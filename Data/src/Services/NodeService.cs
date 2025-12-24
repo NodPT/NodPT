@@ -30,22 +30,8 @@ namespace NodPT.Data.Services
                 TemplateId = node.Template?.Oid,
                 TemplateName = node.Template?.Name,
                 MessageType = node.MessageType,
-                Level = node.Level,
-                AIModelId = node.AIModel?.Oid,
-                AIModelName = node.AIModel?.Name,
-                AIModelEndpoint = node.AIModelEndpoint
+                Level = node.Level
             };
-
-            // If AIModelEndpoint is not set on the node, get it from the matching AIModel in template
-            // This is read-only - the DTO will contain the template endpoint, but we don't modify the entity
-            if (string.IsNullOrEmpty(dto.AIModelEndpoint))
-            {
-                var matchingAIModel = node.GetMatchingAIModel();
-                if (matchingAIModel != null && !string.IsNullOrEmpty(matchingAIModel.EndpointAddress))
-                {
-                    dto.AIModelEndpoint = matchingAIModel.EndpointAddress;
-                }
-            }
 
             // Map MatchingAIModel if available
             if (node.GetMatchingAIModel() != null)
@@ -129,9 +115,6 @@ namespace NodPT.Data.Services
                 var parent = !string.IsNullOrEmpty(nodeDto.ParentId)
                     ? session.Query<Node>().FirstOrDefault(n => n.Id == nodeDto.ParentId)
                     : null;
-                var aiModel = nodeDto.AIModelId.HasValue
-                    ? session.GetObjectByKey<AIModel>(nodeDto.AIModelId.Value)
-                    : null;
 
                 var node = new Node(session)
                 {
@@ -146,9 +129,7 @@ namespace NodPT.Data.Services
                     Project = project,
                     Template = template,
                     MessageType = nodeDto.MessageType,
-                    Level = nodeDto.Level,
-                    AIModel = aiModel,
-                    AIModelEndpoint = nodeDto.AIModelEndpoint
+                    Level = nodeDto.Level
                 };
 
                 session.Save(node);
@@ -179,9 +160,6 @@ namespace NodPT.Data.Services
                 var parent = !string.IsNullOrEmpty(nodeDto.ParentId)
                     ? session.Query<Node>().FirstOrDefault(n => n.Id == nodeDto.ParentId)
                     : null;
-                var aiModel = nodeDto.AIModelId.HasValue
-                    ? session.GetObjectByKey<AIModel>(nodeDto.AIModelId.Value)
-                    : null;
 
                 node.Name = nodeDto.Name;
                 node.NodeType = Enum.TryParse<NodeType>(nodeDto.NodeType, out var nodeType) ? nodeType : NodeType.Default;
@@ -193,8 +171,6 @@ namespace NodPT.Data.Services
                 node.Template = template;
                 node.MessageType = nodeDto.MessageType;
                 node.Level = nodeDto.Level;
-                node.AIModel = aiModel;
-                node.AIModelEndpoint = nodeDto.AIModelEndpoint;
 
                 session.Save(node);
                 session.CommitTransaction();

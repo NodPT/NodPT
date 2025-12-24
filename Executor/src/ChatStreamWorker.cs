@@ -55,18 +55,6 @@ public class ChatStreamWorker : BackgroundService
         _memoryService = memoryService;
     }
 
-    /// <summary>
-    /// Get endpoint source description for logging
-    /// </summary>
-    private static string GetEndpointSource(string? nodeEndpoint, string? aiModelEndpoint)
-    {
-        if (!string.IsNullOrEmpty(nodeEndpoint))
-            return "Node";
-        if (!string.IsNullOrEmpty(aiModelEndpoint))
-            return "Template AIModel";
-        return "Config Default";
-    }
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("ChatStreamWorker starting...");
@@ -253,24 +241,23 @@ public class ChatStreamWorker : BackgroundService
             _logger.LogInformation("Ollama Request Details - Model: {Model}, SystemPrompts: {SystemPromptCount}, History: {HistoryCount}, UserMessage Length: {UserMessageLength}", 
                 modelName, promptContents.Count, history.Count, userMessage.Length);
             
-            // Get endpoint with priority: Node.AIModelEndpoint > AIModel.EndpointAddress > default from config
-            var nodeEndpoint = node.AIModelEndpoint;
-            var endpoint = !string.IsNullOrEmpty(nodeEndpoint)
-                ? nodeEndpoint
-                : !string.IsNullOrEmpty(matchingAiModel?.EndpointAddress) 
-                    ? matchingAiModel.EndpointAddress 
-                    : "default endpoint from config";
+            // Get endpoint from AIModel or use default from config
+            var endpoint = !string.IsNullOrEmpty(matchingAiModel?.EndpointAddress) 
+                ? matchingAiModel.EndpointAddress 
+                : "default endpoint from config";
             
-            var endpointSource = GetEndpointSource(nodeEndpoint, matchingAiModel?.EndpointAddress);
+            var endpointSource = !string.IsNullOrEmpty(matchingAiModel?.EndpointAddress) 
+                ? "Template AIModel" 
+                : "Config Default";
             _logger.LogInformation("Using LLM Endpoint: {Endpoint} (Source: {EndpointSource})", 
                 endpoint, endpointSource);
 
             //! STEP 12-13: SEND MESSAGE TO OLLAMA AND WAIT FOR RESPONSE
-            // Use Node's endpoint, AIModel's endpoint and options if available
+            // Use AIModel's endpoint and options if available
             _logger.LogInformation("=== Sending Request to LLM ===");
             _logger.LogInformation("ChatId: {ChatId}, NodeId: {NodeId}, Model: {Model}", chatId, nodeId, modelName);
             
-            var aiResponse = await _llmChatService.SendChatRequestAsync(ollamaRequest, nodeEndpoint, matchingAiModel, cancellationToken);
+            var aiResponse = await _llmChatService.SendChatRequestAsync(ollamaRequest, matchingAiModel, cancellationToken);
 
             _logger.LogInformation("=== Received AI Response ===");
             _logger.LogInformation("ChatId: {ChatId}, Response Length: {Length} chars", chatId, aiResponse.Length);

@@ -18,9 +18,6 @@ namespace NodPT.Data.DTOs
         public string? TemplateName { get; set; }
         public MessageTypeEnum MessageType { get; set; }
         public LevelEnum Level { get; set; }
-        public int? AIModelId { get; set; }
-        public string? AIModelName { get; set; }
-        public string? AIModelEndpoint { get; set; }
         public AIModelDto? MatchingAIModel { get; set; }
         public List<PromptDto> MatchingPrompts { get; set; } = new();
     }

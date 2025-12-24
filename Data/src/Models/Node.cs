@@ -18,8 +18,6 @@ namespace NodPT.Data.Models
         private Template? _template;
         private MessageTypeEnum _messageType;
         private LevelEnum _level;
-        private AIModel? _aiModel;
-        private string? _aiModelEndpoint;
 
         public Node(Session session) : base(session) { }
         public Node() : base(Session.DefaultSession) { }
@@ -121,27 +119,6 @@ namespace NodPT.Data.Models
             set => SetPropertyValue(nameof(Level), ref _level, value);
         }
 
-        /// <summary>
-        /// Many-to-one relationship: Node can have an AIModel (nullable)
-        /// </summary>
-        [Association("AIModel-Nodes")]
-        [JsonIgnore]
-        public AIModel? AIModel
-        {
-            get => _aiModel;
-            set => SetPropertyValue(nameof(AIModel), ref _aiModel, value);
-        }
-
-        /// <summary>
-        /// LLM endpoint address for this specific node (can override template's AIModel endpoint)
-        /// </summary>
-        [Size(500)]
-        public string? AIModelEndpoint
-        {
-            get => _aiModelEndpoint;
-            set => SetPropertyValue(nameof(AIModelEndpoint), ref _aiModelEndpoint, value);
-        }
-
         // Helper property to work with Properties as Dictionary
         [Browsable(false)]
         public Dictionary<string, string> PropertiesDictionary
@@ -168,14 +145,43 @@ namespace NodPT.Data.Models
         }
 
         /// <summary>
-        /// Readonly property that returns the AIModel from Project.Template that matches this Node's MessageType and Level
+        /// Returns the AIModel from Project.Template that matches this Node's MessageType and Level.
+        /// If not found, creates a default AIModel and adds it to the Template's AIModels collection.
         /// </summary>
         public AIModel? GetMatchingAIModel()
         {
             if (Project?.Template == null) return null;
 
-            return Project.Template.AIModels
+            // Try to find existing matching AIModel
+            var matchingModel = Project.Template.AIModels
                 .FirstOrDefault(am => am.MessageType == MessageType && am.Level == Level && am.IsActive);
+
+            // If found, return it
+            if (matchingModel != null)
+                return matchingModel;
+
+            // Create default AIModel if not found
+            var defaultModel = new AIModel(Session)
+            {
+                Name = $"Default {Level} {MessageType}",
+                ModelIdentifier = "llama3.2:3b",
+                MessageType = MessageType,
+                Level = Level,
+                Description = $"Default AI model for {Level} level with {MessageType} message type",
+                IsActive = true,
+                Template = Project.Template,
+                EndpointAddress = null, // Will use system default
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            // Add to template's collection
+            Project.Template.AIModels.Add(defaultModel);
+            
+            // Save the new model
+            defaultModel.Save();
+
+            return defaultModel;
         }
 
         /// <summary>
