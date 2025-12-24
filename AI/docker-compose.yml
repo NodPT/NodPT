@@ -1,5 +1,9 @@
 version: "3.9"
 
+networks:
+  backend_network:
+    external: true
+
 services:
   ollama:
     image: ollama/ollama:latest
@@ -21,6 +25,10 @@ services:
 
     ports:
       - "11434:11434"
+
+    # Connect to backend network for communication with Executor
+    networks:
+      - backend_network
 
 volumes:
   ollama_data:

@@ -141,13 +141,38 @@ public class LlmChatService
             var json = JsonSerializer.Serialize(request);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            _logger.LogInformation("Sending chat request to LLM endpoint: {Endpoint}, Model: {Model}, Messages: {MessageCount}", 
-                endpoint, request.model, request.messages?.Count ?? 0);
+            _logger.LogInformation("=== Sending Chat Request to LLM ===");
+            _logger.LogInformation("Endpoint: {Endpoint}", endpoint);
+            _logger.LogInformation("Model: {Model}", request.model);
+            _logger.LogInformation("Message Count: {MessageCount}", request.messages?.Count ?? 0);
+            
+            // Log request payload only at Debug level to avoid exposing sensitive user data
+            if (json.Length <= 2000)
+            {
+                _logger.LogDebug("Request Payload: {RequestPayload}", json);
+            }
+            else
+            {
+                _logger.LogDebug("Request Payload (first 2000 chars): {RequestPayload}", json.Substring(0, 2000));
+                _logger.LogDebug("Request Payload Total Length: {PayloadLength} chars", json.Length);
+            }
 
             var response = await _httpClient.PostAsync(endpoint, content, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
+            
+            // Log response payload only at Debug level to avoid exposing sensitive content
+            if (responseJson.Length <= 2000)
+            {
+                _logger.LogDebug("Response Payload: {ResponsePayload}", responseJson);
+            }
+            else
+            {
+                _logger.LogDebug("Response Payload (first 2000 chars): {ResponsePayload}", responseJson.Substring(0, 2000));
+                _logger.LogDebug("Response Payload Total Length: {PayloadLength} chars", responseJson.Length);
+            }
+            
             var responseObject = JsonSerializer.Deserialize<OllamaResponse>(responseJson);
 
             if (responseObject == null)
@@ -157,7 +182,8 @@ public class LlmChatService
             }
 
             var result = responseObject.response ?? string.Empty;
-            _logger.LogInformation("Received LLM response with {Length} characters", result.Length);
+            _logger.LogInformation("=== LLM Response Processed ===");
+            _logger.LogInformation("Response Content Length: {Length} characters", result.Length);
 
             return result;
         }

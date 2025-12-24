@@ -92,11 +92,20 @@ public class ChatStreamWorker : BackgroundService
         {
             var fields = envelope.Fields;
             
+            // Log high-level information about the Redis job entry
+            _logger.LogInformation("=== Processing Redis Job Entry ===");
+            _logger.LogInformation("Entry ID: {EntryId}", envelope.EntryId);
+            _logger.LogInformation("Stream Key: {StreamKey}", envelope.StreamKey);
+            _logger.LogInformation("Payload Fields Count: {FieldCount}", fields.Count);
+            
+            // Log detailed payload fields only at Debug level to avoid exposing sensitive data
+            _logger.LogDebug("Redis job payload fields: {@Fields}", fields);
+            
             // Step 1-2: Extract required fields from Redis data (data A)
             // The message is marked as processing by Redis consumer group automatically
             if (!fields.TryGetValue("chatId", out var chatId) || string.IsNullOrEmpty(chatId))
             {
-                _logger.LogWarning("Chat job missing chatId, skipping");
+                _logger.LogWarning("Chat job missing chatId, skipping. Payload: {@Fields}", fields);
                 return true; // Ack anyway to remove from queue
             }
 
@@ -229,13 +238,34 @@ public class ChatStreamWorker : BackgroundService
 
             _logger.LogInformation("Prepared Ollama request with {MessageCount} messages for chatId {ChatId} (including memory context)", 
                 messages.Count, chatId);
+            _logger.LogInformation("Ollama Request Details - Model: {Model}, SystemPrompts: {SystemPromptCount}, History: {HistoryCount}, UserMessage Length: {UserMessageLength}", 
+                modelName, promptContents.Count, history.Count, userMessage.Length);
+            
+            // Log the endpoint being used
+            var endpoint = !string.IsNullOrEmpty(matchingAiModel?.EndpointAddress) 
+                ? matchingAiModel.EndpointAddress 
+                : "default endpoint from config";
+            _logger.LogInformation("Using LLM Endpoint: {Endpoint}", endpoint);
 
             //! STEP 12-13: SEND MESSAGE TO OLLAMA AND WAIT FOR RESPONSE
             // Use AIModel's endpoint and options if available
+            _logger.LogInformation("=== Sending Request to LLM ===");
+            _logger.LogInformation("ChatId: {ChatId}, NodeId: {NodeId}, Model: {Model}", chatId, nodeId, modelName);
+            
             var aiResponse = await _llmChatService.SendChatRequestAsync(ollamaRequest, matchingAiModel, cancellationToken);
 
-            _logger.LogInformation("Received AI response with {Length} chars for chatId {ChatId}", 
-                aiResponse.Length, chatId);
+            _logger.LogInformation("=== Received AI Response ===");
+            _logger.LogInformation("ChatId: {ChatId}, Response Length: {Length} chars", chatId, aiResponse.Length);
+            
+            // Log response preview only at Debug level to avoid exposing sensitive content
+            if (aiResponse.Length > 0 && aiResponse.Length <= 500)
+            {
+                _logger.LogDebug("Response Preview: {ResponsePreview}", aiResponse);
+            }
+            else if (aiResponse.Length > 500)
+            {
+                _logger.LogDebug("Response Preview (first 500 chars): {ResponsePreview}", aiResponse.Substring(0, 500));
+            }
 
             // Step 14-15: Extract content and create new message data from the responsed message
             var aiMessage = new ChatMessage(session)
@@ -290,10 +320,15 @@ public class ChatStreamWorker : BackgroundService
 
             var entryId = await _redisService.Add("signalr:updates", resultEnvelope);
 
-            _logger.LogInformation("Published result to signalr:updates: EntryId={EntryId}, NewChatId={NewChatId}", 
-                entryId, aiMessage.Oid);
+            _logger.LogInformation("=== Published Result to SignalR ===");
+            _logger.LogInformation("EntryId: {EntryId}, NewChatId: {NewChatId}, OriginalChatId: {OriginalChatId}", 
+                entryId, aiMessage.Oid, chatId);
 
             // Step 20: Acknowledge the Redis data (data A) - handled by returning true
+            _logger.LogInformation("=== Chat Job Completed Successfully ===");
+            _logger.LogInformation("Original ChatId: {ChatId}, New ChatId: {NewChatId}, NodeId: {NodeId}", 
+                chatId, aiMessage.Oid, nodeId);
+            
             return true; // Success, ack the message
         }
         catch (Exception ex)
