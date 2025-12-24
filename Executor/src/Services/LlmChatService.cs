@@ -146,15 +146,15 @@ public class LlmChatService
             _logger.LogInformation("Model: {Model}", request.model);
             _logger.LogInformation("Message Count: {MessageCount}", request.messages?.Count ?? 0);
             
-            // Log request payload (truncate if too long)
+            // Log request payload only at Debug level to avoid exposing sensitive user data
             if (json.Length <= 2000)
             {
-                _logger.LogInformation("Request Payload: {RequestPayload}", json);
+                _logger.LogDebug("Request Payload: {RequestPayload}", json);
             }
             else
             {
-                _logger.LogInformation("Request Payload (first 2000 chars): {RequestPayload}", json.Substring(0, 2000));
-                _logger.LogInformation("Request Payload Total Length: {PayloadLength} chars", json.Length);
+                _logger.LogDebug("Request Payload (first 2000 chars): {RequestPayload}", json.Substring(0, 2000));
+                _logger.LogDebug("Request Payload Total Length: {PayloadLength} chars", json.Length);
             }
 
             var response = await _httpClient.PostAsync(endpoint, content, cancellationToken);
@@ -162,15 +162,15 @@ public class LlmChatService
 
             var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
             
-            // Log response payload (truncate if too long)
+            // Log response payload only at Debug level to avoid exposing sensitive content
             if (responseJson.Length <= 2000)
             {
-                _logger.LogInformation("Response Payload: {ResponsePayload}", responseJson);
+                _logger.LogDebug("Response Payload: {ResponsePayload}", responseJson);
             }
             else
             {
-                _logger.LogInformation("Response Payload (first 2000 chars): {ResponsePayload}", responseJson.Substring(0, 2000));
-                _logger.LogInformation("Response Payload Total Length: {PayloadLength} chars", responseJson.Length);
+                _logger.LogDebug("Response Payload (first 2000 chars): {ResponsePayload}", responseJson.Substring(0, 2000));
+                _logger.LogDebug("Response Payload Total Length: {PayloadLength} chars", responseJson.Length);
             }
             
             var responseObject = JsonSerializer.Deserialize<OllamaResponse>(responseJson);

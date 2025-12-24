@@ -92,17 +92,14 @@ public class ChatStreamWorker : BackgroundService
         {
             var fields = envelope.Fields;
             
-            // Log the complete payload from Redis
+            // Log high-level information about the Redis job entry
             _logger.LogInformation("=== Processing Redis Job Entry ===");
             _logger.LogInformation("Entry ID: {EntryId}", envelope.EntryId);
             _logger.LogInformation("Stream Key: {StreamKey}", envelope.StreamKey);
             _logger.LogInformation("Payload Fields Count: {FieldCount}", fields.Count);
             
-            // Log all fields from the Redis payload
-            foreach (var field in fields)
-            {
-                _logger.LogInformation("  Field: {Key} = {Value}", field.Key, field.Value);
-            }
+            // Log detailed payload fields only at Debug level to avoid exposing sensitive data
+            _logger.LogDebug("Redis job payload fields: {@Fields}", fields);
             
             // Step 1-2: Extract required fields from Redis data (data A)
             // The message is marked as processing by Redis consumer group automatically
@@ -259,13 +256,15 @@ public class ChatStreamWorker : BackgroundService
 
             _logger.LogInformation("=== Received AI Response ===");
             _logger.LogInformation("ChatId: {ChatId}, Response Length: {Length} chars", chatId, aiResponse.Length);
+            
+            // Log response preview only at Debug level to avoid exposing sensitive content
             if (aiResponse.Length > 0 && aiResponse.Length <= 500)
             {
-                _logger.LogInformation("Response Preview: {ResponsePreview}", aiResponse);
+                _logger.LogDebug("Response Preview: {ResponsePreview}", aiResponse);
             }
             else if (aiResponse.Length > 500)
             {
-                _logger.LogInformation("Response Preview (first 500 chars): {ResponsePreview}", aiResponse.Substring(0, 500));
+                _logger.LogDebug("Response Preview (first 500 chars): {ResponsePreview}", aiResponse.Substring(0, 500));
             }
 
             // Step 14-15: Extract content and create new message data from the responsed message
