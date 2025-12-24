@@ -19,6 +19,7 @@ Background worker service built with .NET 8 that processes jobs from Redis strea
 - Redis pub/sub for AI request/response communication
 - Shared RedisService for consistent Redis operations
 - LLM chat integration
+- **Automatic Ollama endpoint verification at startup**
 - Real-time notifications to WebAPI via Redis channels
 - Docker ready
 
@@ -559,7 +560,53 @@ docker ps | grep ollama
 
 # Test endpoint
 curl http://ollama:11434/api/tags
+
+# Test chat endpoint
+curl -X POST http://ollama:11434/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{"model":"llama3.2:3b","prompt":"Hello","stream":false}'
 ```
+
+**Ollama verification fails at startup**:
+
+The Executor performs automatic Ollama endpoint verification at startup. If verification fails:
+
+1. **Check Ollama container status**:
+   ```bash
+   docker ps | grep ollama
+   docker logs ollama
+   ```
+
+2. **Verify Ollama environment variables**:
+   ```bash
+   docker inspect ollama | grep -A 5 Env
+   # Should show:
+   # OLLAMA_HOST=0.0.0.0:11434
+   # OLLAMA_ORIGINS=*
+   ```
+
+3. **Test network connectivity from Executor**:
+   ```bash
+   docker exec nodpt-executor curl http://ollama:11434/api/tags
+   ```
+
+4. **Verify model availability**:
+   ```bash
+   docker exec ollama ollama list
+   # Should show llama3.2:3b or other models
+   ```
+
+5. **Pull required model if missing**:
+   ```bash
+   docker exec ollama ollama pull llama3.2:3b
+   ```
+
+6. **Check Executor logs for detailed error**:
+   ```bash
+   docker logs nodpt-executor | grep -A 10 "Ollama"
+   ```
+
+The Executor will continue to run even if verification fails, but chat functionality may not work until Ollama is properly configured.
 
 **Jobs not being processed**:
 - Check Redis streams: `redis-cli XINFO STREAM jobs:manager`
