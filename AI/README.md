@@ -124,6 +124,11 @@ services:
     # enable all GPUs
     gpus: all
     
+    # Environment variables for remote access
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434    # Listen on all interfaces for Docker network access
+      - OLLAMA_ORIGINS=*              # Allow CORS from any origin
+    
     volumes:
       - ollama_data:/root/.ollama
     
@@ -133,6 +138,15 @@ services:
 volumes:
   ollama_data:
 ```
+
+### Remote Access Configuration
+
+The Ollama service is configured to accept connections from other Docker containers:
+
+- **OLLAMA_HOST=0.0.0.0:11434**: Binds Ollama to all network interfaces, allowing access from other containers on the same Docker network
+- **OLLAMA_ORIGINS=\***: Disables CORS restrictions for web-based access
+
+This configuration enables the Executor service to communicate with Ollama using the hostname `ollama:11434` within the `backend_network`.
 
 ### Persistent Storage
 

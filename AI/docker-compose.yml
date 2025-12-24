@@ -20,6 +20,11 @@ services:
     # enable all GPUs
     gpus: all
 
+    # Environment variables for remote access
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_ORIGINS=*
+
     volumes:
       - ollama_data:/root/.ollama
 
