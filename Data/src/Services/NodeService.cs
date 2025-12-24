@@ -19,7 +19,7 @@ namespace NodPT.Data.Services
             {
                 Id = node.Id,
                 Name = node.Name,
-                NodeType = node.NodeType.ToString(),
+                NodeType = node.NodeType,
                 Properties = node.PropertiesDictionary,
                 CreatedAt = node.CreatedAt,
                 UpdatedAt = node.UpdatedAt,
@@ -29,8 +29,7 @@ namespace NodPT.Data.Services
                 ProjectName = node.Project?.Name,
                 TemplateId = node.Template?.Oid,
                 TemplateName = node.Template?.Name,
-                MessageType = node.MessageType,
-                Level = node.Level
+                MessageType = node.MessageType
             };
 
             // Map MatchingAIModel if available
@@ -43,7 +42,7 @@ namespace NodPT.Data.Services
                     Name = aiModel.Name,
                     ModelIdentifier = aiModel.ModelIdentifier,
                     MessageType = aiModel.MessageType,
-                    Level = aiModel.Level,
+                    NodeType = aiModel.NodeType,
                     Description = aiModel.Description,
                     IsActive = aiModel.IsActive,
                     CreatedAt = aiModel.CreatedAt,
@@ -69,7 +68,7 @@ namespace NodPT.Data.Services
                 Id = p.Oid,
                 Content = p.Content,
                 MessageType = p.MessageType,
-                Level = p.Level,
+                NodeType = p.NodeType,
                 CreatedAt = p.CreatedAt,
                 UpdatedAt = p.UpdatedAt,
                 TemplateId = p.Template?.Oid
@@ -120,7 +119,7 @@ namespace NodPT.Data.Services
                 {
                     Id = nodeDto.Id,
                     Name = nodeDto.Name,
-                    NodeType = Enum.TryParse<NodeType>(nodeDto.NodeType, out var nodeType) ? nodeType : NodeType.Default,
+                    NodeType = nodeDto.NodeType,
                     PropertiesDictionary = nodeDto.Properties,
                     CreatedAt = nodeDto.CreatedAt,
                     UpdatedAt = nodeDto.UpdatedAt,
@@ -128,8 +127,7 @@ namespace NodPT.Data.Services
                     Parent = parent,
                     Project = project,
                     Template = template,
-                    MessageType = nodeDto.MessageType,
-                    Level = nodeDto.Level
+                    MessageType = nodeDto.MessageType
                 };
 
                 session.Save(node);
@@ -162,7 +160,7 @@ namespace NodPT.Data.Services
                     : null;
 
                 node.Name = nodeDto.Name;
-                node.NodeType = Enum.TryParse<NodeType>(nodeDto.NodeType, out var nodeType) ? nodeType : NodeType.Default;
+                node.NodeType = nodeDto.NodeType;
                 node.PropertiesDictionary = nodeDto.Properties;
                 node.UpdatedAt = nodeDto.UpdatedAt;
                 node.Status = nodeDto.Status;
@@ -170,7 +168,6 @@ namespace NodPT.Data.Services
                 node.Project = project;
                 node.Template = template;
                 node.MessageType = nodeDto.MessageType;
-                node.Level = nodeDto.Level;
 
                 session.Save(node);
                 session.CommitTransaction();

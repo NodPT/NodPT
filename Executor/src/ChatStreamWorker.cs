@@ -180,10 +180,10 @@ public class ChatStreamWorker : BackgroundService
                 .Select(p => p.Content!)
                 .ToList();
 
-            _logger.LogInformation("Found {PromptCount} matching prompts for Level={Level}, MessageType={MessageType}", 
-                promptContents.Count, node.Level, node.MessageType);
+            _logger.LogInformation("Found {PromptCount} matching prompts for NodeType={NodeType}, MessageType={MessageType}", 
+                promptContents.Count, node.NodeType, node.MessageType);
 
-            // Step 9: Get model name from template data based on Node's level
+            // Step 9: Get model name from template data based on Node's type
             var matchingAiModel = node.GetMatchingAIModel();
             var modelName = matchingAiModel?.ModelIdentifier ?? "llama3.2:3b";
 

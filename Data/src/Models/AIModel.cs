@@ -8,7 +8,7 @@ namespace NodPT.Data.Models
         private string? _name;
         private string? _modelIdentifier;
         private MessageTypeEnum _messageType;
-        private LevelEnum _level;
+        private NodeType _nodeType;
         private string? _description;
         private bool _isActive = true;
         private DateTime _createdAt = DateTime.UtcNow;
@@ -61,12 +61,12 @@ namespace NodPT.Data.Models
         }
 
         /// <summary>
-        /// Level of the AI model: Brain, Manager, Inspector, or Worker
+        /// Node type: Director, Manager, Inspector, Worker, etc.
         /// </summary>
-        public LevelEnum Level
+        public NodeType NodeType
         {
-            get => _level;
-            set => SetPropertyValue(nameof(Level), ref _level, value);
+            get => _nodeType;
+            set => SetPropertyValue(nameof(NodeType), ref _nodeType, value);
         }
 
         /// <summary>
