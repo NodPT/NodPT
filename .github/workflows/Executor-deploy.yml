@@ -83,49 +83,8 @@ jobs:
                 exit 1
               fi
 
-         # 🔟 Verify Ollama endpoint connectivity
-         - name: 10. Verify Ollama endpoint
-           run: |
-              echo "=== Verifying Ollama Endpoint Connectivity ==="
-              echo "Testing endpoint: http://ollama:11434/api/generate"
-              
-              # Retry up to 3 times with 5 second delays
-              MAX_RETRIES=3
-              RETRY_DELAY=5
-              
-              for attempt in $(seq 1 $MAX_RETRIES); do
-                echo "Attempt $attempt of $MAX_RETRIES..."
-                
-                # Test Ollama endpoint with a simple request
-                if docker exec nodpt-executor curl -s --max-time 30 -X POST http://ollama:11434/api/generate \
-                  -H "Content-Type: application/json" \
-                  -d '{"model":"llama3.2:3b","prompt":"Hello","stream":false,"options":{"num_predict":10,"temperature":0.7}}' \
-                  | grep -q "response"; then
-                  
-                  echo "✅ Ollama endpoint verification successful!"
-                  echo "Executor can successfully communicate with Ollama"
-                  exit 0
-                else
-                  echo "⚠️  Ollama verification attempt $attempt failed"
-                  
-                  if [ $attempt -lt $MAX_RETRIES ]; then
-                    echo "Retrying in $RETRY_DELAY seconds..."
-                    sleep $RETRY_DELAY
-                  fi
-                fi
-              done
-              
-              echo "❌ Ollama verification failed after $MAX_RETRIES attempts"
-              echo "Please check:"
-              echo "  1. Ollama container is running (docker ps | grep ollama)"
-              echo "  2. Ollama is accessible on the network (docker exec nodpt-executor curl http://ollama:11434/api/tags)"
-              echo "  3. Ollama has OLLAMA_HOST=0.0.0.0:11434 environment variable set"
-              echo "  4. Ollama has OLLAMA_ORIGINS=* environment variable set"
-              echo "  5. The model 'llama3.2:3b' is available (docker exec ollama ollama list)"
-              exit 1
-
-         # 1️⃣1️⃣ Show logs on failure
-         - name: 11. Show logs on failure
+         # 🔟 Show logs on failure
+         - name: 10. Show logs on failure
            if: failure()
            working-directory: Executor
            run: docker compose logs
