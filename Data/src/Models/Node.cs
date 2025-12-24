@@ -150,28 +150,54 @@ namespace NodPT.Data.Models
             if (matchingModel != null)
                 return matchingModel;
 
-            // Create default AIModel if not found
-            var defaultModel = new AIModel(Session)
+            // No existing model found; create a default one with proper transaction handling
+            var session = Session;
+            var startedTransaction = false;
+
+            try
             {
-                Name = $"Default {NodeType} {MessageType}",
-                ModelIdentifier = "llama3.2:3b",
-                MessageType = MessageType,
-                NodeType = NodeType,
-                Description = $"Default AI model for {NodeType} type with {MessageType} message type",
-                IsActive = true,
-                Template = Project.Template,
-                EndpointAddress = null, // Will use system default
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+                if (!session.InTransaction)
+                {
+                    session.BeginTransaction();
+                    startedTransaction = true;
+                }
 
-            // Add to template's collection
-            Project.Template.AIModels.Add(defaultModel);
-            
-            // Save the new model
-            defaultModel.Save();
+                var defaultModel = new AIModel(session)
+                {
+                    Name = $"Default {NodeType} {MessageType}",
+                    ModelIdentifier = "llama3.2:3b",
+                    MessageType = MessageType,
+                    NodeType = NodeType,
+                    Description = $"Default AI model for {NodeType} type with {MessageType} message type",
+                    IsActive = true,
+                    Template = Project.Template,
+                    EndpointAddress = null, // Will use system default
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
 
-            return defaultModel;
+                // Add to template's collection
+                Project.Template.AIModels.Add(defaultModel);
+
+                // Save the new model
+                defaultModel.Save();
+
+                if (startedTransaction)
+                {
+                    session.CommitTransaction();
+                }
+
+                return defaultModel;
+            }
+            catch
+            {
+                if (startedTransaction && session.InTransaction)
+                {
+                    session.RollbackTransaction();
+                }
+
+                throw;
+            }
         }
 
         /// <summary>
