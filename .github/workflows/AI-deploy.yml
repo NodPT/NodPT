@@ -38,34 +38,26 @@ jobs:
            run: |
               docker pull ollama/ollama:latest
 
-         # 5️⃣ Verify GPU support
-         - name: 5. Verify GPU support
-           run: |
-              echo "Checking NVIDIA GPU availability..."
-              nvidia-smi || echo "Warning: nvidia-smi not available"
-              echo "Checking Docker GPU support..."
-              docker run --rm --gpus all nvidia/cuda:12.0-base nvidia-smi || echo "Warning: Docker GPU support may not be configured"
-
-         # 6️⃣ Remove old container (required because container_name is fixed)
-         - name: 6. Remove old container
+         # 5️⃣ Remove old container (required because container_name is fixed)
+         - name: 5. Remove old container
            working-directory: AI
            run: |
               docker rm -f ollama || true
 
-         # 7️⃣ Stop current deployment
-         - name: 7. Stop current deployment
+         # 6️⃣ Stop current deployment
+         - name: 6. Stop current deployment
            working-directory: AI
            run: |
               docker compose down || true
 
-         # 8️⃣ Deploy new version
-         - name: 8. Deploy new version
+         # 7️⃣ Deploy new version
+         - name: 7. Deploy new version
            working-directory: AI
            run: |
               docker compose up -d --build --pull always
 
-         # 9️⃣ Verify deployment health
-         - name: 9. Verify deployment health
+         # 8️⃣ Verify deployment health
+         - name: 8. Verify deployment health
            working-directory: AI
            run: |
               echo "Waiting for Ollama health check..."
@@ -83,8 +75,8 @@ jobs:
               docker compose logs
               exit 1
 
-         # 🔟 Show logs on failure
-         - name: 10. Show logs on failure
+         # 9️⃣ Show logs on failure
+         - name: 9. Show logs on failure
            if: failure()
            working-directory: AI
            run: docker compose logs
