@@ -185,7 +185,7 @@ public class ChatStreamWorker : BackgroundService
 
             // Step 9: Get model name from template data based on Node's type
             var matchingAiModel = node.GetMatchingAIModel();
-            var modelName = matchingAiModel?.ModelIdentifier ?? "llama3.2:3b";
+            var modelName = matchingAiModel?.ModelIdentifier ?? Environment.GetEnvironmentVariable("DEFAULT_MODEL") ?? "deepseek-r1:1.5b";
 
             _logger.LogInformation("Using model: {ModelName} (from AIModel: {AIModelName})", 
                 modelName, matchingAiModel?.Name ?? "default");

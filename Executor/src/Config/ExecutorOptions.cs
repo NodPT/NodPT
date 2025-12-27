@@ -35,5 +35,10 @@ public class ExecutorOptions
     /// <summary>
     /// LLM endpoint URL for chat completions
     /// </summary>
-    public string LlmEndpoint { get; set; } = "http://localhost:8355/v1/chat/completions";
+    public string LlmEndpoint { get; set; } = "http://ollama:11434/v1/chat/generate";
+
+    /// <summary>
+    /// Default model name to use for LLM chat completions
+    /// </summary>
+    public string DefaultModel { get; set; } = "deepseek-r1:1.5b";
 }

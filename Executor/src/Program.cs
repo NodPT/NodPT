@@ -48,6 +48,7 @@ builder.Services.Configure<ExecutorOptions>(options =>
     options.MaxAgent = int.TryParse(Environment.GetEnvironmentVariable("MAX_AGENT"), out var maxAgent) ? maxAgent : 0;
     options.MaxTotal = int.TryParse(Environment.GetEnvironmentVariable("MAX_TOTAL"), out var maxTotal) ? maxTotal : 0;
     options.LlmEndpoint = Environment.GetEnvironmentVariable("LLM_ENDPOINT") ?? "http://ollama:11434/api/generate";
+    options.DefaultModel = Environment.GetEnvironmentVariable("DEFAULT_MODEL") ?? "deepseek-r1:1.5b";
 });
 
 // Register ExecutorOptions as singleton
@@ -55,7 +56,7 @@ builder.Services.AddSingleton<ExecutorOptions>(provider =>
 {
     var options = new ExecutorOptions();
     provider.GetRequiredService<IConfiguration>().GetSection(ExecutorOptions.SectionName).Bind(options);
-    
+
     // Override with environment variables
     options.RedisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION") ?? options.RedisConnection;
     options.MaxManager = int.TryParse(Environment.GetEnvironmentVariable("MAX_MANAGER"), out var maxManager) ? maxManager : options.MaxManager;
@@ -63,7 +64,8 @@ builder.Services.AddSingleton<ExecutorOptions>(provider =>
     options.MaxAgent = int.TryParse(Environment.GetEnvironmentVariable("MAX_AGENT"), out var maxAgent) ? maxAgent : options.MaxAgent;
     options.MaxTotal = int.TryParse(Environment.GetEnvironmentVariable("MAX_TOTAL"), out var maxTotal) ? maxTotal : options.MaxTotal;
     options.LlmEndpoint = Environment.GetEnvironmentVariable("LLM_ENDPOINT") ?? options.LlmEndpoint;
-    
+    options.DefaultModel = Environment.GetEnvironmentVariable("DEFAULT_MODEL") ?? options.DefaultModel;
+
     return options;
 });
 
@@ -72,7 +74,7 @@ builder.Services.AddSingleton<SummarizationOptions>(provider =>
 {
     var options = new SummarizationOptions();
     provider.GetRequiredService<IConfiguration>().GetSection("Summarization").Bind(options);
-    
+
     // Override with environment variables
     options.BaseUrl = Environment.GetEnvironmentVariable("SUMMARIZATION_BASE_URL") ?? options.BaseUrl;
     options.Model = Environment.GetEnvironmentVariable("SUMMARIZATION_MODEL") ?? options.Model;
@@ -80,7 +82,7 @@ builder.Services.AddSingleton<SummarizationOptions>(provider =>
         options.TimeoutSeconds = timeout;
     if (int.TryParse(Environment.GetEnvironmentVariable("SUMMARIZATION_MAX_LENGTH"), out var maxLen))
         options.MaxSummaryLength = maxLen;
-    
+
     return options;
 });
 
@@ -89,13 +91,13 @@ builder.Services.AddSingleton<MemoryOptions>(provider =>
 {
     var options = new MemoryOptions();
     provider.GetRequiredService<IConfiguration>().GetSection("Memory").Bind(options);
-    
+
     // Override with environment variables
     if (int.TryParse(Environment.GetEnvironmentVariable("MEMORY_HISTORY_LIMIT"), out var historyLimit))
         options.HistoryLimit = historyLimit;
     options.SummaryKeyPrefix = Environment.GetEnvironmentVariable("MEMORY_SUMMARY_KEY_PREFIX") ?? options.SummaryKeyPrefix;
     options.HistoryKeyPrefix = Environment.GetEnvironmentVariable("MEMORY_HISTORY_KEY_PREFIX") ?? options.HistoryKeyPrefix;
-    
+
     return options;
 });
 
@@ -113,14 +115,14 @@ redisOptions.SyncTimeout = 5000;
 builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
 {
     var logger = provider.GetService<ILogger<Program>>();
-    
+
     try
     {
         logger?.LogInformation("Connecting to Redis at {RedisConnection}...", redisConnection);
         var connection = ConnectionMultiplexer.Connect(redisOptions);
-        
+
         // Redis connection created. StackExchange.Redis will handle reconnection if needed (AbortOnConnectFail=false).
-        
+
         return connection;
     }
     catch (Exception ex)
@@ -190,6 +192,7 @@ var memoryOptions = host.Services.GetRequiredService<MemoryOptions>();
 logger.LogInformation("BackendExecutor starting with configuration:");
 logger.LogInformation("  Redis Connection: {RedisConnection}", redisConnection);
 logger.LogInformation("  LLM Endpoint: {LlmEndpoint}", executorOptions.LlmEndpoint);
+logger.LogInformation("  Default Model: {DefaultModel}", executorOptions.DefaultModel);
 logger.LogInformation("  Max Manager: {MaxManager}", executorOptions.MaxManager == 0 ? "unlimited" : executorOptions.MaxManager);
 logger.LogInformation("  Max Inspector: {MaxInspector}", executorOptions.MaxInspector == 0 ? "unlimited" : executorOptions.MaxInspector);
 logger.LogInformation("  Max Agent: {MaxAgent}", executorOptions.MaxAgent == 0 ? "unlimited" : executorOptions.MaxAgent);

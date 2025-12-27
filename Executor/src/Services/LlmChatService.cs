@@ -8,7 +8,7 @@ using System.Text.Json.Serialization;
 namespace BackendExecutor.Services;
 
 
-public class LlmChatService 
+public class LlmChatService
 {
     private readonly HttpClient _httpClient;
     private readonly ExecutorOptions _options;
@@ -24,41 +24,8 @@ public class LlmChatService
         _logger = logger;
     }
 
-    /// <summary>
-    /// Send a chat message to the LLM endpoint
-    /// </summary>
-    public async Task<string> SendChatMessageAsync(
-        string message,
-        string model,
-        int maxTokens = 64,
-        CancellationToken cancellationToken = default)
-    {
-        var request = new OllamaRequest
-        {
-            model = model,
-            messages = new List<OllamaMessage>
-            {
-                new OllamaMessage { role = "user", content = message }
-            },
-        };
+ 
 
-        return await SendChatRequestAsync(request, cancellationToken);
-    }
-
-    /// <summary>
-    /// Send a chat message object to the LLM endpoint (object will be serialized)
-    /// </summary>
-    public async Task<string> SendChatMessageAsync(
-        object messageObject,
-        string model,
-        int maxTokens = 64,
-        CancellationToken cancellationToken = default)
-    {
-        var message = JsonSerializer.Serialize(messageObject);
-        return await SendChatMessageAsync(message, model, maxTokens, cancellationToken);
-    }
-
-    /// <summary>
     /// Build OllamaOptions from AIModel properties with optimistic defaults
     /// If aiModel is null, returns options with default values suitable for most use cases
     /// </summary>
@@ -82,7 +49,6 @@ public class LlmChatService
             TopP = aiModel?.TopP ?? DefaultTopP,
             NumCtx = aiModel?.NumCtx ?? DefaultNumCtx,
             RepeatPenalty = aiModel?.RepeatPenalty ?? DefaultRepeatPenalty,
-            // These don't have universal defaults - use AIModel values if set
             Seed = aiModel?.Seed,
             NumGpu = aiModel?.NumGpu,
             NumThread = aiModel?.NumThread
@@ -108,8 +74,8 @@ public class LlmChatService
         CancellationToken cancellationToken = default)
     {
         // Use endpoint from AIModel if available, otherwise use default
-        var endpoint = !string.IsNullOrEmpty(aiModel?.EndpointAddress) 
-            ? aiModel.EndpointAddress 
+        var endpoint = !string.IsNullOrEmpty(aiModel?.EndpointAddress)
+            ? aiModel.EndpointAddress
             : _options.LlmEndpoint;
 
         // Build options from AIModel if not already set (always returns optimistic defaults)
@@ -121,15 +87,7 @@ public class LlmChatService
         return await SendChatRequestAsync(request, endpoint, cancellationToken);
     }
 
-    /// <summary>
-    /// Send a structured Ollama request to the LLM endpoint (uses default endpoint from config)
-    /// </summary>
-    public async Task<string> SendChatRequestAsync(
-        OllamaRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        return await SendChatRequestAsync(request, _options.LlmEndpoint, cancellationToken);
-    }
+  
 
     /// <summary>
     /// Send a structured Ollama request to a specific endpoint
@@ -148,34 +106,36 @@ public class LlmChatService
             _logger.LogInformation("Endpoint: {Endpoint}", endpoint);
             _logger.LogInformation("Model: {Model}", request.model);
             _logger.LogInformation("Message Count: {MessageCount}", request.messages?.Count ?? 0);
-            
+
             // Log request payload only at Debug level to avoid exposing sensitive user data
             if (json.Length <= 2000)
             {
-                _logger.LogDebug("Request Payload: {RequestPayload}", json);
+                _logger.LogInformation("Request Payload: {RequestPayload}", json);
             }
             else
             {
-                _logger.LogDebug("Request Payload (first 2000 chars): {RequestPayload}", json.Substring(0, 2000));
-                _logger.LogDebug("Request Payload Total Length: {PayloadLength} chars", json.Length);
+                _logger.LogInformation("Request Payload (first 2000 chars): {RequestPayload}", json.Substring(0, 2000));
+                _logger.LogInformation("Request Payload Total Length: {PayloadLength} chars", json.Length);
             }
 
+
+            //! Send request to LLM endpoint
             var response = await _httpClient.PostAsync(endpoint, content, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
-            
+
             // Log response payload only at Debug level to avoid exposing sensitive content
             if (responseJson.Length <= 2000)
             {
-                _logger.LogDebug("Response Payload: {ResponsePayload}", responseJson);
+                _logger.LogInformation("Response Payload: {ResponsePayload}", responseJson);
             }
             else
             {
-                _logger.LogDebug("Response Payload (first 2000 chars): {ResponsePayload}", responseJson.Substring(0, 2000));
-                _logger.LogDebug("Response Payload Total Length: {PayloadLength} chars", responseJson.Length);
+                _logger.LogInformation("Response Payload (first 2000 chars): {ResponsePayload}", responseJson.Substring(0, 2000));
+                _logger.LogInformation("Response Payload Total Length: {PayloadLength} chars", responseJson.Length);
             }
-            
+
             var responseObject = JsonSerializer.Deserialize<OllamaResponse>(responseJson);
 
             if (responseObject == null)
@@ -207,5 +167,5 @@ public class LlmChatService
         }
     }
 
-   
+
 }
