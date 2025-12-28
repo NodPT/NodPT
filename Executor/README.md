@@ -507,11 +507,12 @@ A test script is provided to verify connectivity to the Ollama service from with
 
 ```bash
 # Run the connectivity test inside the Executor container
-docker exec nodpt-executor bash /app/../test-ollama-connectivity.sh
-
-# Or copy the script to the container and run it
-docker cp Executor/test-ollama-connectivity.sh nodpt-executor:/app/test-ollama-connectivity.sh
 docker exec nodpt-executor bash /app/test-ollama-connectivity.sh
+
+# Or run it interactively
+docker exec -it nodpt-executor bash
+# Then inside the container:
+/app/test-ollama-connectivity.sh
 ```
 
 The test script:
