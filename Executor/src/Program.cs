@@ -154,8 +154,13 @@ builder.Services.AddSingleton<RedisQueueService>(provider =>
     return new RedisQueueService(multiplexer, logger);
 });
 
-// Register HttpClient for LLM service
-builder.Services.AddHttpClient<LlmChatService, LlmChatService>();
+// Register HttpClientFactory
+builder.Services.AddHttpClient();
+
+// Register LLM services
+builder.Services.AddSingleton<OllamaLlmClient>();
+builder.Services.AddSingleton<TensorRtChatClient>();
+builder.Services.AddSingleton<LlmChatService>();
 
 // Register HttpClient for SummarizationService
 builder.Services.AddHttpClient<SummarizationService, SummarizationService>((provider, client) =>
