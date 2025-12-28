@@ -10,16 +10,16 @@ This document describes the implementation of curl in the Executor Docker contai
 
 **File:** `Executor/Dockerfile`
 
-Added curl installation in the runtime stage:
+Added curl and jq installation in the runtime stage:
 
 ```dockerfile
 # Install curl for connectivity testing
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl jq && rm -rf /var/lib/apt/lists/*
 ```
 
 This command:
 - Updates the package lists (`apt-get update`)
-- Installs curl (`apt-get install -y curl`)
+- Installs curl and jq (`apt-get install -y curl jq`)
 - Cleans up package lists to reduce image size (`rm -rf /var/lib/apt/lists/*`)
 
 ### 2. Created Test Script
@@ -194,5 +194,6 @@ If the test fails:
 
 - The test uses `llama3:8b` as specified in the issue, which may differ from the current default model (`deepseek-r1:1.5b`) configured in the Executor service
 - The test is designed to be run manually for verification purposes
-- curl is now available in the Executor container for any debugging or connectivity testing needs
+- curl and jq are now available in the Executor container for any debugging or connectivity testing needs
+- The test script uses `jq` for JSON formatting but gracefully falls back to raw output if jq is unavailable
 - The cleanup command in the Dockerfile (`rm -rf /var/lib/apt/lists/*`) keeps the image size minimal
