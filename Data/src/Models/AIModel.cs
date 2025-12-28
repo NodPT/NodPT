@@ -107,7 +107,7 @@ namespace NodPT.Data.Models
         }
 
         /// <summary>
-        /// Ollama API endpoint address (e.g., "http://localhost:11434/api/chat")
+        /// Ollama API endpoint address (e.g., "http://localhost:11434/api/generate")
         /// </summary>
         [Size(500)]
         public string? EndpointAddress

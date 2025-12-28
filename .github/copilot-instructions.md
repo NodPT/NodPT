@@ -128,6 +128,7 @@ NodPT/
 # Frontend Instructions
 
 ## 📄 Overview
+
 This project builds a visual AI-assisted workflow editor frontend using Vue 3, Rete.js, and Bootstrap 5. The goal is to create a clean, modular UI split into four main areas:
 ■ Top Bar: Fixed controls for nodes, project management, AI tools, user profile.
 ■ Bottom Bar: Fixed status area with zoom controls, build progress, and a minimap toggle.
@@ -135,6 +136,7 @@ This project builds a visual AI-assisted workflow editor frontend using Vue 3, R
 ■ Right Panel: Tab container for AI chat, notebook, logs, timeline, and properties (resizable).
 
 ## 📚 Libraries To Use
+
 Vue 3 (Composition API)
 Rete.js (https://retejs.org/)
 Bootstrap 5 (https://getbootstrap.com/)
@@ -143,6 +145,7 @@ Vuex / Tiny Emitter (eventBus) (for state management if needed)
 FontAwesome (for icons)
 
 ## 📁 Folder structure for frontend:
+
 /src
 /components
 /views
@@ -153,13 +156,15 @@ main.js
 ## 🖱️ Component Structure
 
 ### 2. Top Bar (Fixed Header)
-User menu 
+
+User menu
 File: components/TopBar.vue buttons:
 Project Controls: New, Open, Save, Export, Build, Run, Publish.
 Node Controls: Add Node, Clear, Group, Ungroup, Lock, Unlock.
 Search button
 
 ### 3. Create Bottom Bar (Fixed Footer)
+
 File: components/BottomBar.vue
 ■ Selected Node Status
 ■ Arrage nodes
@@ -168,11 +173,13 @@ File: components/BottomBar.vue
 ■ Use Bootstrap's fixed-bottom class for positioning.
 
 ### 4. Create Left Panel (Resizable Rete.js Canvas)
+
 File: components/LeftPanel.vue
 Render Rete.js editor canvas.
 This panel is where nodes are displayed and manipulated.
 
 ### 5. Create Right Panel (floating panel)
+
 File: components/RightPanel.vue
 Use Bootstrap nav-tabs for tabs:
 ■ AI Chat: Interactive chat UI
@@ -181,27 +188,33 @@ Use Bootstrap nav-tabs for tabs:
 ■ Files
 
 ### 7. Assemble Main Editor View
+
 File: views/MainEditor.vue
 Combine TopBar, BottomBar, LeftPanel, RightPanel into a responsive layout
 
 ### 8. App.vue
+
 Load MainEditor.vue.
 Setup Vue Router if needed for additional pages.
 
 ## Useful Components and Patterns
 
 ### API Plugin
-■ api-plugin already has all functions of crud by using axios and bearer token. Use this plugin by calling const api=inject('api'). The available functions are get, put, delete, post. Pass the parameters as same with axios function. 
+
+■ api-plugin already has all functions of crud by using axios and bearer token. Use this plugin by calling const api=inject('api'). The available functions are get, put, delete, post. Pass the parameters as same with axios function.
 ■ **Important: Don't use axios directly in components or services.** All HTTP requests should use the api plugin which automatically handles authentication headers.
 ■ **For services**: Service classes should have a `setApi(api)` method. Components must inject the api and call `service.setApi(api)` before using the service:
-  ```javascript
-  // In component setup()
-  const api = inject('api');
-  someService.setApi(api);
-  ```
+
+```javascript
+// In component setup()
+const api = inject('api');
+someService.setApi(api);
+```
+
 ■ **IMPORTANT: Never send firebaseUid to backend**. The backend extracts user identity from the JWT token in the Authorization header automatically. The api-plugin handles authentication headers, so you don't need to manage firebaseUid manually.
 
 ## 📝 Keep It Simple
+
 Each Vue component should be self-contained.
 Avoid over-engineering or unnecessary abstractions.
 No backend logic is needed; use mock data for testing UI.
@@ -542,6 +555,7 @@ if (resource.User.Oid != currentUser.Oid && !currentUser.IsAdmin)
 # WebAPI Instructions
 
 ## 📄 Overview
+
 This project builds a visual AI-assisted workflow editor backend using web api .NET 8.0
 The goal is to create a clean, modular web api.
 Data models will be simple, focusing on nodes and other data. Using XPO ORM database for persistence.
@@ -711,22 +725,22 @@ app.UseCors("AllowAll");
 
 1. Run the backend.
 2. Use Postman or your Vue frontend to test endpoints:
-   - `GET /api/nodes`
-   - `GET /api/nodes/{id}`
-   - `GET /api/chat`
-   - `POST /api/chat`
+   -  `GET /api/nodes`
+   -  `GET /api/nodes/{id}`
+   -  `GET /api/generate`
+   -  `POST /api/generate`
 
 ---
 
 ### ✅ Final Notes
 
-- Keep logic simple and clean.
-- Use mock data until real database or AI integration is needed.
-- You can later add endpoints for:
-  - Build progress
-  - Timeline rollback
-  - Node grouping/locking
-  - AI tool interactions
+-  Keep logic simple and clean.
+-  Use mock data until real database or AI integration is needed.
+-  You can later add endpoints for:
+   -  Build progress
+   -  Timeline rollback
+   -  Node grouping/locking
+   -  AI tool interactions
 
 Would you like me to generate a sample `.http` file or Postman collection to test these endpoints?
 
@@ -827,12 +841,12 @@ Controllers should use dependency injection for UnitOfWork and pass `User` (Clai
 public class ProjectsController : ControllerBase
 {
     private readonly UnitOfWork unitOfWork;
-    
+
     public ProjectsController(UnitOfWork _unitOfWork)
     {
         this.unitOfWork = _unitOfWork;
     }
-    
+
     [HttpPost]
     public IActionResult CreateProject([FromBody] ProjectDto projectDto)
     {
@@ -853,7 +867,7 @@ public class ProjectsController : ControllerBase
             return StatusCode(500, new { error = "An error occurred." });
         }
     }
-    
+
     [HttpGet]
     public IActionResult GetProjects()
     {

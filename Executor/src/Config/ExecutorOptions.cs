@@ -35,7 +35,8 @@ public class ExecutorOptions
     /// <summary>
     /// LLM endpoint URL for chat completions
     /// </summary>
-    public string LlmEndpoint { get; set; } = "http://ollama:11434/v1/chat/generate";
+    // Ollama native endpoint. The executor can also be pointed elsewhere via LLM_ENDPOINT.
+    public string LlmEndpoint { get; set; } = "http://ollama:11434/api/generate";
 
     /// <summary>
     /// Default model name to use for LLM chat completions
