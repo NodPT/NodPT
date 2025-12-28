@@ -184,9 +184,10 @@ public class ExecutorIntegrationTests
             using var process = System.Diagnostics.Process.Start(processStartInfo);
             if (process == null)
             {
-                _output.WriteLine("✗ Failed to start curl process");
-                Console.WriteLine("✗ Failed to start curl process");
-                return;
+                const string message = "Failed to start curl process";
+                _output.WriteLine($"✗ {message}");
+                Console.WriteLine($"✗ {message}");
+                Assert.True(false, message);
             }
             
             var output = await process.StandardOutput.ReadToEndAsync();
