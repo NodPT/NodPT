@@ -148,18 +148,14 @@ public class ExecutorIntegrationTests
             throw;
         }
         
-        // Step 2: Create curl string
-        _output.WriteLine("=== STEP 2: Generate Curl Command ===");
+        // Step 2: Create curl string and execute it
+        _output.WriteLine("=== STEP 2: Generate and Execute Curl Command ===");
         _output.WriteLine("");
-        Console.WriteLine("=== STEP 2: Generate Curl Command ===");
+        Console.WriteLine("=== STEP 2: Generate and Execute Curl Command ===");
         Console.WriteLine("");
         
-        // Escape payload for shell
-        var escapedPayload = jsonContent.Replace("\"", "\\\"").Replace("\n", "").Replace("\r", "");
-        
-        var curlCommand = $"curl -X POST {ollamaEndpoint} \\\n" +
-                         $"  -H \"Content-Type: application/json\" \\\n" +
-                         $"  -d \"{escapedPayload}\"";
+        // Create curl command - using single quotes for JSON payload to avoid escaping issues
+        var curlCommand = $"curl -X POST {ollamaEndpoint} -H \"Content-Type: application/json\" -d '{jsonContent}'";
         
         _output.WriteLine("Curl Command:");
         _output.WriteLine(curlCommand);
@@ -168,19 +164,112 @@ public class ExecutorIntegrationTests
         Console.WriteLine(curlCommand);
         Console.WriteLine("");
         
-        // Also create a more readable version with proper JSON formatting
-        var curlCommandReadable = $"curl -X POST {ollamaEndpoint} \\\n" +
-                                 $"  -H \"Content-Type: application/json\" \\\n" +
-                                 $"  -d '{jsonContent}'";
+        // Execute curl command
+        _output.WriteLine("Executing curl command...");
+        Console.WriteLine("Executing curl command...");
         
-        _output.WriteLine("Curl Command (Readable Format):");
-        _output.WriteLine(curlCommandReadable);
+        try
+        {
+            var processStartInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "/bin/bash",
+                Arguments = $"-c \"{curlCommand.Replace("\"", "\\\"")}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            
+            using var process = System.Diagnostics.Process.Start(processStartInfo);
+            if (process == null)
+            {
+                _output.WriteLine("✗ Failed to start curl process");
+                Console.WriteLine("✗ Failed to start curl process");
+                return;
+            }
+            
+            var output = await process.StandardOutput.ReadToEndAsync();
+            var error = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+            
+            _output.WriteLine($"Curl Exit Code: {process.ExitCode}");
+            Console.WriteLine($"Curl Exit Code: {process.ExitCode}");
+            
+            if (!string.IsNullOrEmpty(output))
+            {
+                _output.WriteLine("Curl Output:");
+                _output.WriteLine(output);
+                _output.WriteLine("");
+                Console.WriteLine("Curl Output:");
+                Console.WriteLine(output);
+                Console.WriteLine("");
+            }
+            
+            if (!string.IsNullOrEmpty(error))
+            {
+                _output.WriteLine("Curl Error:");
+                _output.WriteLine(error);
+                _output.WriteLine("");
+                Console.WriteLine("Curl Error:");
+                Console.WriteLine(error);
+                Console.WriteLine("");
+            }
+            
+            if (process.ExitCode == 0)
+            {
+                _output.WriteLine("✓ Curl command executed successfully");
+                Console.WriteLine("✓ Curl command executed successfully");
+                
+                // Try to parse the curl response
+                if (!string.IsNullOrEmpty(output))
+                {
+                    try
+                    {
+                        using var curlJsonDoc = JsonDocument.Parse(output);
+                        var curlRoot = curlJsonDoc.RootElement;
+                        
+                        string? curlMessageContent = null;
+                        
+                        if (curlRoot.TryGetProperty("message", out var curlMessageElement))
+                        {
+                            if (curlMessageElement.TryGetProperty("content", out var curlContentElement))
+                            {
+                                curlMessageContent = curlContentElement.GetString();
+                            }
+                        }
+                        else if (curlRoot.TryGetProperty("response", out var curlResponseElement))
+                        {
+                            curlMessageContent = curlResponseElement.GetString();
+                        }
+                        
+                        if (!string.IsNullOrEmpty(curlMessageContent))
+                        {
+                            _output.WriteLine($"Curl AI Response: {curlMessageContent}");
+                            Console.WriteLine($"Curl AI Response: {curlMessageContent}");
+                        }
+                    }
+                    catch (Exception parseEx)
+                    {
+                        _output.WriteLine($"Could not parse curl response as JSON: {parseEx.Message}");
+                        Console.WriteLine($"Could not parse curl response as JSON: {parseEx.Message}");
+                    }
+                }
+            }
+            else
+            {
+                _output.WriteLine($"✗ Curl command failed with exit code {process.ExitCode}");
+                Console.WriteLine($"✗ Curl command failed with exit code {process.ExitCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _output.WriteLine($"✗ Exception executing curl: {ex.Message}");
+            Console.WriteLine($"✗ Exception executing curl: {ex.Message}");
+        }
+        
         _output.WriteLine("");
-        Console.WriteLine("Curl Command (Readable Format):");
-        Console.WriteLine(curlCommandReadable);
-        Console.WriteLine("");
-        
         _output.WriteLine("=== Test Completed Successfully ===");
+        Console.WriteLine("");
         Console.WriteLine("=== Test Completed Successfully ===");
     }
 }
