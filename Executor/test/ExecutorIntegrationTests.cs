@@ -26,7 +26,6 @@ public class ExecutorIntegrationTests : IDisposable
     private readonly IConnectionMultiplexer _redis;
     private readonly IDatabase _redisDb;
     private readonly string _testStreamKey;
-    private readonly string _testGroup;
     
     public ExecutorIntegrationTests(ITestOutputHelper output)
     {
@@ -53,7 +52,6 @@ public class ExecutorIntegrationTests : IDisposable
         // Setup Redis connection
         var redisConnection = _configuration["Redis:ConnectionString"] ?? "localhost:6379";
         _testStreamKey = _configuration["Redis:Streams:JobsChat"] ?? "jobs:chat:test";
-        _testGroup = "executor-test";
         
         var redisOptions = ConfigurationOptions.Parse(redisConnection);
         redisOptions.AbortOnConnectFail = false;
