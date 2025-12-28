@@ -24,6 +24,13 @@ RUN dotnet publish Executor/src/BackendExecutor.csproj -c Release -o /app/publis
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
+# Install curl for connectivity testing
+RUN apt-get update && apt-get install -y curl jq && rm -rf /var/lib/apt/lists/*
+
 COPY --from=publish /app/publish ./
+
+# Copy the Ollama connectivity test script
+COPY Executor/test-ollama-connectivity.sh /app/test-ollama-connectivity.sh
+RUN chmod +x /app/test-ollama-connectivity.sh
 
 ENTRYPOINT ["dotnet", "BackendExecutor.dll"]
