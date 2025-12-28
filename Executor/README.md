@@ -501,6 +501,28 @@ SignalR service reads this stream and delivers to connected clients.
 
 ## 🧪 Testing
 
+### Ollama Connectivity Test
+
+A test script is provided to verify connectivity to the Ollama service from within the Executor container:
+
+```bash
+# Run the connectivity test inside the Executor container
+docker exec nodpt-executor bash /app/../test-ollama-connectivity.sh
+
+# Or copy the script to the container and run it
+docker cp Executor/test-ollama-connectivity.sh nodpt-executor:/app/test-ollama-connectivity.sh
+docker exec nodpt-executor bash /app/test-ollama-connectivity.sh
+```
+
+The test script:
+- Sends a POST request to `http://ollama:11434/api/generate`
+- Uses model `llama3:8b` for testing
+- Sends a simple "Hello" message
+- Sets `stream=false` for synchronous response
+- Verifies network connectivity and API accessibility
+
+### Manual Testing
+
 ```bash
 # Run tests (if available)
 dotnet test
@@ -512,6 +534,11 @@ redis-cli -h localhost -p 6379 ping
 curl -X POST http://localhost:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model":"llama2","messages":[{"role":"user","content":"test"}]}'
+
+# Test Ollama generate endpoint
+curl -X POST http://ollama:11434/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{"model":"llama3:8b","prompt":"Hello","stream":false}'
 ```
 
 ## 🤝 Contributing

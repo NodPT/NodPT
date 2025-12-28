@@ -24,6 +24,9 @@ RUN dotnet publish Executor/src/BackendExecutor.csproj -c Release -o /app/publis
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
+# Install curl for connectivity testing
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 COPY --from=publish /app/publish ./
 
 ENTRYPOINT ["dotnet", "BackendExecutor.dll"]
