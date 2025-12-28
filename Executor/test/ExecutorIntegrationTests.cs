@@ -260,12 +260,14 @@ public class ExecutorIntegrationTests
             {
                 _output.WriteLine($"✗ Curl command failed with exit code {process.ExitCode}");
                 Console.WriteLine($"✗ Curl command failed with exit code {process.ExitCode}");
+                Assert.True(false, $"Curl command failed with exit code {process.ExitCode}");
             }
         }
         catch (Exception ex)
         {
             _output.WriteLine($"✗ Exception executing curl: {ex.Message}");
             Console.WriteLine($"✗ Exception executing curl: {ex.Message}");
+            throw;
         }
         
         _output.WriteLine("");
