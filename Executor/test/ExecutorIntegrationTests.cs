@@ -154,8 +154,9 @@ public class ExecutorIntegrationTests
         Console.WriteLine("=== STEP 2: Generate and Execute Curl Command ===");
         Console.WriteLine("");
         
-        // Create curl command - using single quotes for JSON payload to avoid escaping issues
-        var curlCommand = $"curl -X POST {ollamaEndpoint} -H \"Content-Type: application/json\" -d '{jsonContent}'";
+        // Create curl command - using single quotes for JSON payload and escaping internal single quotes to avoid shell injection
+        var safeJsonContent = jsonContent.Replace("'", "'\"'\"'");
+        var curlCommand = $"curl -X POST {ollamaEndpoint} -H \"Content-Type: application/json\" -d '{safeJsonContent}'";
         
         _output.WriteLine("Curl Command:");
         _output.WriteLine(curlCommand);
