@@ -1,0 +1,15 @@
+# Build artifacts
+bin/
+obj/
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
