@@ -76,7 +76,7 @@ public class ExecutorIntegrationTests
         var jsonContent = JsonSerializer.Serialize(testRequest, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = true
+            WriteIndented = false
         });
         
         _output.WriteLine("Request Payload:");
