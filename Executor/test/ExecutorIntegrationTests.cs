@@ -88,12 +88,12 @@ public class ExecutorIntegrationTests
         
         try
         {
-            var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+            using var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
             
             _output.WriteLine($"Sending POST request to: {ollamaEndpoint}");
             Console.WriteLine($"Sending POST request to: {ollamaEndpoint}");
             
-            var response = await httpClient.PostAsync(ollamaEndpoint, content);
+            using var response = await httpClient.PostAsync(ollamaEndpoint, content);
             
             _output.WriteLine($"Response Status Code: {(int)response.StatusCode} {response.StatusCode}");
             Console.WriteLine($"Response Status Code: {(int)response.StatusCode} {response.StatusCode}");
