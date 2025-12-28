@@ -63,20 +63,49 @@ export Ollama__GenerateEndpoint=http://ollama:11434/api/generate
 2. Ollama must be running with the required models installed
 3. .NET 8 SDK installed
 
-### Run All Tests
+### Quick Start with Script
+
+The easiest way to run tests is using the provided script:
+
+```bash
+cd Executor/test
+
+# Run all tests with checks
+./run-tests.sh
+
+# Run specific test
+./run-tests.sh "Test_HelloMessage_AddedToRedis"
+
+# Run with detailed verbosity
+./run-tests.sh "" "detailed"
+```
+
+The script will:
+- Check Redis connectivity
+- Check Ollama connectivity
+- Verify required models are installed
+- Run the tests with proper configuration
+
+### Manual Test Execution
+
+### Manual Test Execution
+
+#### Run All Tests
 
 ```bash
 cd Executor/test
 dotnet test
 ```
 
-### Run with Detailed Output
+#### Run with Detailed Output
+
+#### Run with Detailed Output
 
 ```bash
 dotnet test --logger "console;verbosity=detailed"
 ```
 
-### Run Specific Test
+#### Run Specific Test
 
 ```bash
 dotnet test --filter "Test_HelloMessage_AddedToRedis"
