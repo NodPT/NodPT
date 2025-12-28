@@ -13,17 +13,14 @@ echo "Model: llama3:8b"
 echo "Message: Hello"
 echo ""
 
-# Perform the curl request
-response=$(curl -s -X POST http://ollama:11434/api/generate \
+# Perform the curl request and capture both response and exit code
+if response=$(curl -s -X POST http://ollama:11434/api/generate \
   -H "Content-Type: application/json" \
   -d '{
     "model": "llama3:8b",
     "prompt": "Hello",
     "stream": false
-  }')
-
-# Check if curl command succeeded
-if [ $? -eq 0 ]; then
+  }' 2>&1); then
     echo "✓ Successfully connected to Ollama service"
     echo ""
     echo "Response:"
