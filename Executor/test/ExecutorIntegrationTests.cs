@@ -114,17 +114,15 @@ public class ExecutorIntegrationTests
             var root = jsonDoc.RootElement;
             
             string? messageContent = null;
-            
-            if (root.TryGetProperty("message", out var messageElement))
-            {
-                if (messageElement.TryGetProperty("content", out var contentElement))
-                {
-                    messageContent = contentElement.GetString();
-                }
-            }
-            else if (root.TryGetProperty("response", out var responseElement))
+
+            // For /api/generate, Ollama returns { "response": "..." }
+            if (root.TryGetProperty("response", out var responseElement))
             {
                 messageContent = responseElement.GetString();
+            }
+            else
+            {
+                _output.WriteLine("Warning: 'response' property not found in Ollama response.");
             }
             
             _output.WriteLine("✓ HttpClient test passed");
