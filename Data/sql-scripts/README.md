@@ -44,9 +44,10 @@ The sample data includes:
 cd /path/to/NodPT/Data/sql-scripts
 
 # Run the master script (executes all scripts in order)
+# Note: The master script uses SOURCE command which is MySQL-specific
 mysql -h <host> -P <port> -u <username> -p<password> <database> < 00_master_sample_data.sql
 
-# Or run individual scripts in order
+# Or run individual scripts in order (works with any SQL client)
 mysql -h <host> -P <port> -u <username> -p<password> <database> < 01_sample_data_templates.sql
 mysql -h <host> -P <port> -u <username> -p<password> <database> < 02_sample_data_prompts.sql
 mysql -h <host> -P <port> -u <username> -p<password> <database> < 03_sample_data_aimodels.sql
@@ -72,6 +73,29 @@ docker cp Data/sql-scripts/. <container_name>:/tmp/sql-scripts/
 # Execute the master script
 docker exec -i <container_name> mysql -u <username> -p<password> <database> < /tmp/sql-scripts/00_master_sample_data.sql
 ```
+
+### Method 4: Using the Convenience Shell Script
+
+The `load_sample_data.sh` script automates the loading process:
+
+```bash
+# Set database connection environment variables
+export DB_HOST=localhost
+export DB_PORT=3306
+export DB_NAME=nodpt
+export DB_USER=root
+export DB_PASSWORD=yourpassword
+
+# Run the script
+cd /path/to/NodPT/Data/sql-scripts
+./load_sample_data.sh
+```
+
+The script will:
+- Verify database connection
+- Execute all SQL scripts in order
+- Display verification results
+- Show colorized success/error messages
 
 ## 📊 Data Created
 

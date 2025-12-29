@@ -7,6 +7,10 @@
 -- Note: This script should be run after the database schema has been created by XPO
 -- Make sure the application has been run at least once in DEBUG mode to create the tables
 
+-- Note: The SOURCE command is MySQL-specific. It requires running from the MySQL command-line client
+-- from the directory containing these scripts, or providing full paths to the SQL files.
+-- Alternative: Execute each script individually using your preferred database client.
+
 -- Disable foreign key checks temporarily (if needed)
 -- SET FOREIGN_KEY_CHECKS = 0;
 
