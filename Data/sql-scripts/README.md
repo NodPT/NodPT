@@ -246,9 +246,9 @@ Expected results:
 
 ## 🔒 Important Notes
 
-1. **XPO Field Naming**: XPO uses PascalCase for all fields (e.g., `Name`, `Description`, `CreatedAt`)
-2. **Primary Key**: All tables use `OID` (Object ID) as VARCHAR/GUID primary key
-3. **Foreign Keys**: Relationships use the parent table's `OID` (e.g., `Template` field in `Prompt` table)
+1. **XPO Field Naming**: XPO maps persistent properties to PascalCase columns by default (e.g., `Name`, `Description`, `CreatedAt`)
+2. **Primary Key**: By default, XPO's `XPObject` base class uses `OID` (Object ID) as an `INT AUTO_INCREMENT` primary key in MySQL/MariaDB
+3. **Foreign Keys**: Relationships use the parent table's integer `OID` (e.g., `Template` field in `Prompt` table references `Template.OID`)
 4. **Soft Delete**: `GCRecord` field is used for soft deletes (NULL = active, non-NULL = deleted)
 5. **Optimistic Locking**: `OptimisticLockField` is used for concurrency control
 6. **Enum Values**: NodeType and MessageType are stored as integers (0-based)
