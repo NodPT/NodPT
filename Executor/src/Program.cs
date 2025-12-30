@@ -130,7 +130,8 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
         logger?.LogInformation("Connecting to Redis at {RedisConnection}...", redisConnection);
         var connection = ConnectionMultiplexer.Connect(redisOptions);
 
-        // Redis connection created. StackExchange.Redis will handle reconnection if needed (AbortOnConnectFail=false).
+        // ConnectionMultiplexer will handle reconnects in the background (AbortOnConnectFail=false)
+        // No need to force a ping here; rely on built-in retry behavior.
 
         return connection;
     }
@@ -140,12 +141,6 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
         // Return connection anyway - it will retry in background with AbortOnConnectFail=false
         return ConnectionMultiplexer.Connect(redisOptions);
     }
-});
-
-builder.Services.AddSingleton<IDatabase>(provider =>
-{
-    var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
-    return multiplexer.GetDatabase();
 });
 
 // Register Redis Cache and Queue Services
