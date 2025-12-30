@@ -110,24 +110,32 @@ The script will:
 
 Each template has 8 prompts (4 node types × 2 message types):
 
+**Hierarchical Role Architecture:**
+- **Director**: Top-level orchestrator - analyzes project/book concept, defines architecture/structure, creates and instructs Managers
+- **Manager**: Module owner - owns a module/section, designs internal structure, creates and instructs Inspectors
+- **Inspector**: Task decomposer - converts modules into concrete tasks, creates and instructs Workers
+- **Worker**: Code/content generator - produces actual artifacts following exact instructions
+
+**Communication Flow:** Director → Manager → Inspector → Worker (strict downward flow)
+
 | Template | Node Type | Message Type | Purpose |
 |----------|-----------|--------------|---------|
-| Coding Project | Director | Discussion | Strategic planning and architecture |
-| Coding Project | Director | Decision | Architectural approvals |
-| Coding Project | Manager | Discussion | Task coordination |
-| Coding Project | Manager | Decision | Work prioritization |
-| Coding Project | Inspector | Discussion | Code review feedback |
-| Coding Project | Inspector | Decision | Quality gate approvals |
-| Coding Project | Worker | Discussion | Implementation guidance |
-| Coding Project | Worker | Decision | Technical choices |
-| Book Writing | Director | Discussion | Book vision and structure |
-| Book Writing | Director | Decision | Content direction |
-| Book Writing | Manager | Discussion | Writing coordination |
-| Book Writing | Manager | Decision | Section assignments |
-| Book Writing | Inspector | Discussion | Editorial review |
-| Book Writing | Inspector | Decision | Publication approval |
-| Book Writing | Worker | Discussion | Content creation |
-| Book Writing | Worker | Decision | Writing choices |
+| Coding Project | Director | Discussion | Analyze project, define architecture, create Manager nodes with instructions |
+| Coding Project | Director | Decision | Approve architecture, set standards, make final structural decisions |
+| Coding Project | Manager | Discussion | Design module structure, create Inspector nodes with task specifications |
+| Coding Project | Manager | Decision | Approve module design, assign Inspectors, resolve sub-module conflicts |
+| Coding Project | Inspector | Discussion | Decompose sub-module into tasks, create Worker nodes with exact specifications |
+| Coding Project | Inspector | Decision | Approve task breakdown, validate Worker instructions, verify code compliance |
+| Coding Project | Worker | Discussion | Generate code artifacts following exact Inspector specifications |
+| Coding Project | Worker | Decision | Minor implementation details only (within specification boundaries) |
+| Book Writing | Director | Discussion | Analyze book concept, define structure, create Manager nodes with content plans |
+| Book Writing | Director | Decision | Approve book structure, set style standards, make final content decisions |
+| Book Writing | Manager | Discussion | Design content module, create Inspector nodes with writing assignments |
+| Book Writing | Manager | Decision | Approve content design, assign Inspectors, resolve section conflicts |
+| Book Writing | Inspector | Discussion | Decompose section into writing tasks, create Worker nodes with exact instructions |
+| Book Writing | Inspector | Decision | Approve task breakdown, validate Worker instructions, verify content compliance |
+| Book Writing | Worker | Discussion | Generate written content following exact Inspector specifications |
+| Book Writing | Worker | Decision | Minor word choice only (within specification boundaries) |
 
 ### AI Models (16 total)
 
@@ -151,6 +159,24 @@ Each template has 8 AI model configurations:
 | Book Writing | Inspector | Decision | llama2:13b | http://ollama:11434/api/generate |
 | Book Writing | Worker | Discussion | llama2:7b | http://ollama:11434/api/generate |
 | Book Writing | Worker | Decision | llama2:7b | http://ollama:11434/api/generate |
+
+### Execution Rules
+
+The prompts enforce strict hierarchical execution rules:
+
+1. **Responsibility Boundaries**: Each level operates only within its assigned responsibility
+2. **No Upward Override**: No role may override or redesign decisions made at a higher level
+3. **Deterministic Output**: All outputs must be explicit and implementation-ready
+4. **Strict Downward Flow**: Communication flows strictly downward: Director → Manager → Inspector → Worker
+5. **Node Creation**: Each level creates the next level down with complete, unambiguous instructions
+6. **Escalation Only**: Lower levels can only ask for clarification, not change higher-level decisions
+
+**Example for Coding Project:**
+- **Director** receives: "Create an HRMS web application"
+- **Director** creates: Authentication Manager, Employee Manager, Salary Manager, Performance Manager
+- **Manager** (Authentication) creates: Login Inspector, Dashboard Inspector, User Management Inspector
+- **Inspector** (Login) creates: Frontend Worker, Backend Worker, Database Worker
+- **Worker** generates: Actual code files following exact specifications
 
 ## 🔧 Model Parameters
 
