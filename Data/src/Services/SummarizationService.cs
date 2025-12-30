@@ -53,7 +53,7 @@ public class SummarizationService
              _options.BaseUrl, _options.Model, role);
             // Send the request
             var response = await _httpClient.PostAsync(_options.BaseUrl, content, cancellationToken);
-            response.EnsureSuccessStatusCode();
+            // response.EnsureSuccessStatusCode();
             // Parse the response
             var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
             var responseObject = JsonSerializer.Deserialize<OllamaResponse>(responseJson);

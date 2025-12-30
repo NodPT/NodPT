@@ -9,31 +9,40 @@ using NodPT.Data.DTOs;
 using RedisService.Cache;
 using RedisService.Queue;
 
-var builder = Host.CreateApplicationBuilder(args);
-
-// 🔹 Load environment variables
-#if DEBUG // 🔹 Load .env in development
-var dotenvPath = Path.Combine(AppContext.BaseDirectory, ".env");
-if (File.Exists(dotenvPath))
+void loadEnvVariables()
 {
-    Console.WriteLine($"Loading .env from {dotenvPath}");
-    foreach (var line in File.ReadAllLines(dotenvPath))
+    var path = Path.Combine(AppContext.BaseDirectory, ".env");
+    if (File.Exists(path))
     {
-        if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#"))
-            continue;
-        var parts = line.Split('=', 2);
-        if (parts.Length == 2)
+        Console.WriteLine($"Loading .env from {path}");
+        foreach (var line in File.ReadAllLines(path))
         {
-            var key = parts[0].Trim();
-            var value = parts[1].Trim().Trim('"');
-            Environment.SetEnvironmentVariable(key, value);
+            if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#"))
+                continue;
+            var parts = line.Split('=', 2);
+            if (parts.Length == 2)
+            {
+                var key = parts[0].Trim();
+                var value = parts[1].Trim().Trim('"');
+                Environment.SetEnvironmentVariable(key, value);
+            }
         }
     }
 }
-#else
-// In production, load environment variables from system environment
-builder.Configuration.AddEnvironmentVariables();
-#endif
+
+var builder = Host.CreateApplicationBuilder(args);
+
+// if the environment is Development, load .env file
+if (builder.Environment.IsDevelopment())
+{
+    loadEnvVariables();
+}
+else
+{
+    // 🔹 Load environment variables
+    // In production, load environment variables from system environment
+    builder.Configuration.AddEnvironmentVariables();
+}
 
 // 🔹 Database initialization
 DatabaseInitializer.Initialize(builder);

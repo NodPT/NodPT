@@ -21,7 +21,7 @@ public class TensorRtChatClient
             return false;
 
         // User requirement: TensorRT is exposed as /api/chat.
-        if (!uri.AbsolutePath.TrimEnd('/').Equals("/api/chat", StringComparison.OrdinalIgnoreCase))
+        if (!uri.AbsolutePath.TrimEnd('/').Equals("/api/generate", StringComparison.OrdinalIgnoreCase))
             return false;
 
         // Heuristic:
@@ -70,7 +70,7 @@ public class TensorRtChatClient
             }
         }
 
-        response.EnsureSuccessStatusCode();
+        // response.EnsureSuccessStatusCode();
 
         var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
 

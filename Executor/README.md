@@ -532,14 +532,10 @@ dotnet test
 redis-cli -h localhost -p 6379 ping
 
 # Test LLM endpoint
-curl -X POST http://localhost:11434/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"model":"llama2","messages":[{"role":"user","content":"test"}]}'
+curl -X POST http://localhost:11434/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"llama2","messages":[{"role":"user","content":"test"}]}'
 
 # Test Ollama generate endpoint
-curl -X POST http://ollama:11434/api/generate \
-  -H "Content-Type: application/json" \
-  -d '{"model":"llama3:8b","prompt":"Hello","stream":false}'
+curl -X POST http://ollama:11434/api/generate -H "Content-Type: application/json" -d '{"model":"llama3:8b","prompt":"Hello","stream":false}'
 ```
 
 ## 🤝 Contributing
