@@ -25,7 +25,7 @@ public static class DatabaseInitializer
                 "Database configuration is incomplete. Required environment variables: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD");
         }
         
-        var connectionString = $"XpoProvider=MySql;server={host};port={port};user={user};password={password};database={db};SslMode=Preferred;Pooling=true;CharSet=utf8mb4;";
+        var connectionString = $"XpoProvider=MySql;server={host};port={port};user={user};password={password};database={db};SslMode=None;Pooling=true;CharSet=utf8mb4;";
         DatabaseHelper.SetConnectionString(connectionString);
         
         // Update database schema to ensure all tables exist
