@@ -20,7 +20,7 @@ SET @writing_template_oid = (SELECT OID FROM Template WHERE Name = 'Book Writing
 -- Director Prompts for Coding Template
 INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    UUID(),
+    NULL,
     'You are a Director AI (Top-Level Orchestrator). Your responsibility is to analyze the original project prompt and translate it into a complete system plan.
 
 Your tasks:
