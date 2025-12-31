@@ -5,6 +5,7 @@ WORKDIR /src
 # Copy Executor and Data project files from the repository root layout
 COPY Executor/src/BackendExecutor.csproj Executor/src/
 COPY Data/src/NodPT.Data.csproj Data/src/
+COPY Utils/src/NodPT.Utils.csproj Utils/src/
 
 # Restore dependencies for the Executor (will also restore the Data project reference)
 RUN dotnet restore Executor/src/BackendExecutor.csproj
@@ -12,6 +13,7 @@ RUN dotnet restore Executor/src/BackendExecutor.csproj
 # Copy the remaining source code for both projects
 COPY Executor/src/ Executor/src/
 COPY Data/src/ Data/src/
+COPY Utils/src/ Utils/src/
 
 # Build the Executor project
 RUN dotnet build Executor/src/BackendExecutor.csproj -c Release -o /app/build

@@ -10,96 +10,20 @@ using RedisService.Queue;
 using StackExchange.Redis;
 using System;
 using System.Linq;
+using NodPT.Utils;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args); // 🔹 Create builder
-
-// If credentials are not available, log a warning but continue
-// This allows the server to run in development mode without Firebase
-
 // 🔹 Load environment variables
-#if DEBUG // 🔹 Load .env in development
-var dotenvPath = Path.Combine(AppContext.BaseDirectory, ".env");
-if (File.Exists(dotenvPath))
-{
-    Console.WriteLine($"Loading .env from {dotenvPath}");
-    foreach (var line in File.ReadAllLines(dotenvPath))
-    {
-        if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#"))
-            continue;
-        var parts = line.Split('=', 2);
-        if (parts.Length == 2)
-        {
-            var key = parts[0].Trim();
-            var value = parts[1].Trim().Trim('"');
-            Environment.SetEnvironmentVariable(key, value);
-        }
-    }
-}
-#else
-// In production, load environment variables from system environment
-builder.Configuration.AddEnvironmentVariables();
-#endif
-
-
+Common.LoadEnvVariables(builder);
 
 // 🔹 Database initialization
 DatabaseInitializer.Initialize(builder);
 
+// Redis configuration
+Common.SetupRedis<Program>(builder);
+
 // 🔹 Add IHttpContextAccessor for HTTP context access
 builder.Services.AddHttpContextAccessor();
-
-// 🔹 Redis
-#region Redis Configuration
-var redisConnection = builder.Configuration["Redis:ConnectionString"]
-    ?? Environment.GetEnvironmentVariable("REDIS_CONNECTION")
-    ?? "localhost:6379";
-
-// Add abortConnect=false to allow retry behavior when Redis is unavailable
-var redisOptions = ConfigurationOptions.Parse(redisConnection);
-redisOptions.AbortOnConnectFail = false;
-redisOptions.ConnectTimeout = 5000;
-redisOptions.SyncTimeout = 5000;
-
-// Configure Redis connection with error handling and logging
-builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
-{
-    var logger = provider.GetService<ILogger<Program>>();
-
-    try
-    {
-        logger?.LogInformation("Connecting to Redis at {RedisConnection}...", redisConnection);
-        var connection = ConnectionMultiplexer.Connect(redisOptions);
-
-        // ConnectionMultiplexer will handle reconnects in the background (AbortOnConnectFail=false)
-        // No need to force a ping here; rely on built-in retry behavior.
-
-        return connection;
-    }
-    catch (Exception ex)
-    {
-        logger?.LogWarning(ex, "Failed to connect to Redis at {RedisConnection}. Redis features will be unavailable. Ensure Redis is running and accessible.", redisConnection);
-        // Return connection anyway - it will retry in background with AbortOnConnectFail=false
-        return ConnectionMultiplexer.Connect(redisOptions);
-    }
-});
-
-// Register Redis Cache and Queue Services
-builder.Services.AddSingleton<RedisCacheService>(provider =>
-{
-    var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
-    var logger = provider.GetRequiredService<ILogger<RedisCacheService>>();
-    return new RedisCacheService(multiplexer, logger);
-});
-
-builder.Services.AddSingleton<RedisQueueService>(provider =>
-{
-    var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
-    var logger = provider.GetRequiredService<ILogger<RedisQueueService>>();
-    return new RedisQueueService(multiplexer, logger);
-});
-
-#endregion
-
 
 // 🔹 Log Services
 builder.Services.AddScoped<LogService>();
@@ -264,16 +188,10 @@ app.UseAuthentication(); // 🔹 Enable authentication
 app.UseAuthorization(); // 🔹 Enable authorization
 
 // 🔹 Map the SignalR hub
-Console.WriteLine("Mapping SignalR hub to /signalr and /signalR endpoints...");
 app.MapHub<NodptHub>("/signalr").RequireAuthorization();
 Console.WriteLine("SignalR hub mapped successfully to /signalr and /signalR");
 
 app.MapControllers(); // 🔹 Map controllers
-
-// Log all registered endpoints
-var logger = app.Services.GetRequiredService<ILogger<Program>>();
-logger.LogInformation("Application configured. SignalR hub available at /signalr and /signalR");
-
 app.Run();
 
 

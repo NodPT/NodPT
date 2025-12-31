@@ -8,44 +8,19 @@ using DevExpress.Xpo;
 using NodPT.Data.DTOs;
 using RedisService.Cache;
 using RedisService.Queue;
+using NodPT.Utils;
 
-void loadEnvVariables()
-{
-    var path = Path.Combine(AppContext.BaseDirectory, ".env");
-    if (File.Exists(path))
-    {
-        Console.WriteLine($"Loading .env from {path}");
-        foreach (var line in File.ReadAllLines(path))
-        {
-            if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#"))
-                continue;
-            var parts = line.Split('=', 2);
-            if (parts.Length == 2)
-            {
-                var key = parts[0].Trim();
-                var value = parts[1].Trim().Trim('"');
-                Environment.SetEnvironmentVariable(key, value);
-            }
-        }
-    }
-}
-
-var builder = Host.CreateApplicationBuilder(args);
-
-// if the environment is Development, load .env file
-if (builder.Environment.IsDevelopment())
-{
-    loadEnvVariables();
-}
-else
-{
-    // 🔹 Load environment variables
-    // In production, load environment variables from system environment
-    builder.Configuration.AddEnvironmentVariables();
-}
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+// 🔹 Load environment variables
+Common.LoadEnvVariables(builder);
 
 // 🔹 Database initialization
 DatabaseInitializer.Initialize(builder);
+
+// Redis configuration
+Common.SetupRedis<Program>(builder);
+
+#region  Executor Options and Services Setup
 
 // Configure options (Note: Redis connection is now configured separately from ExecutorOptions)
 builder.Services.Configure<ExecutorOptions>(options =>
@@ -59,6 +34,7 @@ builder.Services.Configure<ExecutorOptions>(options =>
     options.LlmEndpoint = Environment.GetEnvironmentVariable("LLM_ENDPOINT") ?? "http://ollama:11434/api/generate";
     options.DefaultModel = Environment.GetEnvironmentVariable("DEFAULT_MODEL") ?? "deepseek-r1:1.5b";
 });
+
 
 // Register ExecutorOptions as singleton
 builder.Services.AddSingleton<ExecutorOptions>(provider =>
@@ -109,54 +85,7 @@ builder.Services.AddSingleton<MemoryOptions>(provider =>
 
     return options;
 });
-
-// Register Redis
-var redisConnection = builder.Configuration["Redis:ConnectionString"]
-    ?? Environment.GetEnvironmentVariable("REDIS_CONNECTION")
-    ?? "localhost:6379";
-
-// Add abortConnect=false to allow retry behavior when Redis is unavailable
-var redisOptions = ConfigurationOptions.Parse(redisConnection);
-redisOptions.AbortOnConnectFail = false;
-redisOptions.ConnectTimeout = 5000;
-redisOptions.SyncTimeout = 5000;
-
-builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
-{
-    var logger = provider.GetService<ILogger<Program>>();
-
-    try
-    {
-        logger?.LogInformation("Connecting to Redis at {RedisConnection}...", redisConnection);
-        var connection = ConnectionMultiplexer.Connect(redisOptions);
-
-        // ConnectionMultiplexer will handle reconnects in the background (AbortOnConnectFail=false)
-        // No need to force a ping here; rely on built-in retry behavior.
-
-        return connection;
-    }
-    catch (Exception ex)
-    {
-        logger?.LogWarning(ex, "Failed to connect to Redis at {RedisConnection}. Redis features will be unavailable. Ensure Redis is running and accessible.", redisConnection);
-        // Return connection anyway - it will retry in background with AbortOnConnectFail=false
-        return ConnectionMultiplexer.Connect(redisOptions);
-    }
-});
-
-// Register Redis Cache and Queue Services
-builder.Services.AddSingleton<RedisCacheService>(provider =>
-{
-    var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
-    var logger = provider.GetRequiredService<ILogger<RedisCacheService>>();
-    return new RedisCacheService(multiplexer, logger);
-});
-
-builder.Services.AddSingleton<RedisQueueService>(provider =>
-{
-    var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
-    var logger = provider.GetRequiredService<ILogger<RedisQueueService>>();
-    return new RedisQueueService(multiplexer, logger);
-});
+#endregion
 
 // Register HttpClientFactory
 builder.Services.AddHttpClient();
@@ -191,23 +120,5 @@ builder.Services.AddScoped<UnitOfWork>(provider => new UnitOfWork());
 builder.Services.AddHostedService<ChatStreamWorker>();
 
 var host = builder.Build();
-
-// Log configuration on startup
-var logger = host.Services.GetRequiredService<ILogger<Program>>();
-var executorOptions = host.Services.GetRequiredService<ExecutorOptions>();
-var summarizationOptions = host.Services.GetRequiredService<SummarizationOptions>();
-var memoryOptions = host.Services.GetRequiredService<MemoryOptions>();
-
-logger.LogInformation("BackendExecutor starting with configuration:");
-logger.LogInformation("  Redis Connection: {RedisConnection}", redisConnection);
-logger.LogInformation("  LLM Endpoint: {LlmEndpoint}", executorOptions.LlmEndpoint);
-logger.LogInformation("  Default Model: {DefaultModel}", executorOptions.DefaultModel);
-logger.LogInformation("  Max Manager: {MaxManager}", executorOptions.MaxManager == 0 ? "unlimited" : executorOptions.MaxManager);
-logger.LogInformation("  Max Inspector: {MaxInspector}", executorOptions.MaxInspector == 0 ? "unlimited" : executorOptions.MaxInspector);
-logger.LogInformation("  Max Agent: {MaxAgent}", executorOptions.MaxAgent == 0 ? "unlimited" : executorOptions.MaxAgent);
-logger.LogInformation("  Max Total: {MaxTotal}", executorOptions.MaxTotal == 0 ? "unlimited" : executorOptions.MaxTotal);
-logger.LogInformation("  Summarization Base URL: {BaseUrl}", summarizationOptions.BaseUrl);
-logger.LogInformation("  Summarization Model: {Model}", summarizationOptions.Model);
-logger.LogInformation("  Memory History Limit: {HistoryLimit}", memoryOptions.HistoryLimit);
 
 host.Run();

@@ -7,9 +7,8 @@
 -- The primary key field is 'OID' (Object ID) as GUID/VARCHAR
 
 -- Insert Coding Template
-INSERT INTO Template (OID, Name, Description, Category, Version, IsActive, CreatedAt, UpdatedAt, OptimisticLockField, GCRecord)
-VALUES (
-    UUID(),  -- OID (primary key)
+INSERT INTO Template ( Name, Description, Category, Version, IsActive, CreatedAt, UpdatedAt, OptimisticLockField, GCRecord)
+VALUES (  -- OID (primary key)
     'Coding Project',  -- Name
     'A comprehensive template for software development projects with AI-assisted workflow. This template includes Director for strategic planning, Manager for task coordination, Inspector for quality assurance, and Worker agents for actual code development.',  -- Description
     'Development',  -- Category
@@ -22,9 +21,8 @@ VALUES (
 );
 
 -- Insert Book Writing Template
-INSERT INTO Template (OID, Name, Description, Category, Version, IsActive, CreatedAt, UpdatedAt, OptimisticLockField, GCRecord)
-VALUES (
-    UUID(),  -- OID (primary key)
+INSERT INTO Template ( Name, Description, Category, Version, IsActive, CreatedAt, UpdatedAt, OptimisticLockField, GCRecord)
+VALUES (  -- OID (primary key)
     'Book Writing',  -- Name
     'A structured template for book writing projects with AI collaboration. Features Director for outline and strategy, Manager for chapter coordination, Inspector for editorial review, and Writer agents for content creation.',  -- Description
     'Writing',  -- Category

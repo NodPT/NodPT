@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Data\src\NodPT.Data.csproj" />
+    <ProjectReference Include="..\..\Utils\src\NodPT.Utils.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -32,34 +32,34 @@ public class RedisQueueService
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<RedisQueueService> _logger;
     private readonly ConcurrentDictionary<string, int> _retryCounters = new();
-    
+
     /// <summary>
     /// Maximum time in milliseconds to wait for Redis connection to be established (30 seconds).
     /// </summary>
     private const int ConnectionWaitTimeoutMs = 30000;
-    
+
     /// <summary>
     /// Interval in milliseconds between Redis connection status checks (500ms).
     /// </summary>
     private const int ConnectionCheckIntervalMs = 500;
-    
+
     /// <summary>
     /// Interval in milliseconds between connection status log messages (5 seconds).
     /// Used to reduce log noise during connection wait periods.
     /// </summary>
     private const int ConnectionLogIntervalMs = 5000;
-    
+
     /// <summary>
     /// Maximum number of retry attempts for Redis operations before failing.
     /// </summary>
     private const int MaxRetries = 5;
-    
+
     /// <summary>
     /// Initial delay in milliseconds for exponential backoff retry logic (1 second).
     /// Subsequent delays: 2s, 4s, 8s, 16s for attempts 1-4.
     /// </summary>
     private const int InitialRetryDelayMs = 1000;
-    
+
     /// <summary>
     /// Maximum delay in milliseconds for exponential backoff to prevent overflow (32 seconds).
     /// </summary>
@@ -112,15 +112,15 @@ public class RedisQueueService
             }
 
             var db = _redis.GetDatabase();
-            
+
             // Convert dictionary to NameValueEntry array
             var entries = envelope.Select(kv => new NameValueEntry(kv.Key, kv.Value)).ToArray();
-            
+
             // Add to stream
             var entryId = await db.StreamAddAsync(streamKey, entries);
-            
+
             _logger.LogDebug("Added message to Redis stream {StreamKey}: {EntryId}", streamKey, entryId);
-            
+
             return entryId.ToString();
         }
         catch (RedisConnectionException ex)
@@ -194,7 +194,7 @@ public class RedisQueueService
         Func<MessageEnvelope, CancellationToken, Task<bool>> handler, ListenOptions? options = null)
     {
         options ??= new ListenOptions();
-        
+
         var handle = new ListenHandle
         {
             StreamKey = streamKey,
@@ -212,7 +212,7 @@ public class RedisQueueService
                 // Wait for Redis connection to be established
                 _logger.LogInformation("Waiting for Redis connection before starting listener for stream {StreamKey}...", streamKey);
                 var connected = await WaitForRedisConnection(ConnectionWaitTimeoutMs);
-                
+
                 if (!connected)
                 {
                     _logger.LogError("Failed to establish Redis connection for stream {StreamKey}. Listener will not start.", streamKey);
@@ -258,7 +258,7 @@ public class RedisQueueService
                                 foreach (var entry in entries)
                                 {
                                     await semaphore.WaitAsync(cancellationToken);
-                                    
+
                                     var task = Task.Run(async () =>
                                     {
                                         try
@@ -309,7 +309,7 @@ public class RedisQueueService
     /// <summary>
     /// Processes a single message from the stream, calling the handler and managing acknowledgment/retry.
     /// </summary>
-    private async Task ProcessMessage(IDatabase db, string streamKey, string group, 
+    private async Task ProcessMessage(IDatabase db, string streamKey, string group,
         StreamEntry entry, Func<MessageEnvelope, CancellationToken, Task<bool>> handler,
         ListenOptions options, CancellationToken cancellationToken)
     {
@@ -335,23 +335,23 @@ public class RedisQueueService
             {
                 // Acknowledge the message
                 await Acknowledge(streamKey, group, entryId);
-                
+
                 // Remove retry counter
                 _retryCounters.TryRemove(retryKey, out _);
-                
+
                 _logger.LogDebug($"Successfully processed and acknowledged message {entryId}");
             }
             else
             {
                 // Handler returned false, increment retry counter
                 var retryCount = _retryCounters.AddOrUpdate(retryKey, 1, (k, v) => v + 1);
-                
+
                 if (retryCount >= options.MaxRetries)
                 {
                     // Move to dead letter stream
                     await MoveToDeadLetter(db, streamKey, group, entry);
                     _retryCounters.TryRemove(retryKey, out _);
-                    
+
                     _logger.LogWarning($"Message {entryId} moved to dead letter after {retryCount} retries");
                 }
                 else
@@ -363,16 +363,16 @@ public class RedisQueueService
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Error processing message {entryId} from stream {streamKey}");
-            
+
             // Increment retry counter
             var retryCount = _retryCounters.AddOrUpdate(retryKey, 1, (k, v) => v + 1);
-            
+
             if (retryCount >= options.MaxRetries)
             {
                 // Move to dead letter stream
                 await MoveToDeadLetter(db, streamKey, group, entry);
                 _retryCounters.TryRemove(retryKey, out _);
-                
+
                 _logger.LogError($"Message {entryId} moved to dead letter after {retryCount} failed attempts");
             }
         }
@@ -387,18 +387,18 @@ public class RedisQueueService
         try
         {
             var deadLetterKey = $"{streamKey}:dead";
-            
+
             // Add original entry plus metadata to dead letter stream
             var deadLetterEntries = entry.Values.ToList();
             deadLetterEntries.Add(new NameValueEntry("original_id", entry.Id.ToString()));
             deadLetterEntries.Add(new NameValueEntry("failed_at", DateTime.UtcNow.ToString("o")));
-            
+
             await db.StreamAddAsync(deadLetterKey, deadLetterEntries.ToArray());
-            
+
             // Acknowledge and delete the original message
             await db.StreamAcknowledgeAsync(streamKey, group, entry.Id);
             await db.StreamDeleteAsync(streamKey, new[] { entry.Id });
-            
+
             _logger.LogInformation($"Moved message {entry.Id} to dead letter stream {deadLetterKey}");
         }
         catch (Exception ex)
@@ -429,10 +429,10 @@ public class RedisQueueService
         try
         {
             var db = _redis.GetDatabase();
-            
+
             // Acknowledge the message
             await db.StreamAcknowledgeAsync(streamKey, group, entryId);
-            
+
             _logger.LogDebug($"Acknowledged message {entryId} in stream {streamKey}");
         }
         catch (Exception ex)
@@ -473,10 +473,10 @@ public class RedisQueueService
         try
         {
             var db = _redis.GetDatabase();
-            
+
             // Get pending messages
             var pendingInfo = await db.StreamPendingAsync(streamKey, group);
-            
+
             if (pendingInfo.PendingMessageCount == 0)
             {
                 return 0;
@@ -484,9 +484,9 @@ public class RedisQueueService
 
             // Get detailed pending messages
             var pendingMessages = await db.StreamPendingMessagesAsync(
-                streamKey, 
-                group, 
-                count: 100, 
+                streamKey,
+                group,
+                count: 100,
                 consumerName: RedisValue.Null);
 
             var claimedCount = 0;
@@ -553,7 +553,7 @@ public class RedisQueueService
         {
             var db = _redis.GetDatabase();
             await db.StreamTrimAsync(streamKey, maxLen, useApproximateMaxLength: true);
-            
+
             _logger.LogDebug($"Trimmed stream {streamKey} to approximately {maxLen} messages");
         }
         catch (Exception ex)
@@ -650,7 +650,7 @@ public class RedisQueueService
         try
         {
             _logger.LogInformation($"Stopping listener for stream {handle.StreamKey}");
-            
+
             // Signal cancellation
             handle.CancellationTokenSource.Cancel();
 
@@ -661,7 +661,7 @@ public class RedisQueueService
             }
 
             handle.CancellationTokenSource.Dispose();
-            
+
             _logger.LogInformation($"Stopped listener for stream {handle.StreamKey}");
         }
         catch (Exception ex)
@@ -679,7 +679,7 @@ public class RedisQueueService
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var lastLogTime = 0L;
-        
+
         while (stopwatch.ElapsedMilliseconds < timeoutMs)
         {
             if (_redis.IsConnected)
@@ -687,17 +687,17 @@ public class RedisQueueService
                 _logger.LogInformation("Redis connection established");
                 return true;
             }
-            
+
             // Log progress every 5 seconds instead of every 500ms
             if (stopwatch.ElapsedMilliseconds - lastLogTime >= ConnectionLogIntervalMs)
             {
                 _logger.LogDebug("Waiting for Redis connection... ({ElapsedMs}ms elapsed)", stopwatch.ElapsedMilliseconds);
                 lastLogTime = stopwatch.ElapsedMilliseconds;
             }
-            
+
             await Task.Delay(ConnectionCheckIntervalMs);
         }
-        
+
         _logger.LogWarning("Redis connection not established after {TimeoutMs}ms", timeoutMs);
         return false;
     }
@@ -717,13 +717,13 @@ public class RedisQueueService
             _logger.LogWarning("Invalid attempt value {Attempt} for exponential backoff, using 0", attempt);
             attempt = 0;
         }
-        
+
         // Prevent overflow: if attempt >= 31, bit shift would overflow
         if (attempt >= 31)
         {
             return MaxRetryDelayMs;
         }
-        
+
         // Use bit shifting for efficient exponential calculation: InitialRetryDelayMs * 2^attempt
         // Cap at MaxRetryDelayMs to prevent overflow for large attempt values
         int delay = InitialRetryDelayMs << attempt;
@@ -736,7 +736,7 @@ public class RedisQueueService
     /// </summary>
     private async Task EnsureConsumerGroupExists(IDatabase db, string streamKey, string group)
     {
-        
+
         for (int attempt = 0; attempt < MaxRetries; attempt++)
         {
             try

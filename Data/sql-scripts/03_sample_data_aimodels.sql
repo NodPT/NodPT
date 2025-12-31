@@ -15,14 +15,12 @@ SET @writing_template_oid = (SELECT OID FROM Template WHERE Name = 'Book Writing
 -- =============================================
 
 -- Director AI Model for Coding (Discussion)
-INSERT INTO AIModel (
-    OID, Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
+INSERT INTO AIModel ( Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
     EndpointAddress, Temperature, NumPredict, TopK, TopP, Seed, NumCtx,
     NumGpu, NumThread, RepeatPenalty, Stop,
     CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord
 )
 VALUES (
-    UUID(),
     'Director Discussion Model - Coding',
     'codellama:13b',  -- A good model for strategic thinking and architecture
     0,  -- Discussion
@@ -48,14 +46,12 @@ VALUES (
 );
 
 -- Director AI Model for Coding (Decision)
-INSERT INTO AIModel (
-    OID, Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
+INSERT INTO AIModel ( Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
     EndpointAddress, Temperature, NumPredict, TopK, TopP, Seed, NumCtx,
     NumGpu, NumThread, RepeatPenalty, Stop,
     CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord
 )
 VALUES (
-    UUID(),
     'Director Decision Model - Coding',
     'codellama:13b',
     1,  -- Decision
@@ -81,14 +77,12 @@ VALUES (
 );
 
 -- Manager AI Model for Coding (Discussion)
-INSERT INTO AIModel (
-    OID, Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
+INSERT INTO AIModel ( Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
     EndpointAddress, Temperature, NumPredict, TopK, TopP, Seed, NumCtx,
     NumGpu, NumThread, RepeatPenalty, Stop,
     CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord
 )
 VALUES (
-    UUID(),
     'Manager Discussion Model - Coding',
     'codellama:7b',  -- Lighter model for task coordination
     0,  -- Discussion
@@ -114,14 +108,12 @@ VALUES (
 );
 
 -- Manager AI Model for Coding (Decision)
-INSERT INTO AIModel (
-    OID, Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
+INSERT INTO AIModel ( Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
     EndpointAddress, Temperature, NumPredict, TopK, TopP, Seed, NumCtx,
     NumGpu, NumThread, RepeatPenalty, Stop,
     CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord
 )
 VALUES (
-    UUID(),
     'Manager Decision Model - Coding',
     'codellama:7b',
     1,  -- Decision
@@ -147,14 +139,12 @@ VALUES (
 );
 
 -- Inspector AI Model for Coding (Discussion)
-INSERT INTO AIModel (
-    OID, Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
+INSERT INTO AIModel ( Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
     EndpointAddress, Temperature, NumPredict, TopK, TopP, Seed, NumCtx,
     NumGpu, NumThread, RepeatPenalty, Stop,
     CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord
 )
 VALUES (
-    UUID(),
     'Inspector Discussion Model - Coding',
     'codellama:13b',  -- Needs good understanding for code review
     0,  -- Discussion
@@ -180,14 +170,12 @@ VALUES (
 );
 
 -- Inspector AI Model for Coding (Decision)
-INSERT INTO AIModel (
-    OID, Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
+INSERT INTO AIModel ( Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
     EndpointAddress, Temperature, NumPredict, TopK, TopP, Seed, NumCtx,
     NumGpu, NumThread, RepeatPenalty, Stop,
     CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord
 )
 VALUES (
-    UUID(),
     'Inspector Decision Model - Coding',
     'codellama:13b',
     1,  -- Decision
@@ -213,14 +201,12 @@ VALUES (
 );
 
 -- Worker AI Model for Coding (Discussion)
-INSERT INTO AIModel (
-    OID, Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
+INSERT INTO AIModel ( Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
     EndpointAddress, Temperature, NumPredict, TopK, TopP, Seed, NumCtx,
     NumGpu, NumThread, RepeatPenalty, Stop,
     CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord
 )
 VALUES (
-    UUID(),
     'Worker Discussion Model - Coding',
     'codellama:7b',  -- Fast, efficient for code generation
     0,  -- Discussion
@@ -246,14 +232,12 @@ VALUES (
 );
 
 -- Worker AI Model for Coding (Decision)
-INSERT INTO AIModel (
-    OID, Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
+INSERT INTO AIModel ( Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
     EndpointAddress, Temperature, NumPredict, TopK, TopP, Seed, NumCtx,
     NumGpu, NumThread, RepeatPenalty, Stop,
     CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord
 )
 VALUES (
-    UUID(),
     'Worker Decision Model - Coding',
     'codellama:7b',
     1,  -- Decision
@@ -283,14 +267,12 @@ VALUES (
 -- =============================================
 
 -- Director AI Model for Writing (Discussion)
-INSERT INTO AIModel (
-    OID, Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
+INSERT INTO AIModel ( Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
     EndpointAddress, Temperature, NumPredict, TopK, TopP, Seed, NumCtx,
     NumGpu, NumThread, RepeatPenalty, Stop,
     CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord
 )
 VALUES (
-    UUID(),
     'Director Discussion Model - Writing',
     'llama2:13b',  -- Good for creative and strategic thinking
     0,  -- Discussion
@@ -316,14 +298,12 @@ VALUES (
 );
 
 -- Director AI Model for Writing (Decision)
-INSERT INTO AIModel (
-    OID, Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
+INSERT INTO AIModel ( Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
     EndpointAddress, Temperature, NumPredict, TopK, TopP, Seed, NumCtx,
     NumGpu, NumThread, RepeatPenalty, Stop,
     CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord
 )
 VALUES (
-    UUID(),
     'Director Decision Model - Writing',
     'llama2:13b',
     1,  -- Decision
@@ -349,14 +329,12 @@ VALUES (
 );
 
 -- Manager AI Model for Writing (Discussion)
-INSERT INTO AIModel (
-    OID, Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
+INSERT INTO AIModel ( Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
     EndpointAddress, Temperature, NumPredict, TopK, TopP, Seed, NumCtx,
     NumGpu, NumThread, RepeatPenalty, Stop,
     CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord
 )
 VALUES (
-    UUID(),
     'Manager Discussion Model - Writing',
     'llama2:7b',
     0,  -- Discussion
@@ -382,14 +360,12 @@ VALUES (
 );
 
 -- Manager AI Model for Writing (Decision)
-INSERT INTO AIModel (
-    OID, Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
+INSERT INTO AIModel ( Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
     EndpointAddress, Temperature, NumPredict, TopK, TopP, Seed, NumCtx,
     NumGpu, NumThread, RepeatPenalty, Stop,
     CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord
 )
 VALUES (
-    UUID(),
     'Manager Decision Model - Writing',
     'llama2:7b',
     1,  -- Decision
@@ -415,14 +391,12 @@ VALUES (
 );
 
 -- Inspector AI Model for Writing (Discussion)
-INSERT INTO AIModel (
-    OID, Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
+INSERT INTO AIModel ( Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
     EndpointAddress, Temperature, NumPredict, TopK, TopP, Seed, NumCtx,
     NumGpu, NumThread, RepeatPenalty, Stop,
     CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord
 )
 VALUES (
-    UUID(),
     'Inspector Discussion Model - Writing',
     'llama2:13b',  -- Better understanding for editorial review
     0,  -- Discussion
@@ -448,14 +422,12 @@ VALUES (
 );
 
 -- Inspector AI Model for Writing (Decision)
-INSERT INTO AIModel (
-    OID, Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
+INSERT INTO AIModel ( Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
     EndpointAddress, Temperature, NumPredict, TopK, TopP, Seed, NumCtx,
     NumGpu, NumThread, RepeatPenalty, Stop,
     CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord
 )
 VALUES (
-    UUID(),
     'Inspector Decision Model - Writing',
     'llama2:13b',
     1,  -- Decision
@@ -481,14 +453,12 @@ VALUES (
 );
 
 -- Worker AI Model for Writing (Discussion)
-INSERT INTO AIModel (
-    OID, Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
+INSERT INTO AIModel ( Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
     EndpointAddress, Temperature, NumPredict, TopK, TopP, Seed, NumCtx,
     NumGpu, NumThread, RepeatPenalty, Stop,
     CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord
 )
 VALUES (
-    UUID(),
     'Worker Discussion Model - Writing',
     'llama2:7b',  -- Fast, efficient for content generation
     0,  -- Discussion
@@ -514,14 +484,12 @@ VALUES (
 );
 
 -- Worker AI Model for Writing (Decision)
-INSERT INTO AIModel (
-    OID, Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
+INSERT INTO AIModel ( Name, ModelIdentifier, MessageType, NodeType, Description, IsActive,
     EndpointAddress, Temperature, NumPredict, TopK, TopP, Seed, NumCtx,
     NumGpu, NumThread, RepeatPenalty, Stop,
     CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord
 )
 VALUES (
-    UUID(),
     'Worker Decision Model - Writing',
     'llama2:7b',
     1,  -- Decision

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace NodPT.Data.Models
 {
-    internal class SummarizePrompts: XPObject
+    public class SummarizePrompts : XPObject
     {
         public SummarizePrompts(Session session) : base(session) { }
         bool active;
