@@ -58,32 +58,28 @@ public static class DatabaseInitializer
 #endif
     }
 
-    static void CreateSampleData()
+    private static void CreateSampleData()
     {
-        var session = DatabaseHelper.GetSession();
-        if (session == null) return;
-
-        if (session.Query<Template>().Any())
+        try
         {
-            Console.WriteLine("Sample data was created");
-            return;
+            // Reuse centralized database connection string from DatabaseHelper
+            var mysqlConnectionString = DatabaseHelper.GetConnectionString();
+            
+            // Get a session to check for existing data
+            var session = DatabaseHelper.GetSession();
+            if (session == null)
+            {
+                Console.WriteLine("Unable to get database session for sample data creation");
+                return;
+            }
+
+            // Create DemoDataHelper instance and execute
+            var demoDataHelper = new NodPT.Data.DemoDataHelper(mysqlConnectionString, session);
+            demoDataHelper.CreateSampleData();
         }
-
-        // create template
-        var template = new Template(session)
+        catch (Exception ex)
         {
-            Category = "code",
-            CreatedAt = DateTime.Now,
-            Description = "for coding",
-            Name = "Coding",
-            IsActive = true,
-            Version = "1.0",
-        };
-
-        template.Save();
-        session.CommitChanges();
-
+            Console.WriteLine($"Error initializing sample data: {ex.Message}");
+        }
     }
-
-
 }

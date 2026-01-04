@@ -24,6 +24,7 @@ namespace NodPT.Data.Services
                 Description = t.Description,
                 Category = t.Category,
                 Version = t.Version,
+                Icon = t.Icon,
                 IsActive = t.IsActive,
                 CreatedAt = t.CreatedAt,
                 UpdatedAt = t.UpdatedAt
@@ -43,6 +44,7 @@ namespace NodPT.Data.Services
                 Description = template.Description,
                 Category = template.Category,
                 Version = template.Version,
+                Icon = template.Icon,
                 IsActive = template.IsActive,
                 CreatedAt = template.CreatedAt,
                 UpdatedAt = template.UpdatedAt
@@ -61,6 +63,7 @@ namespace NodPT.Data.Services
                     Description = templateDto.Description,
                     Category = templateDto.Category,
                     Version = templateDto.Version,
+                    Icon = templateDto.Icon,
                     IsActive = templateDto.IsActive,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -96,6 +99,7 @@ namespace NodPT.Data.Services
                 template.Description = templateDto.Description;
                 template.Category = templateDto.Category;
                 template.Version = templateDto.Version;
+                template.Icon = templateDto.Icon;
                 template.IsActive = templateDto.IsActive;
                 template.UpdatedAt = DateTime.UtcNow;
 

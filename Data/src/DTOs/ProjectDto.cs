@@ -11,6 +11,7 @@ namespace NodPT.Data.DTOs
         public int? UserId { get; set; }
         public int? TemplateId { get; set; }
         public string? TemplateName { get; set; }
+        public string? TemplateIcon { get; set; }
         public string? UserEmail { get; set; }
         public List<NodeDto> Nodes { get; set; } = new();
     }
