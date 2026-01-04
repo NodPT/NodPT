@@ -7,6 +7,7 @@ namespace NodPT.Data.DTOs
         public string? Description { get; set; }
         public string? Category { get; set; }
         public string? Version { get; set; }
+        public string? Icon { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

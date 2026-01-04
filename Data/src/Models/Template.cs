@@ -10,6 +10,7 @@ namespace NodPT.Data.Models
         private string? _description;
         private string? _category;
         private string? _version;
+        private string? _icon;
         private bool _isActive = true;
         private DateTime _createdAt = DateTime.UtcNow;
         private DateTime _updatedAt = DateTime.UtcNow;
@@ -57,6 +58,16 @@ namespace NodPT.Data.Models
         {
             get => _version;
             set => SetPropertyValue(nameof(Version), ref _version, value);
+        }
+
+        /// <summary>
+        /// Icon class for the template (e.g., Bootstrap Icons class)
+        /// </summary>
+        [Size(100)]
+        public string? Icon
+        {
+            get => _icon;
+            set => SetPropertyValue(nameof(Icon), ref _icon, value);
         }
 
         /// <summary>

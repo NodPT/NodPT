@@ -54,16 +54,16 @@ public static class DatabaseInitializer
 
         // Create sample data
 #if DEBUG
-        CreateSampleData(host, port, db, user, password);
+        CreateSampleData();
 #endif
     }
 
-    private static void CreateSampleData(string host, string port, string db, string user, string password)
+    private static void CreateSampleData()
     {
         try
         {
-            // Convert to MySQL connection string format
-            var mysqlConnectionString = $"Server={host};Port={port};Database={db};User={user};Password={password};SslMode=Preferred;CharSet=utf8mb4;";
+            // Convert XPO connection string to MySQL format
+            var mysqlConnectionString = ConvertToMySqlConnectionString(connectionString);
             
             // Get a session to check for existing data
             var session = DatabaseHelper.GetSession();
@@ -81,5 +81,55 @@ public static class DatabaseInitializer
         {
             Console.WriteLine($"Error initializing sample data: {ex.Message}");
         }
+    }
+
+    private static string ConvertToMySqlConnectionString(string xpoConnectionString)
+    {
+        // Parse XPO connection string to extract values
+        var parts = xpoConnectionString.Split(';');
+        var server = "";
+        var port = "";
+        var database = "";
+        var user = "";
+        var password = "";
+        var sslMode = "Preferred";
+        var charset = "utf8mb4";
+        
+        foreach (var part in parts)
+        {
+            var keyValue = part.Split('=');
+            if (keyValue.Length == 2)
+            {
+                var key = keyValue[0].Trim().ToLower();
+                var value = keyValue[1].Trim();
+                
+                switch (key)
+                {
+                    case "server":
+                        server = value;
+                        break;
+                    case "port":
+                        port = value;
+                        break;
+                    case "database":
+                        database = value;
+                        break;
+                    case "user":
+                        user = value;
+                        break;
+                    case "password":
+                        password = value;
+                        break;
+                    case "sslmode":
+                        sslMode = value;
+                        break;
+                    case "charset":
+                        charset = value;
+                        break;
+                }
+            }
+        }
+        
+        return $"Server={server};Port={port};Database={database};User={user};Password={password};SslMode={sslMode};CharSet={charset};";
     }
 }
