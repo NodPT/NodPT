@@ -54,36 +54,7 @@ public static class DatabaseInitializer
 
         // Create sample data
 #if DEBUG
-        CreateSampleData();
+        NodPT.Data.DemoDataHelper.CreateSampleData();
 #endif
     }
-
-    static void CreateSampleData()
-    {
-        var session = DatabaseHelper.GetSession();
-        if (session == null) return;
-
-        if (session.Query<Template>().Any())
-        {
-            Console.WriteLine("Sample data was created");
-            return;
-        }
-
-        // create template
-        var template = new Template(session)
-        {
-            Category = "code",
-            CreatedAt = DateTime.Now,
-            Description = "for coding",
-            Name = "Coding",
-            IsActive = true,
-            Version = "1.0",
-        };
-
-        template.Save();
-        session.CommitChanges();
-
-    }
-
-
 }

@@ -43,8 +43,8 @@ export default {
       },
       {
         id: 2,
-        name: 'writer',
-        title: 'Novel Writer',
+        name: 'book writing',
+        title: 'Book Writing',
         description: 'Create stories, books, and creative content',
         icon: 'bi bi-pen text-success',
         disabled: true
