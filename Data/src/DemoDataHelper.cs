@@ -33,14 +33,20 @@ namespace NodPT.Data
 
             try
             {
-                // Get connection string from DatabaseHelper
-                var connectionString = GetConnectionStringFromEnvironment();
+                // Get connection string from DatabaseHelper (converts XPO format to MySQL format)
+                var connectionString = GetMySqlConnectionString();
+                
+                if (string.IsNullOrEmpty(connectionString))
+                {
+                    Console.WriteLine("Unable to get connection string");
+                    return;
+                }
                 
                 // Get the path to SQL scripts directory
-                var sqlScriptsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "Data", "sql-scripts");
-                sqlScriptsPath = Path.GetFullPath(sqlScriptsPath);
+                // Try multiple locations to handle different deployment scenarios
+                var sqlScriptsPath = FindSqlScriptsDirectory();
 
-                if (!Directory.Exists(sqlScriptsPath))
+                if (string.IsNullOrEmpty(sqlScriptsPath) || !Directory.Exists(sqlScriptsPath))
                 {
                     Console.WriteLine($"SQL scripts directory not found: {sqlScriptsPath}");
                     return;
@@ -75,6 +81,45 @@ namespace NodPT.Data
                 Console.WriteLine($"Error creating sample data: {ex.Message}");
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
             }
+        }
+
+        /// <summary>
+        /// Finds the SQL scripts directory by checking multiple possible locations
+        /// </summary>
+        private static string FindSqlScriptsDirectory()
+        {
+            // Option 1: Relative to application base directory (for development and Docker)
+            var basePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "Data", "sql-scripts");
+            basePath = Path.GetFullPath(basePath);
+            
+            if (Directory.Exists(basePath))
+            {
+                return basePath;
+            }
+
+            // Option 2: Look for sql-scripts in parent directories
+            var currentDir = AppDomain.CurrentDomain.BaseDirectory;
+            for (int i = 0; i < 6; i++)
+            {
+                var testPath = Path.Combine(currentDir, "Data", "sql-scripts");
+                if (Directory.Exists(testPath))
+                {
+                    return testPath;
+                }
+                
+                var parentDir = Directory.GetParent(currentDir);
+                if (parentDir == null) break;
+                currentDir = parentDir.FullName;
+            }
+
+            // Option 3: Check environment variable if set
+            var envPath = Environment.GetEnvironmentVariable("SQL_SCRIPTS_PATH");
+            if (!string.IsNullOrEmpty(envPath) && Directory.Exists(envPath))
+            {
+                return envPath;
+            }
+
+            return string.Empty;
         }
 
         /// <summary>
@@ -137,17 +182,74 @@ namespace NodPT.Data
         }
 
         /// <summary>
-        /// Gets MySQL connection string from environment variables
+        /// Gets MySQL connection string by converting XPO connection string or reading from environment
         /// </summary>
-        private static string GetConnectionStringFromEnvironment()
+        private static string GetMySqlConnectionString()
         {
+            // Try to get connection string from DatabaseHelper
+            var xpoConnectionString = DatabaseHelper.GetConnectionString();
+            
+            if (!string.IsNullOrEmpty(xpoConnectionString))
+            {
+                // Convert XPO connection string to MySQL connection string
+                // XPO format: XpoProvider=MySql;server=host;port=port;user=user;password=password;database=db;...
+                // MySQL format: Server=host;Port=port;Database=db;User=user;Password=password;...
+                
+                var parts = xpoConnectionString.Split(';');
+                var server = "";
+                var port = "";
+                var database = "";
+                var user = "";
+                var password = "";
+                var sslMode = "Preferred";
+                var charset = "utf8mb4";
+                
+                foreach (var part in parts)
+                {
+                    var keyValue = part.Split('=');
+                    if (keyValue.Length == 2)
+                    {
+                        var key = keyValue[0].Trim().ToLower();
+                        var value = keyValue[1].Trim();
+                        
+                        switch (key)
+                        {
+                            case "server":
+                                server = value;
+                                break;
+                            case "port":
+                                port = value;
+                                break;
+                            case "database":
+                                database = value;
+                                break;
+                            case "user":
+                                user = value;
+                                break;
+                            case "password":
+                                password = value;
+                                break;
+                            case "sslmode":
+                                sslMode = value;
+                                break;
+                            case "charset":
+                                charset = value;
+                                break;
+                        }
+                    }
+                }
+                
+                return $"Server={server};Port={port};Database={database};User={user};Password={password};SslMode={sslMode};CharSet={charset};";
+            }
+            
+            // Fallback: get from environment variables
             var host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
-            var port = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
+            var portEnv = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
             var db = Environment.GetEnvironmentVariable("DB_NAME") ?? "nodpt";
-            var user = Environment.GetEnvironmentVariable("DB_USER") ?? "root";
-            var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "";
+            var userEnv = Environment.GetEnvironmentVariable("DB_USER") ?? "root";
+            var passwordEnv = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "";
 
-            return $"Server={host};Port={port};Database={db};User={user};Password={password};SslMode=Preferred;CharSet=utf8mb4;";
+            return $"Server={host};Port={portEnv};Database={db};User={userEnv};Password={passwordEnv};SslMode=Preferred;CharSet=utf8mb4;";
         }
     }
 }
