@@ -7,43 +7,33 @@ using System.Linq;
 
 namespace NodPT.Data
 {
-    public static class DemoDataHelper
+    public class DemoDataHelper
     {
+        private readonly string _connectionString;
+        private readonly UnitOfWork _session;
+
+        /// <summary>
+        /// Initializes a new instance of DemoDataHelper with the provided connection string
+        /// </summary>
+        /// <param name="connectionString">MySQL connection string for executing SQL scripts</param>
+        /// <param name="session">UnitOfWork session for checking existing data</param>
+        public DemoDataHelper(string connectionString, UnitOfWork session)
+        {
+            _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+            _session = session ?? throw new ArgumentNullException(nameof(session));
+        }
+
         /// <summary>
         /// Creates sample data by executing SQL scripts from Data/sql-scripts directory.
         /// Checks if data already exists before executing scripts to avoid duplicates.
         /// </summary>
-        public static void CreateSampleData()
+        public void CreateSampleData()
         {
-            var session = DatabaseHelper.GetSession();
-            if (session == null)
-            {
-                Console.WriteLine("Unable to get database session");
-                return;
-            }
-
-            // Check if sample data already exists
-            if (session.Query<Template>().Any())
-            {
-                Console.WriteLine("Sample data already exists - skipping SQL script execution");
-                return;
-            }
-
-            Console.WriteLine("Creating sample data from SQL scripts...");
+            Console.WriteLine("Checking for existing sample data...");
 
             try
             {
-                // Get connection string from DatabaseHelper (converts XPO format to MySQL format)
-                var connectionString = GetMySqlConnectionString();
-                
-                if (string.IsNullOrEmpty(connectionString))
-                {
-                    Console.WriteLine("Unable to get connection string");
-                    return;
-                }
-                
                 // Get the path to SQL scripts directory
-                // Try multiple locations to handle different deployment scenarios
                 var sqlScriptsPath = FindSqlScriptsDirectory();
 
                 if (string.IsNullOrEmpty(sqlScriptsPath) || !Directory.Exists(sqlScriptsPath))
@@ -52,29 +42,65 @@ namespace NodPT.Data
                     return;
                 }
 
-                // Execute SQL scripts in order
-                var sqlFiles = new[]
+                // Check and execute templates script
+                if (!_session.Query<Template>().Any())
                 {
-                    "01_sample_data_templates.sql",
-                    "02_sample_data_prompts.sql",
-                    "03_sample_data_aimodels.sql"
-                };
-
-                foreach (var sqlFile in sqlFiles)
-                {
-                    var filePath = Path.Combine(sqlScriptsPath, sqlFile);
-                    if (File.Exists(filePath))
+                    var templatesFile = Path.Combine(sqlScriptsPath, "01_sample_data_templates.sql");
+                    if (File.Exists(templatesFile))
                     {
-                        Console.WriteLine($"Executing SQL script: {sqlFile}");
-                        ExecuteSqlScript(connectionString, filePath);
+                        Console.WriteLine("Creating sample templates...");
+                        ExecuteSqlScript(templatesFile);
                     }
                     else
                     {
-                        Console.WriteLine($"SQL script not found: {filePath}");
+                        Console.WriteLine("Templates SQL script not found");
+                        return; // Cannot proceed without templates
                     }
                 }
+                else
+                {
+                    Console.WriteLine("Templates already exist - skipping template creation");
+                }
 
-                Console.WriteLine("Sample data created successfully");
+                // Check and execute prompts script
+                if (!_session.Query<Prompt>().Any())
+                {
+                    var promptsFile = Path.Combine(sqlScriptsPath, "02_sample_data_prompts.sql");
+                    if (File.Exists(promptsFile))
+                    {
+                        Console.WriteLine("Creating sample prompts...");
+                        ExecuteSqlScript(promptsFile);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Prompts SQL script not found");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Prompts already exist - skipping prompt creation");
+                }
+
+                // Check and execute AI models script
+                if (!_session.Query<AIModel>().Any())
+                {
+                    var aiModelsFile = Path.Combine(sqlScriptsPath, "03_sample_data_aimodels.sql");
+                    if (File.Exists(aiModelsFile))
+                    {
+                        Console.WriteLine("Creating sample AI models...");
+                        ExecuteSqlScript(aiModelsFile);
+                    }
+                    else
+                    {
+                        Console.WriteLine("AI Models SQL script not found");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("AI Models already exist - skipping AI model creation");
+                }
+
+                Console.WriteLine("Sample data creation completed successfully");
             }
             catch (Exception ex)
             {
@@ -125,18 +151,17 @@ namespace NodPT.Data
         /// <summary>
         /// Executes a SQL script file against the database
         /// </summary>
-        private static void ExecuteSqlScript(string connectionString, string scriptPath)
+        private void ExecuteSqlScript(string scriptPath)
         {
             try
             {
                 var sqlContent = File.ReadAllText(scriptPath);
                 
-                using (var connection = new MySqlConnection(connectionString))
+                using (var connection = new MySqlConnection(_connectionString))
                 {
                     connection.Open();
                     
                     // Split the SQL content by semicolons to execute individual statements
-                    // This is a simple approach - more complex SQL might need a better parser
                     var statements = sqlContent.Split(new[] { ";\r\n", ";\n" }, StringSplitOptions.RemoveEmptyEntries);
                     
                     foreach (var statement in statements)
@@ -179,77 +204,6 @@ namespace NodPT.Data
                 Console.WriteLine($"Error executing SQL script {scriptPath}: {ex.Message}");
                 throw;
             }
-        }
-
-        /// <summary>
-        /// Gets MySQL connection string by converting XPO connection string or reading from environment
-        /// </summary>
-        private static string GetMySqlConnectionString()
-        {
-            // Try to get connection string from DatabaseHelper
-            var xpoConnectionString = DatabaseHelper.GetConnectionString();
-            
-            if (!string.IsNullOrEmpty(xpoConnectionString))
-            {
-                // Convert XPO connection string to MySQL connection string
-                // XPO format: XpoProvider=MySql;server=host;port=port;user=user;password=password;database=db;...
-                // MySQL format: Server=host;Port=port;Database=db;User=user;Password=password;...
-                
-                var parts = xpoConnectionString.Split(';');
-                var server = "";
-                var port = "";
-                var database = "";
-                var user = "";
-                var password = "";
-                var sslMode = "Preferred";
-                var charset = "utf8mb4";
-                
-                foreach (var part in parts)
-                {
-                    var keyValue = part.Split('=');
-                    if (keyValue.Length == 2)
-                    {
-                        var key = keyValue[0].Trim().ToLower();
-                        var value = keyValue[1].Trim();
-                        
-                        switch (key)
-                        {
-                            case "server":
-                                server = value;
-                                break;
-                            case "port":
-                                port = value;
-                                break;
-                            case "database":
-                                database = value;
-                                break;
-                            case "user":
-                                user = value;
-                                break;
-                            case "password":
-                                password = value;
-                                break;
-                            case "sslmode":
-                                sslMode = value;
-                                break;
-                            case "charset":
-                                charset = value;
-                                break;
-                        }
-                    }
-                }
-                
-                return $"Server={server};Port={port};Database={database};User={user};Password={password};SslMode={sslMode};CharSet={charset};";
-            }
-            
-            // Fallback: get from environment variables
-            var host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
-            var portEnv = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
-            var db = Environment.GetEnvironmentVariable("DB_NAME") ?? "nodpt";
-            var userEnv = Environment.GetEnvironmentVariable("DB_USER") ?? "root";
-            var passwordEnv = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "";
-
-            return $"Server={host};Port={portEnv};Database={db};User={userEnv};Password={passwordEnv};SslMode=Preferred;CharSet=utf8mb4;";
         }
     }
 }

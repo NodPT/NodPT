@@ -54,7 +54,32 @@ public static class DatabaseInitializer
 
         // Create sample data
 #if DEBUG
-        NodPT.Data.DemoDataHelper.CreateSampleData();
+        CreateSampleData(host, port, db, user, password);
 #endif
+    }
+
+    private static void CreateSampleData(string host, string port, string db, string user, string password)
+    {
+        try
+        {
+            // Convert to MySQL connection string format
+            var mysqlConnectionString = $"Server={host};Port={port};Database={db};User={user};Password={password};SslMode=Preferred;CharSet=utf8mb4;";
+            
+            // Get a session to check for existing data
+            var session = DatabaseHelper.GetSession();
+            if (session == null)
+            {
+                Console.WriteLine("Unable to get database session for sample data creation");
+                return;
+            }
+
+            // Create DemoDataHelper instance and execute
+            var demoDataHelper = new NodPT.Data.DemoDataHelper(mysqlConnectionString, session);
+            demoDataHelper.CreateSampleData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing sample data: {ex.Message}");
+        }
     }
 }
