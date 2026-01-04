@@ -128,7 +128,8 @@ export default {
         projectTiles.value.push(...additionalTiles)
       } catch (error) {
         console.error('Error loading templates:', error)
-        toast.alert('Failed to load templates. Please try again.')
+        const errorMessage = error && (error.message || String(error))
+        toast.alert(`Failed to load templates: ${errorMessage || 'Please try again.'}`)
       } finally {
         loading.value = false
       }
