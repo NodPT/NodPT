@@ -14,15 +14,6 @@ public static class DatabaseHelper
     private static volatile IHttpContextAccessor? _httpContextAccessor;
 
     /// <summary>
-    /// Gets the connection string used by DatabaseHelper.
-    /// </summary>
-    /// <returns>The connection string or empty string if not set</returns>
-    public static string GetConnectionString()
-    {
-        return connectionString;
-    }
-
-    /// <summary>
     /// Set the IHttpContextAccessor for resolving request-scoped UnitOfWork instances.
     /// This should be called once during application startup.
     /// </summary>
