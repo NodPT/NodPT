@@ -65,10 +65,10 @@ export default {
             disabled: false
           }))
         
-        // Add placeholder tiles for future template types
+        // Add placeholder tiles for future template types (using negative IDs to avoid conflicts)
         const additionalTiles = [
           {
-            id: 999,
+            id: -1,
             name: 'music',
             title: 'Music Composer',
             description: 'Compose melodies, arrange tracks, and produce music',
@@ -76,7 +76,7 @@ export default {
             disabled: true
           },
           {
-            id: 998,
+            id: -2,
             name: 'video',
             title: 'Video Creator',
             description: 'Edit videos, create animations, and visual content',
@@ -84,7 +84,7 @@ export default {
             disabled: true
           },
           {
-            id: 997,
+            id: -3,
             name: 'data',
             title: 'Data Analysis',
             description: 'Process, analyze, and visualize data insights',
@@ -92,7 +92,7 @@ export default {
             disabled: true
           },
           {
-            id: 996,
+            id: -4,
             name: 'ai',
             title: 'AI Assistant',
             description: 'Build intelligent bots and AI-powered applications',
@@ -100,7 +100,7 @@ export default {
             disabled: true
           },
           {
-            id: 995,
+            id: -5,
             name: 'design',
             title: 'Design Studio',
             description: 'Create graphics, UI/UX designs, and visual assets',
@@ -108,7 +108,7 @@ export default {
             disabled: true
           },
           {
-            id: 994,
+            id: -6,
             name: 'automation',
             title: 'Automation',
             description: 'Automate tasks, workflows, and business processes',
@@ -116,7 +116,7 @@ export default {
             disabled: true
           },
           {
-            id: 993,
+            id: -7,
             name: 'research',
             title: 'Research',
             description: 'Gather information, analyze trends, and generate reports',

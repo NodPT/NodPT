@@ -97,7 +97,7 @@ public static class DatabaseInitializer
         
         foreach (var part in parts)
         {
-            var keyValue = part.Split('=');
+            var keyValue = part.Split(new[] { '=' }, 2); // Split with limit of 2 to handle values containing '='
             if (keyValue.Length == 2)
             {
                 var key = keyValue[0].Trim().ToLower();
