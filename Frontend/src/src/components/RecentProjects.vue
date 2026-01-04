@@ -6,7 +6,7 @@
         class="project-item d-flex align-items-center mb-2 py-2 px-1 hover-shadow cursor-pointer"
         @click="openProject(project)">
         <div class="project-icon me-3">
-          <i :class="getCategoryIcon(project.TemplateName)" class="fs-4"></i>
+          <i :class="getProjectIcon(project)" class="fs-4"></i>
         </div>
         <div class="project-details flex-grow-1">
           <h6 class="mb-0 fw-bold">{{ project.Name }}</h6>
@@ -42,6 +42,38 @@ export default {
     const api = inject('api');
     projectApiService.setApi(api);
 
+
+    const getProjectIcon = (project) => {
+      // Use TemplateIcon if available from backend
+      if (project.TemplateIcon) {
+        return project.TemplateIcon
+      }
+      
+      // Fallback to template name matching for backward compatibility
+      if (!project.TemplateName) return 'bi bi-file-earmark text-secondary'
+
+      const lowerTemplate = project.TemplateName.toLowerCase()
+      const icons = {
+        coding: 'bi bi-code-slash text-primary',
+        writer: 'bi bi-pen text-success',
+        music: 'bi bi-music-note text-info',
+        video: 'bi bi-camera-video text-warning',
+        default: 'bi bi-file-earmark text-secondary'
+      }
+
+      // Map template names to icon categories
+      if (lowerTemplate.includes('cod') || lowerTemplate.includes('dev') || lowerTemplate.includes('program')) {
+        return icons.coding
+      } else if (lowerTemplate.includes('writ') || lowerTemplate.includes('text') || lowerTemplate.includes('document')) {
+        return icons.writer
+      } else if (lowerTemplate.includes('music') || lowerTemplate.includes('audio') || lowerTemplate.includes('sound')) {
+        return icons.music
+      } else if (lowerTemplate.includes('video') || lowerTemplate.includes('film') || lowerTemplate.includes('media')) {
+        return icons.video
+      }
+
+      return icons.default
+    }
 
     const getCategoryIcon = (templateName) => {
       if (!templateName) return 'bi bi-file-earmark text-secondary'
@@ -142,6 +174,7 @@ export default {
       error,
       recentProjects,
       getCategoryIcon,
+      getProjectIcon,
       formatDate,
       openProject,
       loadProjects
