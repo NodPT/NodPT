@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BackendExecutor", "BackendE
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodPT.Data", "..\..\Data\src\NodPT.Data.csproj", "{6EC1D2AE-6FE9-E637-CE33-F6F4664EF97A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodPT.Utils", "..\..\Utils\src\NodPT.Utils.csproj", "{6EC1D2AE-6FE9-E637-CE33-F6F4664EF97A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

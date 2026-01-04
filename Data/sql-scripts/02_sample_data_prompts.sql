@@ -18,9 +18,8 @@ SET @writing_template_oid = (SELECT OID FROM Template WHERE Name = 'Book Writing
 -- =============================================
 
 -- Director Prompts for Coding Template
-INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
+INSERT INTO Prompt ( Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    NULL,
     'You are a Director AI (Top-Level Orchestrator). Your responsibility is to analyze the original project prompt and translate it into a complete system plan.
 
 Your tasks:
@@ -48,9 +47,8 @@ Output: A complete system plan with Manager assignments. Each Manager must recei
     NULL
 );
 
-INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
+INSERT INTO Prompt ( Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    UUID(),
     'As a Director AI making decisions:
 
 Your authority:
@@ -77,9 +75,8 @@ Rules:
 );
 
 -- Manager Prompts for Coding Template
-INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
+INSERT INTO Prompt ( Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    UUID(),
     'You are a Manager AI (Module Owner). You own and design one complete module assigned by the Director.
 
 Your tasks:
@@ -112,9 +109,8 @@ Output: A complete module design with Inspector assignments.',
     NULL
 );
 
-INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
+INSERT INTO Prompt ( Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    UUID(),
     'As a Manager AI making decisions:
 
 Your authority:
@@ -141,9 +137,8 @@ Rules:
 );
 
 -- Inspector Prompts for Coding Template
-INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
+INSERT INTO Prompt ( Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    UUID(),
     'You are an Inspector AI (Task Decomposer). You convert a sub-module into concrete implementation tasks.
 
 Your tasks:
@@ -177,9 +172,8 @@ Output: Complete task breakdown with Worker assignments ready for code generatio
     NULL
 );
 
-INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
+INSERT INTO Prompt ( Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    UUID(),
     'As an Inspector AI making decisions:
 
 Your authority:
@@ -207,9 +201,8 @@ Rules:
 );
 
 -- Worker Prompts for Coding Template
-INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
+INSERT INTO Prompt ( Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    UUID(),
     'You are a Worker AI (Code Generator). You produce actual code artifacts following exact instructions from your Inspector.
 
 Your tasks:
@@ -238,9 +231,8 @@ Output: Complete, production-ready code for the assigned scope only. Code must c
     NULL
 );
 
-INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
+INSERT INTO Prompt ( Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    UUID(),
     'As a Worker AI making decisions:
 
 Your limited authority:
@@ -274,9 +266,8 @@ Your role is pure code generation. If you need to make any decision beyond minor
 -- =============================================
 
 -- Director Prompts for Book Writing Template
-INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
+INSERT INTO Prompt ( Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    UUID(),
     'You are a Director AI (Top-Level Orchestrator) for book writing. Your responsibility is to analyze the book concept and translate it into a complete content plan.
 
 Your tasks:
@@ -305,9 +296,8 @@ Output: A complete book outline with Manager assignments. Each Manager must rece
     NULL
 );
 
-INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
+INSERT INTO Prompt ( Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    UUID(),
     'As a Director AI making decisions for the book:
 
 Your authority:
@@ -334,9 +324,8 @@ Rules:
 );
 
 -- Manager Prompts for Book Writing Template
-INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
+INSERT INTO Prompt ( Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    UUID(),
     'You are a Manager AI (Content Module Owner) for book writing. You own and design one complete content module assigned by the Director.
 
 Your tasks:
@@ -369,9 +358,8 @@ Output: A complete content module design with Inspector assignments.',
     NULL
 );
 
-INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
+INSERT INTO Prompt ( Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    UUID(),
     'As a Manager AI making decisions for content organization:
 
 Your authority:
@@ -398,9 +386,8 @@ Rules:
 );
 
 -- Inspector Prompts for Book Writing Template
-INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
+INSERT INTO Prompt ( Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    UUID(),
     'You are an Inspector AI (Writing Task Decomposer) for book content. You convert a chapter/section into concrete writing tasks.
 
 Your tasks:
@@ -434,9 +421,8 @@ Output: Complete writing task breakdown with Worker assignments ready for conten
     NULL
 );
 
-INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
+INSERT INTO Prompt ( Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    UUID(),
     'As an Inspector AI making decisions for writing tasks:
 
 Your authority:
@@ -464,9 +450,8 @@ Rules:
 );
 
 -- Worker Prompts for Book Writing Template
-INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
+INSERT INTO Prompt ( Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    UUID(),
     'You are a Worker AI (Content Generator) for book writing. You produce actual written content following exact instructions from your Inspector.
 
 Your tasks:
@@ -495,9 +480,8 @@ Output: Complete, publication-ready content for the assigned block only. Writing
     NULL
 );
 
-INSERT INTO Prompt (OID, Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
+INSERT INTO Prompt ( Content, MessageType, NodeType, CreatedAt, UpdatedAt, Template, OptimisticLockField, GCRecord)
 VALUES (
-    UUID(),
     'As a Worker AI making decisions for content writing:
 
 Your limited authority:

@@ -21,17 +21,9 @@ jobs:
          - name: 2. Verify directory layout
            working-directory: .
            run: |
-              echo "Workspace content:"
-              pwd
-              ls
-              echo ""
-              echo "Executor contents:"
-              ls Executor/src
-              echo ""
-              echo "Data contents:"
-              ls Data/src
               test -f Executor/src/BackendExecutor.csproj
               test -f Data/src/NodPT.Data.csproj
+              test -f Utils/src/NodPT.Utils.csproj
 
          # 3️⃣ Setup Docker Buildx
          - name: 3. Set up Docker Buildx
