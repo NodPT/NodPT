@@ -21,7 +21,7 @@
               <div class="selected-template-icon mb-3">
                 <i :class="selectedTemplate.icon" class="fs-1"></i>
               </div>
-              <h6 class="text-muted">{{ selectedTemplate.title }} Project</h6>
+              <h6 class="text-muted">{{ selectedTemplate.name }} Project</h6>
             </div>
             <div class="mb-3">
               <label for="projectNameInput" class="form-label">Project Name</label>
@@ -110,7 +110,7 @@ export default {
         // Create project DTO matching backend structure
         const projectDto = {
           Name: projectName.value.trim(),
-          Description: `${selectedTemplate.value.title} project`,
+          Description: `${selectedTemplate.value.name} project`,
           IsActive: true,
           CreatedAt: new Date().toISOString(),
           UpdatedAt: new Date().toISOString(),

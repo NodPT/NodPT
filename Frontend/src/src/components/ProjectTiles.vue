@@ -15,7 +15,7 @@
             <div class="tile-icon mb-2">
               <i :class="tile.icon" class="fs-3"></i>
             </div>
-            <h6 class="card-title fw-bold mb-1 small">{{ tile.title }}</h6>
+            <h6 class="card-title fw-bold mb-1 small">{{ tile.name }}</h6>
             <p class="card-text text-muted" style="font-size: 0.7rem; line-height: 1.2;">{{ tile.description }}</p>
           </div>
         </div>
@@ -58,8 +58,8 @@ export default {
           .filter(t => t.IsActive)
           .map(template => ({
             id: template.Id,
-            name: template.Category,
-            title: template.Name,
+            category: template.Category,
+            name: template.Name,
             description: template.Description,
             icon: template.Icon || 'bi bi-file-earmark text-secondary',
             disabled: false
@@ -69,56 +69,56 @@ export default {
         const additionalTiles = [
           {
             id: -1,
-            name: 'music',
-            title: 'Music Composer',
+            category: 'music',
+            name: 'Music Composer',
             description: 'Compose melodies, arrange tracks, and produce music',
             icon: 'bi bi-music-note text-info',
             disabled: true
           },
           {
             id: -2,
-            name: 'video',
-            title: 'Video Creator',
+            category: 'video',
+            name: 'Video Creator',
             description: 'Edit videos, create animations, and visual content',
             icon: 'bi bi-camera-video text-warning',
             disabled: true
           },
           {
             id: -3,
-            name: 'data',
-            title: 'Data Analysis',
+            category: 'data',
+            name: 'Data Analysis',
             description: 'Process, analyze, and visualize data insights',
             icon: 'bi bi-graph-up text-danger',
             disabled: true
           },
           {
             id: -4,
-            name: 'ai',
-            title: 'AI Assistant',
+            category: 'ai',
+            name: 'AI Assistant',
             description: 'Build intelligent bots and AI-powered applications',
             icon: 'bi bi-robot text-purple',
             disabled: true
           },
           {
             id: -5,
-            name: 'design',
-            title: 'Design Studio',
+            category: 'design',
+            name: 'Design Studio',
             description: 'Create graphics, UI/UX designs, and visual assets',
             icon: 'bi bi-palette text-pink',
             disabled: true
           },
           {
             id: -6,
-            name: 'automation',
-            title: 'Automation',
+            category: 'automation',
+            name: 'Automation',
             description: 'Automate tasks, workflows, and business processes',
             icon: 'bi bi-gear text-secondary',
             disabled: true
           },
           {
             id: -7,
-            name: 'research',
-            title: 'Research',
+            category: 'research',
+            name: 'Research',
             description: 'Gather information, analyze trends, and generate reports',
             icon: 'bi bi-search text-dark',
             disabled: true
