@@ -62,13 +62,8 @@ public static class DatabaseInitializer
     {
         try
         {
-            // Build MySQL connection string directly from environment variables
-            var host = Environment.GetEnvironmentVariable("DB_HOST");
-            var port = Environment.GetEnvironmentVariable("DB_PORT");
-            var db = Environment.GetEnvironmentVariable("DB_NAME");
-            var user = Environment.GetEnvironmentVariable("DB_USER");
-            var password = Environment.GetEnvironmentVariable("DB_PASSWORD");
-            var mysqlConnectionString = $"Server={host};Port={port};Database={db};User={user};Password={password};SslMode=Preferred;CharSet=utf8mb4;";
+            // Reuse centralized database connection string from DatabaseHelper
+            var mysqlConnectionString = DatabaseHelper.GetConnectionString();
             
             // Get a session to check for existing data
             var session = DatabaseHelper.GetSession();
