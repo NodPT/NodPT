@@ -131,7 +131,6 @@ export default {
         // Prepare node data
         const nodeData = {
           Name: nodeName.value.trim(),
-          NodeType: hierarchy.child, // Use PascalCase for backend
           MessageType: 'Discussion',
           ParentId: selectedNode.value.id,
           ProjectId: parseInt(projectId),
@@ -139,7 +138,7 @@ export default {
           Properties: {}
         }
 
-        // Create node via API
+        // Create node via API (backend will determine NodeType based on parent)
         const createdNode = await nodeApiService.createNode(nodeData)
 
         toast.success(`Node "${nodeName.value}" created successfully`)

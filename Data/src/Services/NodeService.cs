@@ -63,6 +63,7 @@ namespace NodPT.Data.Services
                 UpdatedAt = node.UpdatedAt,
                 Status = node.Status,
                 ParentId = node.Parent?.Id,
+                OriginalParentNodeId = node.OriginalParentNodeId,
                 ProjectId = node.Project?.Oid,
                 ProjectName = node.Project?.Name,
                 TemplateId = node.Template?.Oid,
@@ -165,7 +166,8 @@ namespace NodPT.Data.Services
                     Parent = parent,
                     Project = project,
                     Template = template,
-                    MessageType = nodeDto.MessageType
+                    MessageType = nodeDto.MessageType,
+                    OriginalParentNodeId = nodeDto.OriginalParentNodeId
                 };
 
                 session.Save(node);
@@ -206,6 +208,7 @@ namespace NodPT.Data.Services
                 node.Project = project;
                 node.Template = template;
                 node.MessageType = nodeDto.MessageType;
+                node.OriginalParentNodeId = nodeDto.OriginalParentNodeId;
 
                 session.Save(node);
                 session.CommitTransaction();
@@ -218,7 +221,7 @@ namespace NodPT.Data.Services
         }
 
         /// <summary>
-        /// Recursively deletes a node and all its children
+        /// Soft-deletes a node by setting its parent to null and storing the original parent ID
         /// Prevents deletion of Director nodes
         /// </summary>
         /// <param name="id">Node ID to delete</param>
@@ -252,9 +255,15 @@ namespace NodPT.Data.Services
                     throw new UnauthorizedAccessException("You don't have permission to delete this node");
                 }
 
-                // Recursively delete all children
-                DeleteNodeRecursive(node);
+                // Soft delete: Store original parent and clear parent reference
+                if (node.Parent != null)
+                {
+                    node.OriginalParentNodeId = node.Parent.Id;
+                    node.Parent = null;
+                }
 
+                node.UpdatedAt = DateTime.UtcNow;
+                session.Save(node);
                 session.CommitTransaction();
             }
             catch
@@ -265,44 +274,20 @@ namespace NodPT.Data.Services
         }
 
         /// <summary>
-        /// Recursively deletes a node and all its children
-        /// </summary>
-        /// <param name="node">Node to delete</param>
-        private void DeleteNodeRecursive(Node node)
-        {
-            // Get all children before deletion
-            var children = node.Children.ToList();
-
-            // Recursively delete children first
-            foreach (var child in children)
-            {
-                DeleteNodeRecursive(child);
-            }
-
-            // Delete the node itself
-            session.Delete(node);
-        }
-
-        /// <summary>
-        /// Validates if a node can be created with the given parent based on hierarchy rules
-        /// Hierarchy: Director → Manager → Inspector → Worker
+        /// Determines the child node type based on parent node type
+        /// Following hierarchy: Director → Manager → Inspector → Worker
         /// </summary>
         /// <param name="parentNodeType">Parent node type</param>
-        /// <param name="childNodeType">Child node type to be created</param>
-        /// <returns>True if hierarchy is valid</returns>
-        public bool ValidateNodeHierarchy(NodeType parentNodeType, NodeType childNodeType)
+        /// <returns>Child node type or null if parent cannot have children</returns>
+        public NodeType? GetChildNodeType(NodeType parentNodeType)
         {
-            // Define valid parent-child relationships
-            var validHierarchy = new Dictionary<NodeType, List<NodeType>>
+            return parentNodeType switch
             {
-                { NodeType.Director, new List<NodeType> { NodeType.Manager } },
-                { NodeType.Manager, new List<NodeType> { NodeType.Inspector } },
-                { NodeType.Inspector, new List<NodeType> { NodeType.Worker } },
-                { NodeType.Worker, new List<NodeType>() } // Workers cannot have children
+                NodeType.Director => NodeType.Manager,
+                NodeType.Manager => NodeType.Inspector,
+                NodeType.Inspector => NodeType.Worker,
+                _ => null // Worker and other types cannot have children
             };
-
-            return validHierarchy.ContainsKey(parentNodeType) && 
-                   validHierarchy[parentNodeType].Contains(childNodeType);
         }
     }
 }

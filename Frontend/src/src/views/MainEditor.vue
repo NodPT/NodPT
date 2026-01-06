@@ -249,7 +249,7 @@ const handleDeleteNode = async () => {
         // Show confirmation dialog
         const nodeName = selectedNode.value.name || 'this node';
         const confirmed = window.confirm(
-                `Are you sure you want to delete "${nodeName}" and all its child nodes? This action cannot be undone.`
+                `Are you sure you want to delete "${nodeName}"? The node will be removed but can be recovered later.`
         );
 
         if (!confirmed) {

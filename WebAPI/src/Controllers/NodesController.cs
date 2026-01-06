@@ -80,28 +80,32 @@ namespace NodPT.API.Controllers
                     return Unauthorized(new { error = "User not authorized" });
                 }
 
-                // Validate hierarchy if parent is provided
-                if (!string.IsNullOrEmpty(node.ParentId))
+                // Parent node is required
+                if (string.IsNullOrEmpty(node.ParentId))
                 {
-                    var parentNode = unitOfWork.Query<Node>().FirstOrDefault(n => n.Id == node.ParentId);
-                    if (parentNode == null)
-                    {
-                        return BadRequest(new { error = "Parent node not found" });
-                    }
-
-                    // Verify parent belongs to user's project
-                    if (parentNode.Project?.User?.Oid != user.Oid)
-                    {
-                        return Unauthorized(new { error = "Parent node does not belong to your project" });
-                    }
-
-                    // Validate hierarchy
-                    if (!_nodeService.ValidateNodeHierarchy(parentNode.NodeType, node.NodeType))
-                    {
-                        return BadRequest(new { error = $"Invalid hierarchy: {parentNode.NodeType} cannot have {node.NodeType} as child. Valid hierarchy: Director → Manager → Inspector → Worker" });
-                    }
+                    return BadRequest(new { error = "Parent node is required" });
                 }
 
+                var parentNode = unitOfWork.Query<Node>().FirstOrDefault(n => n.Id == node.ParentId);
+                if (parentNode == null)
+                {
+                    return BadRequest(new { error = "Parent node not found" });
+                }
+
+                // Verify parent belongs to user's project
+                if (parentNode.Project?.User?.Oid != user.Oid)
+                {
+                    return Unauthorized(new { error = "Parent node does not belong to your project" });
+                }
+
+                // Automatically determine child node type based on parent
+                var childNodeType = _nodeService.GetChildNodeType(parentNode.NodeType);
+                if (childNodeType == null)
+                {
+                    return BadRequest(new { error = $"{parentNode.NodeType} nodes cannot have children" });
+                }
+
+                node.NodeType = childNodeType.Value;
                 node.Id = Guid.NewGuid().ToString();
                 node.CreatedAt = DateTime.UtcNow;
                 node.UpdatedAt = DateTime.UtcNow;
