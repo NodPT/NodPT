@@ -29,6 +29,7 @@ import '../assets/styles/chat-dark.css';
 import { triggerEvent, listenEvent, EVENT_TYPES } from '../rete/eventBus';
 import signalRService from '../service/signalRService';
 import projectApiService from '../service/projectApiService';
+import nodeApiService from '../service/nodeApiService';
 import { useTheme } from '../composables/useTheme';
 
 const route = useRoute();
@@ -36,6 +37,7 @@ const api = inject('api');
 const toast = inject('toast');
 const { isDarkTheme, loadTheme } = useTheme();
 projectApiService.setApi(api);
+nodeApiService.setApi(api);
 const minimapVisible = ref(false);
 const isLeftPanelVisible = ref(true);
 const isRightPanelVisible = ref(true);
@@ -231,7 +233,7 @@ const handleNodeSelected = (nodeData) => {
         triggerEvent(EVENT_TYPES.SELECTED_NODE_CHANGED, nodeData);
 };
 
-const handleDeleteNode = () => {
+const handleDeleteNode = async () => {
         // Check if there's a selected node
         if (!selectedNode.value || !selectedNode.value.id) {
                 console.warn('No node selected to delete');
@@ -240,19 +242,40 @@ const handleDeleteNode = () => {
 
         // Prevent deletion of Director node
         if (selectedNode.value.type === 'director') {
-                console.warn('Director node cannot be deleted');
+                toast.warning('Director node cannot be deleted');
                 return;
         }
 
-        // Get the editor manager from LeftPanel
-        if (leftPanelRef.value && typeof leftPanelRef.value.getNodeManager === 'function') {
-                const nodeManager = leftPanelRef.value.getNodeManager();
-                if (nodeManager) {
-                        // Delete the selected node
-                        nodeManager.deleteNode(selectedNode.value.id);
-                        // Clear the selected node
-                        selectedNode.value = null;
+        // Show confirmation dialog
+        const nodeName = selectedNode.value.name || 'this node';
+        const confirmed = window.confirm(
+                `Are you sure you want to delete "${nodeName}" and all its child nodes? This action cannot be undone.`
+        );
+
+        if (!confirmed) {
+                return;
+        }
+
+        try {
+                // Delete node via API
+                const nodeId = selectedNode.value.id;
+                await nodeApiService.deleteNode(nodeId);
+
+                // Get the editor manager from LeftPanel
+                if (leftPanelRef.value && typeof leftPanelRef.value.getNodeManager === 'function') {
+                        const nodeManager = leftPanelRef.value.getNodeManager();
+                        if (nodeManager) {
+                                // Delete the selected node from the editor
+                                nodeManager.deleteNode(nodeId);
+                                // Clear the selected node
+                                selectedNode.value = null;
+                                toast.success(`Node "${nodeName}" deleted successfully`);
+                        }
                 }
+        } catch (error) {
+                console.error('Error deleting node:', error);
+                const errorMsg = error.response?.data?.error || error.message || 'Unknown error';
+                toast.error(`Failed to delete node: ${errorMsg}`);
         }
 };
 

@@ -120,6 +120,7 @@
   <CopyProjectModal />
   <RenameProjectModal />
   <DeleteProjectModal />
+  <AddNodeModal />
 </template>
 
 <script>
@@ -133,6 +134,7 @@ import OpenProjectModal from './OpenProjectModal.vue';
 import CopyProjectModal from './CopyProjectModal.vue';
 import RenameProjectModal from './RenameProjectModal.vue';
 import DeleteProjectModal from './DeleteProjectModal.vue';
+import AddNodeModal from './AddNodeModal.vue';
 import { Modal } from 'bootstrap';
 
 
@@ -143,7 +145,8 @@ export default {
     OpenProjectModal,
     CopyProjectModal,
     RenameProjectModal,
-    DeleteProjectModal
+    DeleteProjectModal,
+    AddNodeModal
   },
   props: {
     show_menu: {
@@ -269,6 +272,12 @@ export default {
     };
 
     const nodeAction = (action) => {
+      if (action === 'add') {
+        // Show add node modal
+        const modal = new Modal(document.getElementById('addNodeModal'));
+        modal.show();
+        return;
+      }
       if (action === 'delete') {
         // Prevent deletion of Director node
         if (isDirectorSelected.value) return;

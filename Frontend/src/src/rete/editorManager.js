@@ -104,6 +104,22 @@ export class EditorManager {
 			editor.use(area);
 			area.use(render);
 			area.use(connectionPlugin);
+
+			// Prevent users from manually removing or reconnecting nodes
+			connectionPlugin.addPipe((context) => {
+				// Block connection removal attempts
+				if (context.type === 'connectionremove') {
+					console.warn('Manual connection removal is disabled');
+					return; // Block the action
+				}
+				// Block connection pick (start of reconnecting)
+				if (context.type === 'connectionpick') {
+					console.warn('Manual connection editing is disabled');
+					return; // Block the action
+				}
+				return context; // Allow other connection events
+			});
+
 			area.use(minimapPlugin);
 			// area.use(contextMenuPlugin);
 			area.use(scopes);
@@ -220,6 +236,7 @@ export class EditorManager {
 			listenEvent(EVENT_TYPES.SEARCH_FOCUS_NODE, this.handleFocusNode.bind(this));
 			listenEvent(EVENT_TYPES.TOGGLE_MINIMAP, this.toggleMinimap.bind(this));
 			listenEvent(EVENT_TYPES.NODE_ACTION, this.handleNodeAction.bind(this));
+			listenEvent(EVENT_TYPES.NODE_CREATED_FROM_API, this.handleNodeCreatedFromApi.bind(this));
 
 			// Inject translatePosition method to area object
 			// Usage: area.translatePosition(nodeId, { x, y }, duration)
@@ -1159,6 +1176,78 @@ export class EditorManager {
 			}
 		} catch (error) {
 			console.error('Failed to handle node action:', error);
+		}
+	}
+
+	/**
+	 * Handle node created from API event
+	 * Adds the node to the editor and creates connection to parent
+	 * @param {Object} data - Event data containing nodeData and parentId
+	 */
+	async handleNodeCreatedFromApi(data) {
+		if (!this.editor || !this.area) {
+			console.warn('Editor instance not initialized');
+			return;
+		}
+
+		try {
+			const { nodeData, parentId } = data;
+
+			// Find parent node
+			const parentNode = this.editor.getNodes().find(n => n.id === parentId);
+			if (!parentNode) {
+				console.error('Parent node not found:', parentId);
+				return;
+			}
+
+			// Map backend node type to frontend type
+			const nodeType = nodeData.NodeType?.toLowerCase() || 'worker';
+			
+			// Add the new node to editor using backend-provided ID
+			const newNode = await this.addNode(
+				nodeType,
+				nodeData.Name,
+				1, // input count
+				1, // output count
+				nodeData.Id // Use backend-generated ID
+			);
+
+			if (!newNode) {
+				console.error('Failed to add node to editor');
+				return;
+			}
+
+			// Position the new node near the parent
+			const parentView = this.area.nodeViews.get(parentNode.id);
+			if (parentView) {
+				const parentPos = parentView.position;
+				// Position child below and slightly offset from parent
+				const childX = parentPos.x + 50;
+				const childY = parentPos.y + 150;
+				await this.area.translate(newNode.node.id, { x: childX, y: childY });
+			}
+
+			// Create connection from parent to child
+			await this.connectNodes(
+				this.editor,
+				parentNode,
+				newNode.node,
+				`${parentNode.label} -> ${newNode.node.label}`
+			);
+
+			// Update area
+			await this.area.update();
+
+			// Select the newly created node
+			triggerEvent(EVENT_TYPES.NODE_SELECTED, {
+				id: newNode.node.id,
+				name: newNode.node.label,
+				type: nodeType
+			});
+
+		} catch (error) {
+			console.error('Failed to handle node created from API:', error);
+			throw error;
 		}
 	}
 
