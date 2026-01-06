@@ -13,6 +13,44 @@ namespace NodPT.Data.Services
             this.session = unitOfWork;
         }
 
+        /// <summary>
+        /// Creates and attaches a welcome message to a node
+        /// </summary>
+        /// <param name="node">The node to attach the welcome message to</param>
+        /// <param name="user">The user creating the message (optional)</param>
+        /// <returns>The created ChatMessage</returns>
+        public ChatMessage AttachWelcomeMessage(Node node, User? user = null)
+        {
+            // Define standard welcome messages
+            var welcomeMessages = new[]
+            {
+                "Hello, how may I help you?",
+                "Welcome! I'm ready to assist you.",
+                "Hi there! What can I do for you today?",
+                "Greetings! How can I be of service?"
+            };
+
+            // Select a welcome message (can use random or based on node type)
+            var random = new Random();
+            var selectedMessage = welcomeMessages[random.Next(welcomeMessages.Length)];
+
+            // Create the welcome message
+            var chatMessage = new ChatMessage(session)
+            {
+                Sender = "Assistant",
+                Message = selectedMessage,
+                Timestamp = DateTime.UtcNow,
+                MarkedAsSolution = false,
+                Liked = false,
+                Disliked = false,
+                Node = node,
+                User = user
+            };
+
+            chatMessage.Save();
+            return chatMessage;
+        }
+
         private NodeDto MapToDto(Node node)
         {
             var dto = new NodeDto
@@ -179,17 +217,44 @@ namespace NodPT.Data.Services
             }
         }
 
-        public void DeleteNode(string id)
+        /// <summary>
+        /// Recursively deletes a node and all its children
+        /// Prevents deletion of Director nodes
+        /// </summary>
+        /// <param name="id">Node ID to delete</param>
+        /// <param name="user">User performing the deletion (for authorization)</param>
+        /// <exception cref="InvalidOperationException">When attempting to delete a Director node</exception>
+        /// <exception cref="UnauthorizedAccessException">When user doesn't own the node</exception>
+        public void DeleteNode(string id, User? user = null)
         {
             session.BeginTransaction();
 
             try
             {
                 var node = session.Query<Node>().FirstOrDefault(n => n.Id == id);
-                if (node != null)
+                if (node == null)
                 {
-                    session.Delete(node);
+                    session.RollbackTransaction();
+                    throw new ArgumentException($"Node with ID '{id}' not found");
                 }
+
+                // Prevent deletion of Director nodes
+                if (node.NodeType == NodeType.Director)
+                {
+                    session.RollbackTransaction();
+                    throw new InvalidOperationException("Director nodes cannot be deleted");
+                }
+
+                // Verify user owns the node's project (if user is provided)
+                if (user != null && node.Project?.User != null && node.Project.User.Oid != user.Oid)
+                {
+                    session.RollbackTransaction();
+                    throw new UnauthorizedAccessException("You don't have permission to delete this node");
+                }
+
+                // Recursively delete all children
+                DeleteNodeRecursive(node);
+
                 session.CommitTransaction();
             }
             catch
@@ -197,6 +262,47 @@ namespace NodPT.Data.Services
                 session.RollbackTransaction();
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Recursively deletes a node and all its children
+        /// </summary>
+        /// <param name="node">Node to delete</param>
+        private void DeleteNodeRecursive(Node node)
+        {
+            // Get all children before deletion
+            var children = node.Children.ToList();
+
+            // Recursively delete children first
+            foreach (var child in children)
+            {
+                DeleteNodeRecursive(child);
+            }
+
+            // Delete the node itself
+            session.Delete(node);
+        }
+
+        /// <summary>
+        /// Validates if a node can be created with the given parent based on hierarchy rules
+        /// Hierarchy: Director → Manager → Inspector → Worker
+        /// </summary>
+        /// <param name="parentNodeType">Parent node type</param>
+        /// <param name="childNodeType">Child node type to be created</param>
+        /// <returns>True if hierarchy is valid</returns>
+        public bool ValidateNodeHierarchy(NodeType parentNodeType, NodeType childNodeType)
+        {
+            // Define valid parent-child relationships
+            var validHierarchy = new Dictionary<NodeType, List<NodeType>>
+            {
+                { NodeType.Director, new List<NodeType> { NodeType.Manager } },
+                { NodeType.Manager, new List<NodeType> { NodeType.Inspector } },
+                { NodeType.Inspector, new List<NodeType> { NodeType.Worker } },
+                { NodeType.Worker, new List<NodeType>() } // Workers cannot have children
+            };
+
+            return validHierarchy.ContainsKey(parentNodeType) && 
+                   validHierarchy[parentNodeType].Contains(childNodeType);
         }
     }
 }

@@ -227,6 +227,10 @@ namespace NodPT.Data.Services
                     };
 
                     session.Save(defaultNode);
+
+                    // Attach welcome message to the default Director node
+                    var nodeService = new NodeService(session);
+                    nodeService.AttachWelcomeMessage(defaultNode, this.user);
                 
                 }
 
