@@ -12,6 +12,7 @@ namespace NodPT.Data.DTOs
         public DateTime UpdatedAt { get; set; }
         public string? Status { get; set; }
         public string? ParentId { get; set; }
+        public string? OriginalParentNodeId { get; set; }
         public int? ProjectId { get; set; }
         public string? ProjectName { get; set; }
         public int? TemplateId { get; set; }

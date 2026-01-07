@@ -13,6 +13,42 @@ namespace NodPT.Data.Services
             this.session = unitOfWork;
         }
 
+        /// <summary>
+        /// Creates and attaches a welcome message to a node
+        /// </summary>
+        /// <param name="node">The node to attach the welcome message to</param>
+        /// <param name="user">The user creating the message (optional)</param>
+        /// <returns>The created ChatMessage</returns>
+        public ChatMessage AttachWelcomeMessage(Node node, User? user = null)
+        {
+            // Define standard welcome messages
+            var welcomeMessages = new[]
+            {
+                "Hello, how may I help you?",
+                "Welcome! I'm ready to assist you.",
+                "Hi there! What can I do for you today?",
+                "Greetings! How can I be of service?"
+            };
+
+            // Select a welcome message (can use random or based on node type)
+            var selectedMessage = welcomeMessages[Random.Shared.Next(welcomeMessages.Length)];
+            // Create the welcome message
+            var chatMessage = new ChatMessage(session)
+            {
+                Sender = "Assistant",
+                Message = selectedMessage,
+                Timestamp = DateTime.UtcNow,
+                MarkedAsSolution = false,
+                Liked = false,
+                Disliked = false,
+                Node = node,
+                User = user
+            };
+
+            chatMessage.Save();
+            return chatMessage;
+        }
+
         private NodeDto MapToDto(Node node)
         {
             var dto = new NodeDto
@@ -25,6 +61,7 @@ namespace NodPT.Data.Services
                 UpdatedAt = node.UpdatedAt,
                 Status = node.Status,
                 ParentId = node.Parent?.Id,
+                OriginalParentNodeId = node.OriginalParentNodeId,
                 ProjectId = node.Project?.Oid,
                 ProjectName = node.Project?.Name,
                 TemplateId = node.Template?.Oid,
@@ -99,7 +136,7 @@ namespace NodPT.Data.Services
             return nodes.Select(n => MapToDto(n)).ToList();
         }
 
-        public void AddNode(NodeDto nodeDto)
+        public Node AddNode(NodeDto nodeDto)
         {
             session.BeginTransaction();
 
@@ -127,11 +164,14 @@ namespace NodPT.Data.Services
                     Parent = parent,
                     Project = project,
                     Template = template,
-                    MessageType = nodeDto.MessageType
+                    MessageType = nodeDto.MessageType,
+                    OriginalParentNodeId = nodeDto.OriginalParentNodeId
                 };
 
                 session.Save(node);
                 session.CommitTransaction();
+                
+                return node;
             }
             catch
             {
@@ -168,6 +208,7 @@ namespace NodPT.Data.Services
                 node.Project = project;
                 node.Template = template;
                 node.MessageType = nodeDto.MessageType;
+                node.OriginalParentNodeId = nodeDto.OriginalParentNodeId;
 
                 session.Save(node);
                 session.CommitTransaction();
@@ -179,17 +220,66 @@ namespace NodPT.Data.Services
             }
         }
 
-        public void DeleteNode(string id)
+        /// <summary>
+        /// Soft-deletes a node by clearing its parent reference and storing the original parent ID.
+        /// Also cascades the soft delete to all child nodes to prevent orphaning.
+        /// Prevents deletion of Director nodes.
+        /// </summary>
+        /// <remarks>
+        /// This operation soft-deletes the specified node and cascades to all its children.
+        /// Both the node and its children have their parent references cleared and original
+        /// parent IDs stored in OriginalParentNodeId for potential recovery.
+        /// </remarks>
+        /// <param name="id">Node ID to delete</param>
+        /// <param name="user">User performing the deletion (for authorization)</param>
+        /// <exception cref="InvalidOperationException">When attempting to delete a Director node</exception>
+        /// <exception cref="UnauthorizedAccessException">When user doesn't own the node</exception>
+        public void DeleteNode(string id, User? user = null)
         {
             session.BeginTransaction();
 
             try
             {
                 var node = session.Query<Node>().FirstOrDefault(n => n.Id == id);
-                if (node != null)
+                if (node == null)
                 {
-                    session.Delete(node);
+                    session.RollbackTransaction();
+                    throw new ArgumentException($"Node with ID '{id}' not found");
                 }
+
+                // Prevent deletion of Director nodes
+                if (node.NodeType == NodeType.Director)
+                {
+                    session.RollbackTransaction();
+                    throw new InvalidOperationException("Director nodes cannot be deleted");
+                }
+
+                // Verify user owns the node's project (if user is provided)
+                if (user != null && node.Project?.User != null && node.Project.User.Oid != user.Oid)
+                {
+                    session.RollbackTransaction();
+                    throw new UnauthorizedAccessException("You don't have permission to delete this node");
+                }
+
+                // Soft delete: Store original parent and clear parent reference
+                if (node.Parent != null)
+                {
+                    node.OriginalParentNodeId = node.Parent.Id;
+                    node.Parent = null;
+                }
+
+                // Also update children to prevent orphaning
+                // Store their original parent and clear their parent reference
+                foreach (var child in node.Children.ToList())
+                {
+                    child.OriginalParentNodeId = node.Id;
+                    child.Parent = null;
+                    child.UpdatedAt = DateTime.UtcNow;
+                    session.Save(child);
+                }
+
+                node.UpdatedAt = DateTime.UtcNow;
+                session.Save(node);
                 session.CommitTransaction();
             }
             catch
@@ -197,6 +287,23 @@ namespace NodPT.Data.Services
                 session.RollbackTransaction();
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Determines the child node type based on parent node type
+        /// Following hierarchy: Director → Manager → Inspector → Worker
+        /// </summary>
+        /// <param name="parentNodeType">Parent node type</param>
+        /// <returns>Child node type or null if parent cannot have children</returns>
+        public NodeType? GetChildNodeType(NodeType parentNodeType)
+        {
+            return parentNodeType switch
+            {
+                NodeType.Director => NodeType.Manager,
+                NodeType.Manager => NodeType.Inspector,
+                NodeType.Inspector => NodeType.Worker,
+                _ => null // Worker and other types cannot have children
+            };
         }
     }
 }

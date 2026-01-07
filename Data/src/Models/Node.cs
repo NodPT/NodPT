@@ -17,6 +17,7 @@ namespace NodPT.Data.Models
         private Project? _project;
         private Template? _template;
         private MessageTypeEnum _messageType;
+        private string? _originalParentNodeId;
 
         public Node(Session session) : base(session) { }
         public Node() : base(Session.DefaultSession) { }
@@ -107,6 +108,16 @@ namespace NodPT.Data.Models
         {
             get => _messageType;
             set => SetPropertyValue(nameof(MessageType), ref _messageType, value);
+        }
+
+        /// <summary>
+        /// Stores the original parent node ID before deletion for recovery purposes
+        /// </summary>
+        [Size(255)]
+        public string? OriginalParentNodeId
+        {
+            get => _originalParentNodeId;
+            set => SetPropertyValue(nameof(OriginalParentNodeId), ref _originalParentNodeId, value);
         }
 
         // Helper property to work with Properties as Dictionary

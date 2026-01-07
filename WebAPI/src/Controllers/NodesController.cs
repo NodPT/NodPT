@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 
 using NodPT.Data.DTOs;
 using NodPT.Data.Services;
+using NodPT.Data.Models;
 using DevExpress.Xpo;
 
 namespace NodPT.API.Controllers
@@ -22,56 +23,250 @@ namespace NodPT.API.Controllers
         }
 
         [HttpGet]
-        public IActionResult GetNodes() => Ok(_nodeService.GetAllNodes());
+        public IActionResult GetNodes()
+        {
+            try
+            {
+                // Get authenticated user
+                var user = UserService.GetUser(User, unitOfWork);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not authorized" });
+                }
+
+                // Only return nodes from projects owned by the authenticated user
+                var userProjects = unitOfWork.Query<Project>()
+                    .Where(p => p.User != null && p.User.Oid == user.Oid)
+                    .Select(p => p.Oid)
+                    .ToList();
+
+                var nodes = _nodeService.GetAllNodes()
+                    .Where(n => n.ProjectId.HasValue && userProjects.Contains(n.ProjectId.Value))
+                    .ToList();
+
+                return Ok(nodes);
+            }
+            catch (Exception ex)
+            {
+                LogService.LogError(ex.Message, ex.StackTrace, User?.Identity?.Name, "NodesController", "GetNodes");
+                return StatusCode(500, new { error = "An error occurred." });
+            }
+        }
 
         [HttpGet("{id}")]
         public IActionResult GetNode(string id)
         {
-            var node = _nodeService.GetNode(id);
-            return node == null ? NotFound() : Ok(node);
+            try
+            {
+                // Get the currently authenticated user
+                var currentUser = UserService.GetUser(User, unitOfWork);
+                if (currentUser == null)
+                {
+                    return Unauthorized(new { error = "User not authorized" });
+                }
+
+                var node = _nodeService.GetNode(id);
+                if (node == null)
+                {
+                    return NotFound();
+                }
+
+                // Ensure the node belongs to a project owned by the current user (or user is admin)
+                if (node.ProjectId.HasValue)
+                {
+                    var project = unitOfWork.GetObjectByKey<Project>(node.ProjectId.Value);
+                    if (project?.User == null || (project.User.Oid != currentUser.Oid && !currentUser.IsAdmin))
+                    {
+                        return Forbid("You don't have permission to access this node");
+                    }
+                }
+                else
+                {
+                    return Forbid("You don't have permission to access this node");
+                }
+
+                return Ok(node);
+            }
+            catch (Exception ex)
+            {
+                LogService.LogError(ex.Message, ex.StackTrace, User?.Identity?.Name, "NodesController", "GetNode");
+                return StatusCode(500, new { error = "An error occurred." });
+            }
         }
 
         [HttpGet("project/{projectId}")]
         public IActionResult GetNodesByProject(int projectId)
         {
-            var nodes = _nodeService.GetNodesByProject(projectId);
-            return Ok(nodes);
+            try
+            {
+                // Get authenticated user
+                var user = UserService.GetUser(User, unitOfWork);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not authorized" });
+                }
+
+                // Verify the project belongs to the user
+                var project = unitOfWork.GetObjectByKey<Project>(projectId);
+                if (project == null)
+                {
+                    return NotFound(new { error = "Project not found" });
+                }
+
+                if (project.User == null || project.User.Oid != user.Oid)
+                {
+                    return Forbid();
+                }
+
+                var nodes = _nodeService.GetNodesByProject(projectId);
+                return Ok(nodes);
+            }
+            catch (Exception ex)
+            {
+                LogService.LogError(ex.Message, ex.StackTrace, User?.Identity?.Name, "NodesController", "GetNodesByProject");
+                return StatusCode(500, new { error = "An error occurred." });
+            }
         }
 
         [HttpPost]
         public IActionResult CreateNode([FromBody] NodeDto node)
         {
-            if (node == null) return BadRequest();
+            try
+            {
+                if (node == null) return BadRequest();
 
-            node.Id = Guid.NewGuid().ToString();
-            node.CreatedAt = DateTime.UtcNow;
-            node.UpdatedAt = DateTime.UtcNow;
+                // Get authenticated user
+                var user = UserService.GetUser(User, unitOfWork);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not authorized" });
+                }
 
-            _nodeService.AddNode(node);
-            return CreatedAtAction(nameof(GetNode), new { id = node.Id }, node);
+                // Parent node is required
+                if (string.IsNullOrEmpty(node.ParentId))
+                {
+                    return BadRequest(new { error = "Parent node is required" });
+                }
+
+                var parentNode = unitOfWork.Query<Node>().FirstOrDefault(n => n.Id == node.ParentId);
+                if (parentNode == null)
+                {
+                    return BadRequest(new { error = "Parent node not found" });
+                }
+
+                // Verify parent belongs to user's project
+                if (parentNode.Project?.User?.Oid != user.Oid)
+                {
+                    return Unauthorized(new { error = "Parent node does not belong to your project" });
+                }
+
+                // Automatically determine child node type based on parent
+                var childNodeType = _nodeService.GetChildNodeType(parentNode.NodeType);
+                if (childNodeType == null)
+                {
+                    return BadRequest(new { error = $"{parentNode.NodeType} nodes cannot have children" });
+                }
+
+                node.NodeType = childNodeType.Value;
+                node.Id = Guid.NewGuid().ToString();
+                node.CreatedAt = DateTime.UtcNow;
+                node.UpdatedAt = DateTime.UtcNow;
+
+                // Add node and get the created entity directly
+                var createdNode = _nodeService.AddNode(node);
+
+                // Attach welcome message to the newly created node
+                _nodeService.AttachWelcomeMessage(createdNode, user);
+                unitOfWork.CommitTransaction();
+
+                return CreatedAtAction(nameof(GetNode), new { id = node.Id }, node);
+            }
+            catch (Exception ex)
+            {
+                LogService.LogError(ex.Message, ex.StackTrace, User?.Identity?.Name, "NodesController", "CreateNode");
+                return StatusCode(500, new { error = "An error occurred." });
+            }
         }
 
         [HttpPut("{id}")]
         public IActionResult UpdateNode(string id, [FromBody] NodeDto node)
         {
-            if (node == null || node.Id != id) return BadRequest();
+            try
+            {
+                if (node == null || node.Id != id) return BadRequest();
 
-            var existingNode = _nodeService.GetNode(id);
-            if (existingNode == null) return NotFound();
+                var existingNode = _nodeService.GetNode(id);
+                if (existingNode == null) return NotFound();
 
-            node.UpdatedAt = DateTime.UtcNow;
-            _nodeService.UpdateNode(node);
-            return Ok(node);
+                // Get authenticated user and ensure they are authorized to update this node
+                var user = UserService.GetUser(User, unitOfWork);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not authorized" });
+                }
+
+                // Verify the node belongs to a project owned by the user
+                if (existingNode.ProjectId.HasValue)
+                {
+                    var project = unitOfWork.GetObjectByKey<Project>(existingNode.ProjectId.Value);
+                    if (project?.User == null || project.User.Oid != user.Oid)
+                    {
+                        return Forbid();
+                    }
+                }
+                else
+                {
+                    return Forbid();
+                }
+
+                node.UpdatedAt = DateTime.UtcNow;
+                _nodeService.UpdateNode(node);
+                return Ok(node);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                LogService.LogError(ex.Message, ex.StackTrace, User?.Identity?.Name, "NodesController", "UpdateNode");
+                return StatusCode(500, new { error = "An error occurred." });
+            }
         }
 
         [HttpDelete("{id}")]
         public IActionResult DeleteNode(string id)
         {
-            var node = _nodeService.GetNode(id);
-            if (node == null) return NotFound();
+            try
+            {
+                // Get authenticated user
+                var user = UserService.GetUser(User, unitOfWork);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not authorized" });
+                }
 
-            _nodeService.DeleteNode(id);
-            return NoContent();
+                var node = _nodeService.GetNode(id);
+                if (node == null) return NotFound();
+
+                // Attempt to delete the node (will throw exception if Director or unauthorized)
+                _nodeService.DeleteNode(id, user);
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Director node deletion attempt
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                LogService.LogError(ex.Message, ex.StackTrace, User?.Identity?.Name, "NodesController", "DeleteNode");
+                return StatusCode(500, new { error = "An error occurred." });
+            }
         }
     }
 }

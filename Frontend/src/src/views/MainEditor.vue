@@ -12,6 +12,8 @@
                 <Footer :selected-node="selectedNode" :total-nodes="totalNodes" :progress="buildProgress"
                         :minimap-visible="minimapVisible" :connection-status="connectionStatus"
                         :is-dark-theme="isDarkTheme" />
+                
+                <DeleteNodeModal />
         </div>
 </template>
 
@@ -22,6 +24,7 @@ import TopBar from '../components/TopBar.vue';
 import Footer from '../components/Footer.vue';
 import LeftPanel from '../components/LeftPanel.vue';
 import RightPanel from '../components/RightPanel.vue';
+import DeleteNodeModal from '../components/DeleteNodeModal.vue';
 import '../assets/styles/main-editor.css';
 import '../assets/styles/main-editor-dark.css';
 import '../assets/styles/components-dark.css';
@@ -29,6 +32,7 @@ import '../assets/styles/chat-dark.css';
 import { triggerEvent, listenEvent, EVENT_TYPES } from '../rete/eventBus';
 import signalRService from '../service/signalRService';
 import projectApiService from '../service/projectApiService';
+import nodeApiService from '../service/nodeApiService';
 import { useTheme } from '../composables/useTheme';
 
 const route = useRoute();
@@ -36,6 +40,7 @@ const api = inject('api');
 const toast = inject('toast');
 const { isDarkTheme, loadTheme } = useTheme();
 projectApiService.setApi(api);
+nodeApiService.setApi(api);
 const minimapVisible = ref(false);
 const isLeftPanelVisible = ref(true);
 const isRightPanelVisible = ref(true);
@@ -240,7 +245,20 @@ const handleDeleteNode = () => {
 
         // Prevent deletion of Director node
         if (selectedNode.value.type === 'director') {
-                console.warn('Director node cannot be deleted');
+                toast.warning('Director node cannot be deleted');
+                return;
+        }
+
+        // Show Bootstrap modal for confirmation
+        triggerEvent(EVENT_TYPES.SHOW_DELETE_NODE_MODAL, {
+                nodeId: selectedNode.value.id,
+                nodeName: selectedNode.value.name || 'this node'
+        });
+};
+
+// Handle node deleted event from modal
+const handleNodeDeleted = (data) => {
+        if (!data || !data.nodeId) {
                 return;
         }
 
@@ -248,10 +266,12 @@ const handleDeleteNode = () => {
         if (leftPanelRef.value && typeof leftPanelRef.value.getNodeManager === 'function') {
                 const nodeManager = leftPanelRef.value.getNodeManager();
                 if (nodeManager) {
-                        // Delete the selected node
-                        nodeManager.deleteNode(selectedNode.value.id);
-                        // Clear the selected node
-                        selectedNode.value = null;
+                        // Delete the selected node from the editor
+                        nodeManager.deleteNode(data.nodeId);
+                        // Clear the selected node if it's the one being deleted
+                        if (selectedNode.value && selectedNode.value.id === data.nodeId) {
+                                selectedNode.value = null;
+                        }
                 }
         }
 };
@@ -307,6 +327,7 @@ onMounted(async () => {
         cleanupFns.push(listenEvent(EVENT_TYPES.SIGNALR_TOGGLE_CONNECTION, handleSignalRToggle));
         cleanupFns.push(listenEvent(EVENT_TYPES.NODE_SELECTED, handleNodeSelected));
         cleanupFns.push(listenEvent(EVENT_TYPES.DELETE_NODE, handleDeleteNode));
+        cleanupFns.push(listenEvent(EVENT_TYPES.NODE_DELETED, handleNodeDeleted));
         window.addEventListener('keydown', handleKeydown);
 
         // Start SignalR connection when entering the editor
