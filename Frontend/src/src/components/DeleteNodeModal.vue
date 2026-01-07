@@ -15,7 +15,7 @@
             <div class="d-flex align-items-start">
               <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
               <div>
-                <strong>Warning:</strong> This action will permanently remove the node from the editor.
+                <strong>Warning:</strong> This action will soft-delete the node and all its children. They will be removed from the editor but can potentially be recovered from the database.
               </div>
             </div>
           </div>

@@ -221,9 +221,15 @@ namespace NodPT.Data.Services
         }
 
         /// <summary>
-        /// Soft-deletes a node by setting its parent to null and storing the original parent ID
-        /// Prevents deletion of Director nodes
+        /// Soft-deletes a node by clearing its parent reference and storing the original parent ID.
+        /// Also cascades the soft delete to all child nodes to prevent orphaning.
+        /// Prevents deletion of Director nodes.
         /// </summary>
+        /// <remarks>
+        /// This operation soft-deletes the specified node and cascades to all its children.
+        /// Both the node and its children have their parent references cleared and original
+        /// parent IDs stored in OriginalParentNodeId for potential recovery.
+        /// </remarks>
         /// <param name="id">Node ID to delete</param>
         /// <param name="user">User performing the deletion (for authorization)</param>
         /// <exception cref="InvalidOperationException">When attempting to delete a Director node</exception>
@@ -260,6 +266,16 @@ namespace NodPT.Data.Services
                 {
                     node.OriginalParentNodeId = node.Parent.Id;
                     node.Parent = null;
+                }
+
+                // Also update children to prevent orphaning
+                // Store their original parent and clear their parent reference
+                foreach (var child in node.Children.ToList())
+                {
+                    child.OriginalParentNodeId = node.Id;
+                    child.Parent = null;
+                    child.UpdatedAt = DateTime.UtcNow;
+                    session.Save(child);
                 }
 
                 node.UpdatedAt = DateTime.UtcNow;
