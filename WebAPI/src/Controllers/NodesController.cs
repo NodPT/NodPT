@@ -136,7 +136,6 @@ namespace NodPT.API.Controllers
                 if (createdNode != null)
                 {
                     _nodeService.AttachWelcomeMessage(createdNode, user);
-                    unitOfWork.CommitTransaction();
                 }
 
                 return CreatedAtAction(nameof(GetNode), new { id = node.Id }, node);
