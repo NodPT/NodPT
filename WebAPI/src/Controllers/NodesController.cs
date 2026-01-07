@@ -41,8 +41,27 @@ namespace NodPT.API.Controllers
         {
             try
             {
+                // Get the currently authenticated user
+                var currentUser = UserService.GetUser(User, unitOfWork);
+                if (currentUser == null)
+                {
+                    return Unauthorized(new { error = "User not authorized" });
+                }
+
                 var node = _nodeService.GetNode(id);
-                return node == null ? NotFound() : Ok(node);
+                if (node == null)
+                {
+                    return NotFound();
+                }
+
+                // Ensure the node belongs to a project owned by the current user (or user is admin)
+                var projectOwner = node.Project?.User;
+                if (projectOwner == null || (projectOwner.Oid != currentUser.Oid && !currentUser.IsAdmin))
+                {
+                    return Forbid("You don't have permission to access this node");
+                }
+
+                return Ok(node);
             }
             catch (Exception ex)
             {
