@@ -27,7 +27,24 @@ namespace NodPT.API.Controllers
         {
             try
             {
-                return Ok(_nodeService.GetAllNodes());
+                // Get authenticated user
+                var user = UserService.GetUser(User, unitOfWork);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not authorized" });
+                }
+
+                // Only return nodes from projects owned by the authenticated user
+                var userProjects = unitOfWork.Query<Project>()
+                    .Where(p => p.User != null && p.User.Oid == user.Oid)
+                    .Select(p => p.Oid)
+                    .ToList();
+
+                var nodes = _nodeService.GetAllNodes()
+                    .Where(n => n.ProjectId.HasValue && userProjects.Contains(n.ProjectId.Value))
+                    .ToList();
+
+                return Ok(nodes);
             }
             catch (Exception ex)
             {
@@ -55,8 +72,15 @@ namespace NodPT.API.Controllers
                 }
 
                 // Ensure the node belongs to a project owned by the current user (or user is admin)
-                var projectOwner = node.Project?.User;
-                if (projectOwner == null || (projectOwner.Oid != currentUser.Oid && !currentUser.IsAdmin))
+                if (node.ProjectId.HasValue)
+                {
+                    var project = unitOfWork.GetObjectByKey<Project>(node.ProjectId.Value);
+                    if (project?.User == null || (project.User.Oid != currentUser.Oid && !currentUser.IsAdmin))
+                    {
+                        return Forbid("You don't have permission to access this node");
+                    }
+                }
+                else
                 {
                     return Forbid("You don't have permission to access this node");
                 }
@@ -75,6 +99,25 @@ namespace NodPT.API.Controllers
         {
             try
             {
+                // Get authenticated user
+                var user = UserService.GetUser(User, unitOfWork);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not authorized" });
+                }
+
+                // Verify the project belongs to the user
+                var project = unitOfWork.GetObjectByKey<Project>(projectId);
+                if (project == null)
+                {
+                    return NotFound(new { error = "Project not found" });
+                }
+
+                if (project.User == null || project.User.Oid != user.Oid)
+                {
+                    return Forbid();
+                }
+
                 var nodes = _nodeService.GetNodesByProject(projectId);
                 return Ok(nodes);
             }
@@ -164,8 +207,22 @@ namespace NodPT.API.Controllers
                     return Unauthorized(new { error = "User not authorized" });
                 }
 
+                // Verify the node belongs to a project owned by the user
+                if (existingNode.ProjectId.HasValue)
+                {
+                    var project = unitOfWork.GetObjectByKey<Project>(existingNode.ProjectId.Value);
+                    if (project?.User == null || project.User.Oid != user.Oid)
+                    {
+                        return Forbid();
+                    }
+                }
+                else
+                {
+                    return Forbid();
+                }
+
                 node.UpdatedAt = DateTime.UtcNow;
-                _nodeService.UpdateNode(node, user);
+                _nodeService.UpdateNode(node);
                 return Ok(node);
             }
             catch (UnauthorizedAccessException ex)
