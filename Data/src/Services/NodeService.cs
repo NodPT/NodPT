@@ -136,7 +136,7 @@ namespace NodPT.Data.Services
             return nodes.Select(n => MapToDto(n)).ToList();
         }
 
-        public void AddNode(NodeDto nodeDto)
+        public Node AddNode(NodeDto nodeDto)
         {
             session.BeginTransaction();
 
@@ -170,6 +170,8 @@ namespace NodPT.Data.Services
 
                 session.Save(node);
                 session.CommitTransaction();
+                
+                return node;
             }
             catch
             {

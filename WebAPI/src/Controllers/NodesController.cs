@@ -172,14 +172,12 @@ namespace NodPT.API.Controllers
                 node.CreatedAt = DateTime.UtcNow;
                 node.UpdatedAt = DateTime.UtcNow;
 
-                _nodeService.AddNode(node);
+                // Add node and get the created entity directly
+                var createdNode = _nodeService.AddNode(node);
 
                 // Attach welcome message to the newly created node
-                var createdNode = unitOfWork.Query<Node>().FirstOrDefault(n => n.Id == node.Id);
-                if (createdNode != null)
-                {
-                    _nodeService.AttachWelcomeMessage(createdNode, user);
-                }
+                _nodeService.AttachWelcomeMessage(createdNode, user);
+                unitOfWork.CommitTransaction();
 
                 return CreatedAtAction(nameof(GetNode), new { id = node.Id }, node);
             }
