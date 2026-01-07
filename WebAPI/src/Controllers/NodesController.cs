@@ -157,9 +157,20 @@ namespace NodPT.API.Controllers
                 var existingNode = _nodeService.GetNode(id);
                 if (existingNode == null) return NotFound();
 
+                // Get authenticated user and ensure they are authorized to update this node
+                var user = UserService.GetUser(User, unitOfWork);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not authorized" });
+                }
+
                 node.UpdatedAt = DateTime.UtcNow;
-                _nodeService.UpdateNode(node);
+                _nodeService.UpdateNode(node, user);
                 return Ok(node);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { error = ex.Message });
             }
             catch (Exception ex)
             {
