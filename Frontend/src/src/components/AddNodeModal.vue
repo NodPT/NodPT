@@ -120,12 +120,11 @@ export default {
         const nodeType = selectedNode.value.type?.toLowerCase()
         const hierarchy = hierarchyMap[nodeType]
 
-        // Get project ID from route or selected node
-        const urlParams = new URLSearchParams(window.location.search)
-        const projectId = urlParams.get('projectId')
+        // Get project ID from selected node
+        const projectId = selectedNode.value.ProjectId ?? selectedNode.value.projectId
 
         if (!projectId) {
-          throw new Error('Project ID not found')
+          throw new Error('Project ID not found on selected node')
         }
 
         // Prepare node data
