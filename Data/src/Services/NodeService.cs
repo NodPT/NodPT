@@ -31,9 +31,7 @@ namespace NodPT.Data.Services
             };
 
             // Select a welcome message (can use random or based on node type)
-            var random = new Random();
-            var selectedMessage = welcomeMessages[random.Next(welcomeMessages.Length)];
-
+            var selectedMessage = welcomeMessages[Random.Shared.Next(welcomeMessages.Length)];
             // Create the welcome message
             var chatMessage = new ChatMessage(session)
             {
