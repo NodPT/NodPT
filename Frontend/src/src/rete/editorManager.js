@@ -110,12 +110,16 @@ export class EditorManager {
 				// Block connection removal attempts
 				if (context.type === 'connectionremove') {
 					console.warn('Manual connection removal is disabled');
-					return; // Block the action
+					// Explicitly mark the context as rejected to block the action
+					context.rejected = true;
+					return context;
 				}
 				// Block connection pick (start of reconnecting)
 				if (context.type === 'connectionpick') {
 					console.warn('Manual connection editing is disabled');
-					return; // Block the action
+					// Explicitly mark the context as rejected to block the action
+					context.rejected = true;
+					return context;
 				}
 				return context; // Allow other connection events
 			});
