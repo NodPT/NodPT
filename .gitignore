@@ -552,5 +552,7 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-.env.local
 .env
+.env.local
+.evn.development
+.env.production
