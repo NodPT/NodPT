@@ -39,6 +39,9 @@ namespace NodPT.API.Controllers
 
             try
             {
+                User? user = null;
+                bool isNewUser = false;
+
 #if DEBUG
                 // In Development mode, bypass Firebase validation and return first active user
                 Console.WriteLine("DEBUG MODE: Bypassing Firebase authentication in AuthController");
@@ -46,7 +49,7 @@ namespace NodPT.API.Controllers
                 session!.BeginTransaction();
 
                 // Find first active, approved, non-banned user
-                var user = session.Query<User>()
+                user = session.Query<User>()
                     .Where(u => u.Active && u.Approved && !u.Banned)
                     .FirstOrDefault();
 
@@ -77,7 +80,6 @@ namespace NodPT.API.Controllers
                 var firebaseUserInfo = await NodPT.API.Services.FirebaseService.ValidateFirebaseTokenAsync(request.FirebaseToken);
                 if (firebaseUserInfo == null)
                 {
-                    // LogUserAccess(null, null, "login", false, "Invalid Firebase token");
                     return Unauthorized(new AuthResponseDto
                     {
                         Success = false,
@@ -88,9 +90,8 @@ namespace NodPT.API.Controllers
                 session!.BeginTransaction();
 
                 // Find or create user
-                var user = session.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("FirebaseUid", firebaseUserInfo.Uid));
+                user = session.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("FirebaseUid", firebaseUserInfo.Uid));
 
-                bool isNewUser = false;
                 if (user == null)
                 {
                     // Auto-create user if not exists - defaults to Approved=false, Banned=false
