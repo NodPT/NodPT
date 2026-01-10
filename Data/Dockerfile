@@ -13,4 +13,3 @@ VOLUME ["/var/lib/mysql"]
 # Expose default MariaDB port
 EXPOSE 3306
 
-# Use image's default entrypoint/cmd (mysqld)

@@ -4,12 +4,22 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: nodpt-data
+    environment:
+      MYSQL_ROOT_PASSWORD: ChangeMeRootPass!
+      MYSQL_DATABASE: demo_db
+      MYSQL_USER: demo_user
+      MYSQL_PASSWORD: demo_password123
     ports:
       - "3306:3306"
     restart: unless-stopped
+    volumes:
+      - db_data:/var/lib/mysql
     networks:
       - backend_network
 
 networks:
   backend_network:
     external: true
+
+volumes:
+  db_data:

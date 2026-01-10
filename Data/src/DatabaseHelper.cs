@@ -51,8 +51,11 @@ public static class DatabaseHelper
         // This is needed for background services and console applications
         if (string.IsNullOrEmpty(connectionString))
             throw new InvalidOperationException("Connection string is not set. Please set it before creating a UnitOfWork.");
-
+#if DEBUG
+        var dataStore = XpoDefault.GetConnectionProvider(connectionString, AutoCreateOption.DatabaseAndSchema);
+#else
         var dataStore = XpoDefault.GetConnectionProvider(connectionString, AutoCreateOption.SchemaAlreadyExists);
+#endif
         var dl = new SimpleDataLayer(dataStore);
         return new UnitOfWork(dl);
     }

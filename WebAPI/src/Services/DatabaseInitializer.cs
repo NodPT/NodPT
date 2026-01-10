@@ -54,7 +54,7 @@ public static class DatabaseInitializer
 
         // Create sample data
 #if DEBUG
-        CreateSampleData();
+        // CreateSampleData();
 #endif
     }
 
@@ -62,6 +62,10 @@ public static class DatabaseInitializer
     {
         var session = DatabaseHelper.GetSession();
         if (session == null) return;
+
+        // update scheme
+        session.AutoCreateOption.ToString();
+        session.UpdateSchema();
 
         if (session.Query<Template>().Any())
         {
