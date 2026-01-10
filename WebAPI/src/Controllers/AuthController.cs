@@ -39,11 +39,36 @@ namespace NodPT.API.Controllers
 
             try
             {
-                // Validate Firebase token using Firebase Admin SDK (with DEBUG mock fallback)
+                User? user = null;
+                bool isNewUser = false;
+
+#if DEBUG
+                // In Development mode, bypass Firebase validation and return first active user
+                Console.WriteLine("DEBUG MODE: Bypassing Firebase authentication in AuthController");
+                
+                session!.BeginTransaction();
+
+                // Find first active, approved, non-banned user
+                user = session.Query<User>()
+                    .Where(u => u.Active && u.Approved && !u.Banned)
+                    .FirstOrDefault();
+
+                if (user == null)
+                {
+                    // If no valid user exists, create a development user
+                    user = CreateNewUser(session, "dev-user", "dev@example.com", "Development User", null, true);
+                    isNewUser = true;
+                }
+                else
+                {
+                    // Update last login time for existing user
+                    user.LastLoginAt = DateTime.UtcNow;
+                }
+#else
+                // Validate Firebase token using Firebase Admin SDK
                 var firebaseUserInfo = await NodPT.API.Services.FirebaseService.ValidateFirebaseTokenAsync(request.FirebaseToken);
                 if (firebaseUserInfo == null)
                 {
-                    // LogUserAccess(null, null, "login", false, "Invalid Firebase token");
                     return Unauthorized(new AuthResponseDto
                     {
                         Success = false,
@@ -54,24 +79,12 @@ namespace NodPT.API.Controllers
                 session!.BeginTransaction();
 
                 // Find or create user
-                var user = session.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("FirebaseUid", firebaseUserInfo.Uid));
+                user = session.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("FirebaseUid", firebaseUserInfo.Uid));
 
-                bool isNewUser = false;
                 if (user == null)
                 {
                     // Auto-create user if not exists - defaults to Approved=false, Banned=false
-                    user = new User(session)
-                    {
-                        FirebaseUid = firebaseUserInfo.Uid,
-                        Email = firebaseUserInfo.Email,
-                        DisplayName = firebaseUserInfo.DisplayName,
-                        PhotoUrl = firebaseUserInfo.PhotoUrl,
-                        Active = true,
-                        Approved = false,
-                        Banned = false,
-                        CreatedAt = DateTime.UtcNow,
-                        LastLoginAt = DateTime.UtcNow
-                    };
+                    user = CreateNewUser(session, firebaseUserInfo.Uid, firebaseUserInfo.Email, firebaseUserInfo.DisplayName, firebaseUserInfo.PhotoUrl, false);
                     isNewUser = true;
                 }
                 else
@@ -99,6 +112,7 @@ namespace NodPT.API.Controllers
                     await LogUserAccessAsync(user, "login", false, validationError.Message);
                     return Unauthorized(validationError);
                 }
+#endif
 
                 // Generate refresh token if remember me is enabled
                 string? refreshToken = null;
@@ -323,6 +337,34 @@ namespace NodPT.API.Controllers
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Create a new user with the specified details
+        /// </summary>
+        /// <param name="session">Database session</param>
+        /// <param name="firebaseUid">Firebase UID</param>
+        /// <param name="email">User email</param>
+        /// <param name="displayName">User display name</param>
+        /// <param name="photoUrl">User photo URL</param>
+        /// <param name="approved">Whether the user is approved</param>
+        /// <returns>The newly created user</returns>
+        private User CreateNewUser(UnitOfWork session, string firebaseUid, string? email, string? displayName, string? photoUrl, bool approved)
+        {
+            var user = new User(session)
+            {
+                FirebaseUid = firebaseUid,
+                Email = email,
+                DisplayName = displayName,
+                PhotoUrl = photoUrl,
+                Active = true,
+                Approved = approved,
+                Banned = false,
+                CreatedAt = DateTime.UtcNow,
+                LastLoginAt = DateTime.UtcNow
+            };
+            session.Save(user);
+            return user;
         }
 
         /// <summary>
