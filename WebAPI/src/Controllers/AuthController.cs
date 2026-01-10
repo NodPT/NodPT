@@ -56,19 +56,8 @@ namespace NodPT.API.Controllers
                 if (user == null)
                 {
                     // If no valid user exists, create a development user
-                    user = new User(session)
-                    {
-                        FirebaseUid = "dev-user",
-                        Email = "dev@example.com",
-                        DisplayName = "Development User",
-                        PhotoUrl = null,
-                        Active = true,
-                        Approved = true,
-                        Banned = false,
-                        CreatedAt = DateTime.UtcNow,
-                        LastLoginAt = DateTime.UtcNow
-                    };
-                    session.Save(user);
+                    user = CreateNewUser(session, "dev-user", "dev@example.com", "Development User", null, true);
+                    isNewUser = true;
                 }
                 else
                 {
@@ -95,18 +84,7 @@ namespace NodPT.API.Controllers
                 if (user == null)
                 {
                     // Auto-create user if not exists - defaults to Approved=false, Banned=false
-                    user = new User(session)
-                    {
-                        FirebaseUid = firebaseUserInfo.Uid,
-                        Email = firebaseUserInfo.Email,
-                        DisplayName = firebaseUserInfo.DisplayName,
-                        PhotoUrl = firebaseUserInfo.PhotoUrl,
-                        Active = true,
-                        Approved = false,
-                        Banned = false,
-                        CreatedAt = DateTime.UtcNow,
-                        LastLoginAt = DateTime.UtcNow
-                    };
+                    user = CreateNewUser(session, firebaseUserInfo.Uid, firebaseUserInfo.Email, firebaseUserInfo.DisplayName, firebaseUserInfo.PhotoUrl, false);
                     isNewUser = true;
                 }
                 else
@@ -359,6 +337,34 @@ namespace NodPT.API.Controllers
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Create a new user with the specified details
+        /// </summary>
+        /// <param name="session">Database session</param>
+        /// <param name="firebaseUid">Firebase UID</param>
+        /// <param name="email">User email</param>
+        /// <param name="displayName">User display name</param>
+        /// <param name="photoUrl">User photo URL</param>
+        /// <param name="approved">Whether the user is approved</param>
+        /// <returns>The newly created user</returns>
+        private User CreateNewUser(UnitOfWork session, string firebaseUid, string? email, string? displayName, string? photoUrl, bool approved)
+        {
+            var user = new User(session)
+            {
+                FirebaseUid = firebaseUid,
+                Email = email,
+                DisplayName = displayName,
+                PhotoUrl = photoUrl,
+                Active = true,
+                Approved = approved,
+                Banned = false,
+                CreatedAt = DateTime.UtcNow,
+                LastLoginAt = DateTime.UtcNow
+            };
+            session.Save(user);
+            return user;
         }
 
         /// <summary>
