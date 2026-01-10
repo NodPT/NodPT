@@ -39,7 +39,41 @@ namespace NodPT.API.Controllers
 
             try
             {
-                // Validate Firebase token using Firebase Admin SDK (with DEBUG mock fallback)
+#if DEBUG
+                // In Development mode, bypass Firebase validation and return first active user
+                Console.WriteLine("DEBUG MODE: Bypassing Firebase authentication in AuthController");
+                
+                session!.BeginTransaction();
+
+                // Find first active, approved, non-banned user
+                var user = session.Query<User>()
+                    .Where(u => u.Active && u.Approved && !u.Banned)
+                    .FirstOrDefault();
+
+                if (user == null)
+                {
+                    // If no valid user exists, create a development user
+                    user = new User(session)
+                    {
+                        FirebaseUid = "dev-user",
+                        Email = "dev@example.com",
+                        DisplayName = "Development User",
+                        PhotoUrl = null,
+                        Active = true,
+                        Approved = true,
+                        Banned = false,
+                        CreatedAt = DateTime.UtcNow,
+                        LastLoginAt = DateTime.UtcNow
+                    };
+                    session.Save(user);
+                }
+                else
+                {
+                    // Update last login time for existing user
+                    user.LastLoginAt = DateTime.UtcNow;
+                }
+#else
+                // Validate Firebase token using Firebase Admin SDK
                 var firebaseUserInfo = await NodPT.API.Services.FirebaseService.ValidateFirebaseTokenAsync(request.FirebaseToken);
                 if (firebaseUserInfo == null)
                 {
@@ -99,6 +133,7 @@ namespace NodPT.API.Controllers
                     await LogUserAccessAsync(user, "login", false, validationError.Message);
                     return Unauthorized(validationError);
                 }
+#endif
 
                 // Generate refresh token if remember me is enabled
                 string? refreshToken = null;

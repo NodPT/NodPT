@@ -23,8 +23,18 @@ class AuthApiService {
 	 */
 	async login(FirebaseToken, rememberMe = false) {
 		try {
+			// Check if we're in Development mode
+			const isDevelopment = import.meta.env.VITE_ENV === 'Development';
+			
+			let tokenToSend = FirebaseToken;
+			if (isDevelopment) {
+				// In Development mode, bypass Firebase and send mock token
+				console.log('Development mode: Bypassing Firebase authentication');
+				tokenToSend = 'dev-mock-token';
+			}
+
 			const response = await this.api.post(`${this.baseURL}/login`, {
-				FirebaseToken,
+				FirebaseToken: tokenToSend,
 				rememberMe,
 			});
 

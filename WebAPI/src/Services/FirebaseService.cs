@@ -42,6 +42,17 @@ namespace NodPT.API.Services
 
         public static async Task<FirebaseUserInfo?> ValidateFirebaseTokenAsync(string token)
         {
+#if DEBUG
+            // In Development mode, bypass Firebase validation and return a mock user
+            Console.WriteLine("DEBUG MODE: Bypassing Firebase authentication");
+            return new FirebaseUserInfo
+            {
+                Uid = "dev-user",
+                Email = "dev@example.com",
+                DisplayName = "Development User",
+                PhotoUrl = null
+            };
+#else
             try
             {
                 FirebaseToken decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(token);
@@ -58,6 +69,7 @@ namespace NodPT.API.Services
                 Console.WriteLine($"Firebase token validation failed: {ex.Message}");
                 return null;
             }
+#endif
         }
 
         public static string? SanitizeText(string? uid)

@@ -143,14 +143,24 @@ async function handleSocialLogin(loginFunction, providerName) {
   loginMessage.value = '';
 
   try {
-    // Step 1: Authenticate with Firebase
-    const result = await loginFunction();
-    const user = result.user;
+    // Check if we're in Development mode
+    const isDevelopment = import.meta.env.VITE_ENV === 'Development';
+    
+    let FirebaseToken;
+    if (isDevelopment) {
+      // In Development mode, skip Firebase authentication
+      console.log('Development mode: Skipping Firebase authentication');
+      FirebaseToken = 'dev-mock-token';
+    } else {
+      // Step 1: Authenticate with Firebase
+      const result = await loginFunction();
+      const user = result.user;
 
-    console.log(`${user}`);
+      console.log(`${user}`);
 
-    // Step 2: Get Firebase ID token
-    const FirebaseToken = await user.getIdToken();
+      // Step 2: Get Firebase ID token
+      FirebaseToken = await user.getIdToken();
+    }
 
     // Step 3: Send token to backend API for validation
     const apiResponse = await authApiService.login(FirebaseToken, rememberMe.value);
