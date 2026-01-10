@@ -9,7 +9,6 @@ namespace NodPT.Data
 {
     public class DemoDataHelper
     {
-        private readonly string _connectionString;
         private readonly UnitOfWork _session;
 
         /// <summary>
@@ -17,9 +16,8 @@ namespace NodPT.Data
         /// </summary>
         /// <param name="connectionString">MySQL connection string for executing SQL scripts</param>
         /// <param name="session">UnitOfWork session for checking existing data</param>
-        public DemoDataHelper(string connectionString, UnitOfWork session)
+        public DemoDataHelper(UnitOfWork session)
         {
-            _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
             _session = session ?? throw new ArgumentNullException(nameof(session));
         }
 
@@ -117,7 +115,7 @@ namespace NodPT.Data
             // Option 1: Relative to application base directory (for development and Docker)
             var basePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "Data", "sql-scripts");
             basePath = Path.GetFullPath(basePath);
-            
+
             if (Directory.Exists(basePath))
             {
                 return basePath;
@@ -132,7 +130,7 @@ namespace NodPT.Data
                 {
                     return testPath;
                 }
-                
+
                 var parentDir = Directory.GetParent(currentDir);
                 if (parentDir == null) break;
                 currentDir = parentDir.FullName;
@@ -156,46 +154,38 @@ namespace NodPT.Data
             try
             {
                 var sqlContent = File.ReadAllText(scriptPath);
-                
-                using (var connection = new MySqlConnection(_connectionString))
+
+
+                // Split the SQL content by semicolons to execute individual statements
+                var statements = sqlContent.Split(new[] { ";\r\n", ";\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (var statement in statements)
                 {
-                    connection.Open();
-                    
-                    // Split the SQL content by semicolons to execute individual statements
-                    var statements = sqlContent.Split(new[] { ";\r\n", ";\n" }, StringSplitOptions.RemoveEmptyEntries);
-                    
-                    foreach (var statement in statements)
+                    var trimmedStatement = statement.Trim();
+
+                    // Skip empty statements and comments
+                    if (string.IsNullOrWhiteSpace(trimmedStatement) ||
+                        trimmedStatement.StartsWith("--") ||
+                        trimmedStatement.StartsWith("/*"))
                     {
-                        var trimmedStatement = statement.Trim();
-                        
-                        // Skip empty statements and comments
-                        if (string.IsNullOrWhiteSpace(trimmedStatement) || 
-                            trimmedStatement.StartsWith("--") ||
-                            trimmedStatement.StartsWith("/*"))
-                        {
-                            continue;
-                        }
+                        continue;
+                    }
 
-                        // Skip SOURCE commands (they're for MySQL client only)
-                        if (trimmedStatement.ToUpper().StartsWith("SOURCE"))
-                        {
-                            continue;
-                        }
+                    // Skip SOURCE commands (they're for MySQL client only)
+                    if (trimmedStatement.ToUpper().StartsWith("SOURCE"))
+                    {
+                        continue;
+                    }
 
-                        try
-                        {
-                            using (var command = new MySqlCommand(trimmedStatement, connection))
-                            {
-                                command.CommandTimeout = 60; // 60 seconds timeout
-                                command.ExecuteNonQuery();
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Error executing statement: {trimmedStatement.Substring(0, Math.Min(100, trimmedStatement.Length))}...");
-                            Console.WriteLine($"Error: {ex.Message}");
-                            // Continue with next statement instead of failing completely
-                        }
+                    try
+                    {
+                        _session?.ExecuteNonQuery(trimmedStatement);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error executing statement: {trimmedStatement.Substring(0, Math.Min(100, trimmedStatement.Length))}...");
+                        Console.WriteLine($"Error: {ex.Message}");
+                        // Continue with next statement instead of failing completely
                     }
                 }
             }

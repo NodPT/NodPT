@@ -15,7 +15,7 @@ namespace NodPT.Data.Services
 
         public List<TemplateDto> GetAllTemplates()
         {
-            var templates = new XPCollection<Template>(session);
+            var templates = new XPCollection<Template>(session).Where(x => x.IsActive);
 
             return templates.Select(t => new TemplateDto
             {

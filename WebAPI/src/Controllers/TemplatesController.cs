@@ -32,6 +32,7 @@ namespace NodPT.API.Controllers
         }
 
         [HttpPost]
+        [CustomAuthorized("Admin")]
         public IActionResult CreateTemplate([FromBody] TemplateDto template)
         {
             if (template == null) return BadRequest();
@@ -41,7 +42,7 @@ namespace NodPT.API.Controllers
         }
 
         [HttpPut("{id}")]
-        [CustomAuthorized]
+        [CustomAuthorized("Admin")]
         public IActionResult UpdateTemplate(int id, [FromBody] TemplateDto template)
         {
             if (template == null) return BadRequest();
@@ -51,7 +52,7 @@ namespace NodPT.API.Controllers
         }
 
         [HttpDelete("{id}")]
-        [CustomAuthorized]
+        [CustomAuthorized("Admin")]
         public IActionResult DeleteTemplate(int id)
         {
             var deleted = _templateService.DeleteTemplate(id);

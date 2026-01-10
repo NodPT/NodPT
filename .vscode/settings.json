@@ -8,12 +8,26 @@
             "ssh": "Disabled",
             "previewLimit": 50,
             "server": "localhost",
-            "port": 8444,
+            "port": 3306,
             "driver": "MariaDB",
             "name": "nodpt",
+            "database": "demo_db",
+            "username": "demo_user",
+            "password": "demo_password123"
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "100.82.84.53",
+            "port": 8444,
+            "driver": "MariaDB",
+            "name": "nodpt_server",
             "database": "nodpt_db_master",
-            "username": "sql_user_admin",
-            "password": "Ca159753*"
+            "username": "sql_user_admin"
         }
     ]
 }

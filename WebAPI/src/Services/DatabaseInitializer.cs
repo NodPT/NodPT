@@ -10,6 +10,14 @@ using DevExpress.Xpo.Helpers;
 public static class DatabaseInitializer
 {
     static string connectionString = string.Empty;
+
+    static void UpdateSchem()
+    {
+        var session = DatabaseHelper.GetSession();
+        session.AutoCreateOption.ToString();
+        session?.UpdateSchema();
+    }
+
     public static void Initialize(WebApplicationBuilder builder)
     {
         // Do NOT use defaults. Require all parts to be provided via env vars or configuration.
@@ -54,7 +62,8 @@ public static class DatabaseInitializer
 
         // Create sample data
 #if DEBUG
-        CreateSampleData();
+        //  CreateSampleData();
+        UpdateSchem();
 #endif
     }
 
@@ -62,9 +71,6 @@ public static class DatabaseInitializer
     {
         try
         {
-            // Reuse centralized database connection string from DatabaseHelper
-            var mysqlConnectionString = DatabaseHelper.GetConnectionString();
-            
             // Get a session to check for existing data
             var session = DatabaseHelper.GetSession();
             if (session == null)
@@ -74,7 +80,7 @@ public static class DatabaseInitializer
             }
 
             // Create DemoDataHelper instance and execute
-            var demoDataHelper = new NodPT.Data.DemoDataHelper(mysqlConnectionString, session);
+            var demoDataHelper = new NodPT.Data.DemoDataHelper(session);
             demoDataHelper.CreateSampleData();
         }
         catch (Exception ex)
