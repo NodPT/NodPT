@@ -121,6 +121,8 @@ const rememberMe = ref(false);
 const isLoading = ref(false);
 const loginMessage = ref('');
 const loginMessageClass = ref('');
+// Check if we're in Development mode
+const isDevelopment = import.meta.env.VITE_ENV === 'Development';
 
 // Helper function to show messages
 function showMessage(message, isError = false) {
@@ -143,9 +145,7 @@ async function handleSocialLogin(loginFunction, providerName) {
   loginMessage.value = '';
 
   try {
-    // Check if we're in Development mode
-    const isDevelopment = import.meta.env.VITE_ENV === 'Development';
-    
+
     let FirebaseToken;
     if (isDevelopment) {
       // In Development mode, skip Firebase authentication
@@ -202,7 +202,10 @@ async function handleSocialLogin(loginFunction, providerName) {
 }
 
 async function onGoogle() {
-  await handleSocialLogin(loginWithGoogle, 'Google');
+  if (isDevelopment)
+    await handleSocialLogin();
+  else
+    await handleSocialLogin(loginWithGoogle, 'Google');
 }
 
 async function onMicrosoft() {

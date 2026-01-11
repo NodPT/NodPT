@@ -79,7 +79,7 @@ router.beforeEach(async (to, from, next) => {
 	// If running in QA environment, bypass authentication checks
 	// Set VITE_ENV=QA in your .env file to enable this behavior
 	let isQA = false;
-	if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ENV === 'QA') {
+	if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ENV === 'Development') {
 		isQA = true;
 	}
 	let requiresAuth = to.matched.some((record) => record.meta.requiresAuth);

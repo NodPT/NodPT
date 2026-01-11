@@ -56,7 +56,12 @@ namespace NodPT.API.Controllers
                 if (user == null)
                 {
                     // If no valid user exists, create a development user
-                    user = CreateNewUser(session, "dev-user", "dev@example.com", "Development User", null, true);
+                    user = CreateNewUser(session, 
+                        "dev-user", 
+                        "dev@example.com", 
+                        "Development User", 
+                        null, 
+                        true);
                     isNewUser = true;
                 }
                 else
@@ -84,7 +89,12 @@ namespace NodPT.API.Controllers
                 if (user == null)
                 {
                     // Auto-create user if not exists - defaults to Approved=false, Banned=false
-                    user = CreateNewUser(session, firebaseUserInfo.Uid, firebaseUserInfo.Email, firebaseUserInfo.DisplayName, firebaseUserInfo.PhotoUrl, false);
+                    user = CreateNewUser(session, 
+                        firebaseUserInfo.Uid, 
+                        firebaseUserInfo.Email, 
+                        firebaseUserInfo.DisplayName, 
+                        firebaseUserInfo.PhotoUrl, 
+                        false);
                     isNewUser = true;
                 }
                 else
@@ -125,9 +135,10 @@ namespace NodPT.API.Controllers
                 session.Save(user);
                 session.CommitTransaction();
 
+#if !DEBUG
                 // Log successful login
                 await LogUserAccessAsync(user, "login", true);
-
+#endif
                 return Ok(new AuthResponseDto
                 {
                     Success = true,

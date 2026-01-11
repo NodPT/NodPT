@@ -52,7 +52,9 @@ export default {
       try {
         loading.value = true
         const templates = await templateApiService.getTemplates()
-        
+        if (!templates || !Array.isArray(templates)) {
+          throw new Error('Invalid templates data received from server.')
+        }
         // Map templates to tiles format
         projectTiles.value = templates
           .filter(t => t.IsActive)
@@ -64,7 +66,7 @@ export default {
             icon: template.Icon || 'bi bi-file-earmark text-secondary',
             disabled: false
           }))
-        
+
         // Add placeholder tiles for future template types (using negative IDs to avoid conflicts)
         const additionalTiles = [
           {
@@ -124,7 +126,7 @@ export default {
             disabled: true
           }
         ]
-        
+
         projectTiles.value.push(...additionalTiles)
       } catch (error) {
         console.error('Error loading templates:', error)

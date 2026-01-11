@@ -72,7 +72,8 @@
           </button>
           <ul class="dropdown-menu" :class="{ show: openMenu === 'nodes' }">
             <li><a class="dropdown-item" href="#" @click.prevent="nodeAction('add')">Add Node</a></li>
-            <li><a class="dropdown-item" :class="{ disabled: isDirectorSelected }" href="#" @click.prevent="nodeAction('delete')">Delete</a></li>
+            <li><a class="dropdown-item" :class="{ disabled: isDirectorSelected }" href="#"
+                @click.prevent="nodeAction('delete')">Delete</a></li>
             <li>
               <hr class="dropdown-divider" />
             </li>
@@ -230,7 +231,7 @@ export default {
         localStorage.removeItem('userData');
         sessionStorage.removeItem('userData');
 
-        return response.data;
+        return response;
       } catch (error) {
         console.error('Failed to logout:', error);
         throw error;

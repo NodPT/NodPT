@@ -12,7 +12,7 @@
         <div class="modal-body">
           <!-- Step 1: Select Template -->
           <div v-if="currentStep === 1">
-            <ProjectTiles :selectionMode="true" @tile-selected="selectTemplate" />
+            <!-- <ProjectTiles :selectionMode="true" @tile-selected="selectTemplate" /> -->
           </div>
 
           <!-- Step 2: Enter Project Name -->
