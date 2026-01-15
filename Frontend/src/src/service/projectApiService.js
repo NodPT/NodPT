@@ -1,12 +1,9 @@
 import { getToken } from './tokenStorage';
 
-// Use environment variable if available, otherwise fallback to localhost
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5049/api';
-
 class ProjectApiService {
 
 	constructor() {
-		this.baseURL = `${API_BASE_URL}/projects`;
+		this.baseURL = '/projects';
 		this.api = null;
 	}
 

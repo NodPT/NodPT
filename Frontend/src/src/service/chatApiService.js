@@ -1,9 +1,6 @@
-// Use environment variable if available, otherwise fallback to localhost
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5049/api';
-
 class ChatApiService {
 	constructor() {
-		this.baseURL = `${API_BASE_URL}/chat`;
+		this.baseURL = '/chat';
 		this.api = null;
 		this.connectionId = localStorage.getItem('connectionId'); // Optional SignalR connection ID
 	}
