@@ -1,6 +1,9 @@
+// Use environment variable if available, otherwise fallback to localhost
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5049/api';
+
 class TemplateApiService {
 	constructor() {
-		this.baseURL = '/templates';
+		this.baseURL = `${API_BASE_URL}/templates`;
 		this.api = null;
 	}
 
