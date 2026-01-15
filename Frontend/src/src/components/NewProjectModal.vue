@@ -104,6 +104,12 @@ export default {
         return
       }
 
+      // Validate that a template is selected
+      if (!selectedTemplate.value || !selectedTemplate.value.id) {
+        toast.alert('Please select a template first.')
+        return
+      }
+
       try {
         isCreating.value = true
 
@@ -118,7 +124,9 @@ export default {
         }
 
         // Call API to create project
+        console.log('Creating project with DTO:', projectDto)
         const createdProject = await projectApiService.createProject(projectDto)
+        console.log('Project created:', createdProject)
 
         if (!createdProject || !createdProject.Id) {
           isCreating.value = false;
@@ -160,6 +168,15 @@ export default {
     }
 
     const openModalWithTile = (tile) => {
+      console.log('Opening modal with tile:', tile)
+      
+      // Validate tile has required properties
+      if (!tile || !tile.id) {
+        console.error('Invalid tile data:', tile)
+        toast.alert('Invalid template selected. Please try again.')
+        return
+      }
+      
       // Open the modal
       const modalElement = document.getElementById('newProjectModal')
       if (modalElement) {
