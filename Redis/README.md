@@ -89,3 +89,9 @@ Redis/
 Changes to the Redis folder are automatically deployed via GitHub Actions when pushed to the `main` or `master` branch.
 
 See `.github/workflows/Redis-deploy.yml` for deployment configuration.
+
+Create backend_network
+```cmd
+docker network create backend_network
+
+```
