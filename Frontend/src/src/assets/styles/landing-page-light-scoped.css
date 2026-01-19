@@ -5,6 +5,8 @@
 }
 
 [data-theme="light"] .landing-header {
+  background-color: rgba(248, 249, 250, 0.7);
+  backdrop-filter: blur(10px);
   transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -101,7 +103,8 @@
 }
 
 [data-theme="light"] .landing-footer {
-  background-color: rgba(233, 236, 239, 0.9);
+  background-color: rgba(233, 236, 239, 0.95);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 /* Light theme specific adjustments */
