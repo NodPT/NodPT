@@ -316,12 +316,18 @@ public class ChatStreamWorker : BackgroundService
 
             _logger.LogInformation("Updated memory with AI response for node {NodeId}", nodeId);
 
-            // Step 19: Prepare new Redis data (data B) with new chatId only
-            // Other data (connectionId, nodeId, userId, projectId) are already saved in the ChatMessage
+            // Step 19: Prepare new Redis data (data B) with chatId and connectionId
+            // Include connectionId so SignalRUpdateListener can send directly without DB lookup
             var resultEnvelope = new Dictionary<string, string>
             {
                 { "chatId", aiMessage.Oid.ToString() }
             };
+
+            // Add connectionId if available
+            if (!string.IsNullOrEmpty(aiMessage.ConnectionId))
+            {
+                resultEnvelope["connectionId"] = aiMessage.ConnectionId;
+            }
 
             var entryId = await _redisService.Add("signalr:updates", resultEnvelope);
 

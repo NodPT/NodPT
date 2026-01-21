@@ -75,13 +75,18 @@ public class SignalRUpdateListener : BackgroundService
                 return true; // Ack anyway to remove from queue
             }
 
-            if (!fields.TryGetValue("connectionId", out var connectionId) || string.IsNullOrEmpty(connectionId))
+            // Try to get connectionId from Redis payload first
+            string? connectionId = null;
+            if (fields.TryGetValue("connectionId", out var redisConnectionId) && !string.IsNullOrEmpty(redisConnectionId))
             {
-                _logger.LogWarning("SignalR update missing connectionId for chatId {ChatId}, skipping", chatId);
-                return true; // Ack anyway to remove from queue
+                connectionId = redisConnectionId;
+                _logger.LogInformation("Processing SignalR update for chatId {ChatId}, connectionId {ConnectionId} (from Redis)", chatId, connectionId);
             }
-
-            _logger.LogInformation("Processing SignalR update for chatId {ChatId}, connectionId {ConnectionId}", chatId, connectionId);
+            else
+            {
+                // Fallback: Fetch connectionId from database for backward compatibility
+                _logger.LogWarning("SignalR update missing connectionId in Redis for chatId {ChatId}, attempting database fallback", chatId);
+            }
 
             // Fetch the AI response from database
             using var scope = _serviceProvider.CreateScope();
@@ -94,27 +99,30 @@ public class SignalRUpdateListener : BackgroundService
                 return true; // Ack anyway to remove from queue
             }
 
-            // Find the original chat message
-            var originalMessage = session.FindObject<ChatMessage>(CriteriaOperator.Parse("Oid = ?", chatIdInt));
-            if (originalMessage == null)
+            // Fetch the AI response message (the chatId in Redis is the AI response message ID)
+            var aiResponseMessage = session.FindObject<ChatMessage>(CriteriaOperator.Parse("Oid = ?", chatIdInt));
+            if (aiResponseMessage == null)
             {
                 _logger.LogWarning("ChatMessage not found for chatId {ChatId}", chatId);
                 return true; // Ack anyway to remove from queue
             }
 
-            // Get the AI response (latest assistant message for the same node)
-            using var aiResponses = new XPCollection<ChatMessage>(session,
-                CriteriaOperator.Parse("Node.Id = ? AND Sender = ? AND Timestamp >= ?", 
-                    originalMessage.Node?.Id, "assistant", originalMessage.Timestamp),
-                new SortProperty("Timestamp", DevExpress.Xpo.DB.SortingDirection.Descending));
-
-            if (aiResponses.Count == 0)
+            // If connectionId not in Redis payload, get it from the database message
+            if (connectionId == null)
             {
-                _logger.LogWarning("No AI response found for chatId {ChatId}", chatId);
-                return false; // Don't ack, might be too early, retry later
+                connectionId = aiResponseMessage.ConnectionId;
+
+                if (string.IsNullOrEmpty(connectionId))
+                {
+                    _logger.LogWarning("ConnectionId not found for chatId {ChatId}, skipping SignalR delivery", chatId);
+                    return true; // Ack anyway to remove from queue
+                }
+
+                _logger.LogInformation("Retrieved connectionId {ConnectionId} from database for chatId {ChatId}", connectionId, chatId);
             }
 
-            var latestResponse = aiResponses[0];
+            // Get the AI response content to send via SignalR
+            var latestResponse = aiResponseMessage;
 
             // Send to the specific client connection via SignalR
             await _hubContext.Clients.Client(connectionId).SendAsync(
@@ -126,7 +134,7 @@ public class SignalRUpdateListener : BackgroundService
                     content = latestResponse.Message,
                     sender = latestResponse.Sender,
                     timestamp = latestResponse.Timestamp,
-                    nodeId = originalMessage.Node?.Id
+                    nodeId = latestResponse.Node?.Id
                 },
                 cancellationToken);
 
