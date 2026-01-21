@@ -80,7 +80,7 @@ public class SignalRUpdateListener : BackgroundService
             if (fields.TryGetValue("connectionId", out var redisConnectionId) && !string.IsNullOrEmpty(redisConnectionId))
             {
                 connectionId = redisConnectionId;
-                _logger.LogInformation("Processing SignalR update for chatId {ChatId}, connectionId {ConnectionId} (from Redis)", chatId, connectionId);
+                _logger.LogDebug("Processing SignalR update for chatId {ChatId}, connectionId {ConnectionId} (from Redis)", chatId, connectionId);
             }
             else
             {
@@ -99,7 +99,8 @@ public class SignalRUpdateListener : BackgroundService
                 return true; // Ack anyway to remove from queue
             }
 
-            // Fetch the AI response message (the chatId in Redis is the AI response message ID)
+            // Fetch the AI response message
+            // (the chatId in Redis is the database ID of the AI response message)
             var aiResponseMessage = session.FindObject<ChatMessage>(CriteriaOperator.Parse("Oid = ?", chatIdInt));
             if (aiResponseMessage == null)
             {
@@ -118,11 +119,8 @@ public class SignalRUpdateListener : BackgroundService
                     return true; // Ack anyway to remove from queue
                 }
 
-                _logger.LogInformation("Retrieved connectionId {ConnectionId} from database for chatId {ChatId}", connectionId, chatId);
+                _logger.LogDebug("Retrieved connectionId {ConnectionId} from database for chatId {ChatId}", connectionId, chatId);
             }
-
-            // Get the AI response content to send via SignalR
-            var latestResponse = aiResponseMessage;
 
             // Send to the specific client connection via SignalR
             await _hubContext.Clients.Client(connectionId).SendAsync(
@@ -130,11 +128,11 @@ public class SignalRUpdateListener : BackgroundService
                 new
                 {
                     chatId = chatId,
-                    messageId = latestResponse.Oid,
-                    content = latestResponse.Message,
-                    sender = latestResponse.Sender,
-                    timestamp = latestResponse.Timestamp,
-                    nodeId = latestResponse.Node?.Id
+                    messageId = aiResponseMessage.Oid,
+                    content = aiResponseMessage.Message,
+                    sender = aiResponseMessage.Sender,
+                    timestamp = aiResponseMessage.Timestamp,
+                    nodeId = aiResponseMessage.Node?.Id
                 },
                 cancellationToken);
 
