@@ -242,13 +242,13 @@ public class ChatStreamWorker : BackgroundService
                 });
             }
             
-            // Add current user message
-            messages.Add(new OllamaMessage { role = "user", content = userMessage });
-
             if (!string.IsNullOrWhiteSpace(responseFormat))
             {
                 messages.Add(new OllamaMessage { role = "system", content = responseFormat });
             }
+
+            // Add current user message
+            messages.Add(new OllamaMessage { role = "user", content = userMessage });
             
             // Build Ollama request with options from AIModel
             var ollamaRequest = new OllamaRequest
@@ -258,7 +258,7 @@ public class ChatStreamWorker : BackgroundService
                 options = LlmChatService.BuildOptionsFromAIModel(matchingAiModel)
             };
 
-            if (isSolutionJob)
+            if (ShouldApplyDirectorSolutionFormat(node, isSolutionJob))
             {
                 ollamaRequest.response_format = BuildDirectorSolutionSchema();
             }
@@ -406,6 +406,79 @@ public class ChatStreamWorker : BackgroundService
         await base.StopAsync(cancellationToken);
         
         _logger.LogInformation("ChatStreamWorker stopped");
+    }
+
+    private static bool ShouldApplyDirectorSolutionFormat(Node node, bool isSolutionJob)
+    {
+        return isSolutionJob && node.NodeType == NodeType.Director;
+    }
+
+    private static string BuildSolutionResponseFormat(Node node, bool isSolutionJob)
+    {
+        if (!ShouldApplyDirectorSolutionFormat(node, isSolutionJob))
+        {
+            return string.Empty;
+        }
+
+        return "Return only a JSON object with: message (string) and managers (array). " +
+               "Each manager must include name (string) and job (string). " +
+               "Use managers to decide how many manager nodes to create and what their jobs are.";
+    }
+
+    private static ResponseFormat BuildDirectorSolutionSchema()
+    {
+        return new ResponseFormat
+        {
+            type = "json_schema",
+            schema = new JsonSchema
+            {
+                type = "object",
+                properties = new Dictionary<string, JsonSchema>
+                {
+                    {
+                        "message",
+                        new JsonSchema
+                        {
+                            type = "string",
+                            description = "Summary message for the director response."
+                        }
+                    },
+                    {
+                        "managers",
+                        new JsonSchema
+                        {
+                            type = "array",
+                            description = "List of manager nodes to create.",
+                            items = new JsonSchema
+                            {
+                                type = "object",
+                                properties = new Dictionary<string, JsonSchema>
+                                {
+                                    {
+                                        "name",
+                                        new JsonSchema
+                                        {
+                                            type = "string",
+                                            description = "Manager node name."
+                                        }
+                                    },
+                                    {
+                                        "job",
+                                        new JsonSchema
+                                        {
+                                            type = "string",
+                                            description = "Manager job responsibilities."
+                                        }
+                                    }
+                                },
+                                required = new List<string> { "name", "job" }
+                            }
+                        }
+                    }
+                },
+                required = new List<string> { "message", "managers" }
+            }
+        };
     }
 
     /// <summary>

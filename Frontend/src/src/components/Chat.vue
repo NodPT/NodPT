@@ -30,18 +30,15 @@
 							:title="message._copied ? 'Copied' : 'Copy to clipboard'">
 							<i :class="['bi', message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold']"></i>
 						</button>
+						<button v-if="!message.markedAsSolution" @click="buildSolution(message)" class="action-btn"
+							:disabled="isLoading" title="Mark as solution">
+							<i class="bi bi-check2-circle fw-bold"></i>
+						</button>
+						<span v-if="message.markedAsSolution" class="badge bg-success ms-2">
+							<i class="bi bi-check2-square me-1 fw-bold"></i>
+							<span>Solution</span>
+						</span>
 					</div>
-					<!-- Build Solution button - shown when message content contains solution=true -->
-					<button v-if="hasSolution(message) && !message.markedAsSolution && !message.thinking"
-						@click="buildSolution(message)" class="action-btn ms-2" :disabled="isLoading"
-						title="Build Solution">
-						<i class="bi bi-tools fw-bold"></i>
-						<span class="ms-1">Build Solution</span>
-					</button>
-					<span v-if="message.markedAsSolution && !message.thinking" class="badge bg-success ms-2">
-						<i class="bi bi-check2-square me-1 fw-bold"></i>
-						<span>Solution</span>
-					</span>
 				</div>
 				<div class="message-time">
 					{{ formatTime(message.timestamp) }}
@@ -53,7 +50,7 @@
 				<textarea v-model="newMessage" @keydown.enter.exact="handleEnter" ref="messageTextarea"
 					class="chat-textarea form-control" placeholder="Ask anything..." :disabled="isLoading"
 					rows="1"></textarea>
-				<button @click="sendMessage" class="btn btn-primary send-btn">
+				<button @click="sendMessage" class="btn btn-primary send-btn" :disabled="isSendDisabled">
 					<span v-if="isLoading" class="spinner-border spinner-border-sm"></span>
 					<i v-else class="bi fw-bold" :class="[thinking ? 'bi-square-fill' : 'bi-send']"></i>
 				</button>
@@ -64,8 +61,9 @@
 
 <script>
 import { ref, reactive, inject, onMounted, nextTick, onBeforeUnmount, watch, computed } from 'vue';
-import { eventBus, listenEvent, EVENT_TYPES } from '../rete/eventBus.js';
+import { listenEvent, EVENT_TYPES, triggerEvent } from '../rete/eventBus.js';
 import chatApiService from '../service/chatApiService.js';
+import nodeApiService from '../service/nodeApiService.js';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
@@ -75,6 +73,7 @@ export default {
 		// Inject API plugin
 		const api = inject('api');
 		chatApiService.setApi(api);
+		nodeApiService.setApi(api);
 
 		// Reactive data for chat
 		const chatData = reactive({ messages: [] });
@@ -356,11 +355,53 @@ export default {
 			}
 		};
 
-		// Check if message content contains the hidden solution marker <!-- solution:true -->
-		const hasSolution = (message) => {
-			if (!message || !message.content) return false;
-			// Look for the hidden HTML comment marker <!-- solution:true --> (case-insensitive, allow whitespace)
-			return /<!--\s*solution\s*:\s*true\s*-->/i.test(message.content);
+		const createManagerNodes = async (parentNodeId, managers) => {
+			if (!parentNodeId || !Array.isArray(managers) || managers.length === 0) {
+				return;
+			}
+
+			let projectId;
+			try {
+				const parentNode = await nodeApiService.getNode(parentNodeId);
+				projectId = parentNode?.ProjectId ?? parentNode?.projectId;
+			} catch (error) {
+				console.error('Failed to load parent node for solution output:', error);
+				return;
+			}
+
+			if (!projectId) {
+				console.error('Project ID not found for solution output');
+				return;
+			}
+
+			for (const manager of managers) {
+				if (!manager) {
+					continue;
+				}
+
+				const managerName = (manager.name || manager.Name || 'Manager').trim();
+				const managerJob = manager.job || manager.Job;
+
+				try {
+					const createdNode = await nodeApiService.createNode({
+						Name: managerName,
+						MessageType: 'Discussion',
+						ParentId: parentNodeId,
+						ProjectId: parseInt(projectId, 10),
+						Status: 'Active',
+						Properties: managerJob ? { Job: managerJob } : {},
+					});
+
+					triggerEvent(EVENT_TYPES.NODE_CREATED_FROM_API, {
+						nodeData: createdNode,
+						parentId: parentNodeId,
+					});
+				} catch (error) {
+					console.error('Failed to create manager node from solution output:', error);
+				}
+			}
+
+			triggerEvent(EVENT_TYPES.ARRANGE_NODES);
 		};
 
 		// Build solution from AI message
@@ -516,6 +557,39 @@ export default {
 			scrollToBottom();
 		};
 
+		const handleSolutionOutputReceived = async (data) => {
+			if (!data || !data.nodeId) {
+				return;
+			}
+
+			if (!data.content) {
+				console.warn('Solution output missing content');
+				return;
+			}
+
+			let solutionPayload;
+			try {
+				solutionPayload = JSON.parse(data.content);
+			} catch (error) {
+				console.error('Failed to parse solution output JSON:', error);
+				return;
+			}
+
+			if (solutionPayload?.message && data.messageId && data.nodeId === currentNodeId.value) {
+				const targetMessage = chatData.messages.find(msg => msg.id === data.messageId);
+				if (targetMessage) {
+					targetMessage.content = solutionPayload.message;
+				}
+			}
+
+			const managers = Array.isArray(solutionPayload?.managers) ? solutionPayload.managers : [];
+			if (!managers.length) {
+				return;
+			}
+
+			await createManagerNodes(data.nodeId, managers);
+		};
+
 		// Load initial data on mount
 		onMounted(() => {
 			loadChatData('default');
@@ -525,6 +599,7 @@ export default {
 			eventListeners.push(listenEvent(EVENT_TYPES.PROJECT_CONTEXT_CHANGED, handleProjectContextChange));
 			// Listen for AI responses from SignalR
 			eventListeners.push(listenEvent(EVENT_TYPES.SIGNALR_AI_RESPONSE_RECEIVED, handleAIResponseReceived));
+			eventListeners.push(listenEvent(EVENT_TYPES.SOLUTION_OUTPUT_RECEIVED, handleSolutionOutputReceived));
 		});
 
 		onBeforeUnmount(() => {
@@ -552,7 +627,6 @@ export default {
 			formatTime,
 			sendMessage,
 			buildSolution,
-			hasSolution,
 			likeMessage,
 			dislikeMessage,
 			copyMessage,
