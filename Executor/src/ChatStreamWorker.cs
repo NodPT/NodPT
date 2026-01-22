@@ -424,7 +424,7 @@ public class ChatStreamWorker : BackgroundService
                 properties = new Dictionary<string, JsonSchema>
                 {
                     {
-                        "message",
+                        "Message",
                         new JsonSchema
                         {
                             type = "string",
@@ -432,7 +432,7 @@ public class ChatStreamWorker : BackgroundService
                         }
                     },
                     {
-                        "managers",
+                        "Managers",
                         new JsonSchema
                         {
                             type = "array",
@@ -443,7 +443,7 @@ public class ChatStreamWorker : BackgroundService
                                 properties = new Dictionary<string, JsonSchema>
                                 {
                                     {
-                                        "name",
+                                        "Name",
                                         new JsonSchema
                                         {
                                             type = "string",
@@ -451,7 +451,7 @@ public class ChatStreamWorker : BackgroundService
                                         }
                                     },
                                     {
-                                        "job",
+                                        "Job",
                                         new JsonSchema
                                         {
                                             type = "string",
@@ -459,12 +459,12 @@ public class ChatStreamWorker : BackgroundService
                                         }
                                     }
                                 },
-                                required = new List<string> { "name", "job" }
+                                required = new List<string> { "Name", "Job" }
                             }
                         }
                     }
                 },
-                required = new List<string> { "message", "managers" }
+                required = new List<string> { "Message", "Managers" }
             }
         };
     }

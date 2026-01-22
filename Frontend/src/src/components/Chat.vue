@@ -76,6 +76,7 @@ export default {
 	setup() {
 		// Inject API plugin
 		const api = inject('api');
+		const toast = inject('toast');
 		chatApiService.setApi(api);
 		nodeApiService.setApi(api);
 
@@ -294,7 +295,7 @@ export default {
 			// Validate that we have a nodeId
 			if (!currentNodeId.value) {
 				console.error('Cannot send message: No node selected');
-				alert('Please select a node first');
+				toast?.warning('Please select a node first');
 				return;
 			}
 
@@ -374,13 +375,13 @@ export default {
 				projectId = parentNode?.ProjectId ?? parentNode?.projectId;
 			} catch (error) {
 				console.error('Failed to load parent node for solution output:', error);
-				window.alert('Unable to load the parent node. Manager nodes could not be created. Please try again.');
+				toast?.error('Unable to load the parent node. Manager nodes could not be created.');
 				return;
 			}
 
 			if (!projectId) {
 				console.error('Project ID not found for solution output');
-				window.alert('Unable to determine the project for the selected node. Manager nodes could not be created.');
+				toast?.error('Unable to determine the project for the selected node. Manager nodes could not be created.');
 				return;
 			}
 
@@ -390,7 +391,7 @@ export default {
 				}
 
 				const managerName = (manager.Name || manager.name || 'Manager').trim();
-				const managerJob = manager.job || manager.Job;
+				const managerJob = manager.Job || manager.job;
 
 				try {
 					const createdNode = await nodeApiService.createNode({
@@ -408,7 +409,7 @@ export default {
 					});
 				} catch (error) {
 					console.error('Failed to create manager node from solution output:', error);
-					window.alert('Failed to create a manager node from the solution output. Please try again.');
+					toast?.error('Failed to create a manager node from the solution output.');
 				}
 			}
 
@@ -426,6 +427,8 @@ export default {
 				// Call the mark as solution API
 				await chatApiService.markAsSolution(message.id, currentNodeId.value);
 
+				message.markedAsSolution = true;
+				message.solutionPending = false;
 				console.log('Solution built for message:', message.id);
 
 			} catch (error) {
@@ -433,7 +436,7 @@ export default {
 				// Revert UI change on error
 				message.markedAsSolution = false;
 				message.solutionPending = false;
-				alert('Failed to build solution. Please try again.');
+				toast?.error('Failed to build solution. Please try again.');
 			} finally {
 				isLoading.value = false;
 			}
@@ -450,7 +453,7 @@ export default {
 				message.Disliked = result.Disliked;
 			} catch (error) {
 				console.error('Error liking message:', error);
-				alert('Failed to like message. Please try again.');
+				toast?.error('Failed to like message. Please try again.');
 			}
 		};
 
@@ -465,7 +468,7 @@ export default {
 				message.Disliked = result.Disliked;
 			} catch (error) {
 				console.error('Error disliking message:', error);
-				alert('Failed to dislike message. Please try again.');
+				toast?.error('Failed to dislike message. Please try again.');
 			}
 		};
 
@@ -590,22 +593,28 @@ export default {
 					content: 'The solution output could not be applied because the AI returned invalid data. Please try again.',
 					timestamp: new Date().toISOString(),
 					markedAsSolution: false,
+					solutionPending: false,
 					Liked: false,
 					Disliked: false,
 				});
 				return;
 			}
 
-			if (solutionPayload?.message && data.messageId && data.nodeId === currentNodeId.value) {
+			const solutionMessage = solutionPayload?.Message ?? solutionPayload?.message;
+			if (solutionMessage && data.messageId && data.nodeId === currentNodeId.value) {
 				const targetMessage = chatData.messages.find(msg => msg.id === data.messageId);
 				if (targetMessage) {
-					targetMessage.content = solutionPayload.message;
+					targetMessage.content = solutionMessage;
 					targetMessage.markedAsSolution = true;
 					targetMessage.solutionPending = false;
 				}
 			}
 
-			const managers = Array.isArray(solutionPayload?.managers) ? solutionPayload.managers : [];
+			const managers = Array.isArray(solutionPayload?.Managers)
+				? solutionPayload.Managers
+				: Array.isArray(solutionPayload?.managers)
+					? solutionPayload.managers
+					: [];
 			if (!managers.length) {
 				return;
 			}
