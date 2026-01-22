@@ -323,10 +323,17 @@ public class ChatStreamWorker : BackgroundService
                 { "chatId", aiMessage.Oid.ToString() }
             };
 
-            // Add connectionId if available
+            // Add connectionId if available, otherwise log a warning for observability
             if (!string.IsNullOrEmpty(aiMessage.ConnectionId))
             {
                 resultEnvelope["connectionId"] = aiMessage.ConnectionId;
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "AI message missing ConnectionId when publishing to Redis. ChatId: {ChatId}, NewChatId: {NewChatId}",
+                    chatId,
+                    aiMessage.Oid);
             }
 
             var entryId = await _redisService.Add("signalr:updates", resultEnvelope);
