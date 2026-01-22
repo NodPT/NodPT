@@ -141,7 +141,7 @@ namespace NodPT.API.Controllers
         }
 
         [HttpPost("mark-solution")]
-        public IActionResult MarkAsSolution([FromBody] MarkSolutionRequestDto request)
+        public async Task<IActionResult> MarkAsSolution([FromBody] MarkSolutionRequestDto request)
         {
             if (request == null) return BadRequest("Request cannot be null");
 
@@ -163,6 +163,17 @@ namespace NodPT.API.Controllers
                 {
                     return NotFound(new { error = "Message not found" });
                 }
+
+                await _session.CommitChangesAsync();
+
+                var solutionEnvelope = new Dictionary<string, string>
+                {
+                    { "chatId", message.Oid.ToString() },
+                    { "jobType", "solution" }
+                };
+
+                var entryId = await _redisService.Add("jobs:chat", solutionEnvelope);
+                _logger.LogInformation("Solution chat queued for processing: ChatId={ChatId}, EntryId={EntryId}", message.Oid, entryId);
 
                 return Ok(new ChatMessageDto
                 {

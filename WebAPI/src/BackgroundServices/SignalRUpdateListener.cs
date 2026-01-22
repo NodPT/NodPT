@@ -95,6 +95,8 @@ public class SignalRUpdateListener : BackgroundService
                 _logger.LogWarning("SignalR update missing connectionId in Redis for chatId {ChatId}, attempting database fallback", chatId);
             }
 
+            var isSolutionOutput = fields.TryGetValue("solutionOutput", out var solutionFlag) && solutionFlag == "true";
+
             // Fetch the AI response from database
             using var scope = _serviceProvider.CreateScope();
             var session = scope.ServiceProvider.GetRequiredService<UnitOfWork>();
@@ -141,7 +143,8 @@ public class SignalRUpdateListener : BackgroundService
                     sender = aiResponseMessage.Sender,
                     timestamp = aiResponseMessage.Timestamp,
                     nodeId = aiResponseMessage.Node?.Id,
-                    messageType = "ai" // Indicates this is an AI response message
+                    messageType = "ai", // Indicates this is an AI response message
+                    solutionOutput = isSolutionOutput
                 },
                 cancellationToken);
 

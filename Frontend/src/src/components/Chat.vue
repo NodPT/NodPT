@@ -30,18 +30,19 @@
 							:title="message._copied ? 'Copied' : 'Copy to clipboard'">
 							<i :class="['bi', message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold']"></i>
 						</button>
+						<button v-if="message.type === 'ai' && !message.markedAsSolution" @click="buildSolution(message)"
+							class="action-btn"
+							:disabled="isLoading" title="Mark as solution">
+							<i class="bi bi-check2-circle fw-bold"></i>
+						</button>
+						<span v-if="message.solutionPending" class="badge bg-warning text-dark ms-2">
+							<span>Processing</span>
+						</span>
+						<span v-if="message.markedAsSolution" class="badge bg-success ms-2">
+							<i class="bi bi-check2-square me-1 fw-bold"></i>
+							<span>Solution</span>
+						</span>
 					</div>
-					<!-- Build Solution button - shown when message content contains solution=true -->
-					<button v-if="hasSolution(message) && !message.markedAsSolution && !message.thinking"
-						@click="buildSolution(message)" class="action-btn ms-2" :disabled="isLoading"
-						title="Build Solution">
-						<i class="bi bi-tools fw-bold"></i>
-						<span class="ms-1">Build Solution</span>
-					</button>
-					<span v-if="message.markedAsSolution && !message.thinking" class="badge bg-success ms-2">
-						<i class="bi bi-check2-square me-1 fw-bold"></i>
-						<span>Solution</span>
-					</span>
 				</div>
 				<div class="message-time">
 					{{ formatTime(message.timestamp) }}
@@ -53,7 +54,7 @@
 				<textarea v-model="newMessage" @keydown.enter.exact="handleEnter" ref="messageTextarea"
 					class="chat-textarea form-control" placeholder="Ask anything..." :disabled="isLoading"
 					rows="1"></textarea>
-				<button @click="sendMessage" class="btn btn-primary send-btn">
+				<button @click="sendMessage" class="btn btn-primary send-btn" :disabled="isSendDisabled">
 					<span v-if="isLoading" class="spinner-border spinner-border-sm"></span>
 					<i v-else class="bi fw-bold" :class="[thinking ? 'bi-square-fill' : 'bi-send']"></i>
 				</button>
@@ -64,8 +65,9 @@
 
 <script>
 import { ref, reactive, inject, onMounted, nextTick, onBeforeUnmount, watch, computed } from 'vue';
-import { eventBus, listenEvent, EVENT_TYPES } from '../rete/eventBus.js';
+import { listenEvent, EVENT_TYPES, triggerEvent } from '../rete/eventBus.js';
 import chatApiService from '../service/chatApiService.js';
+import nodeApiService from '../service/nodeApiService.js';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
@@ -74,7 +76,9 @@ export default {
 	setup() {
 		// Inject API plugin
 		const api = inject('api');
+		const toast = inject('toast');
 		chatApiService.setApi(api);
+		nodeApiService.setApi(api);
 
 		// Reactive data for chat
 		const chatData = reactive({ messages: [] });
@@ -137,6 +141,7 @@ export default {
 			content: 'How can I help you today?',
 			timestamp: new Date().toISOString(),
 			markedAsSolution: false,
+			solutionPending: false,
 			liked: false,
 			disliked: false,
 		});
@@ -205,6 +210,7 @@ export default {
 						content: msg.Message,
 						timestamp: msg.Timestamp,
 						markedAsSolution: msg.MarkedAsSolution,
+						solutionPending: false,
 						Liked: msg.Liked || false,
 						Disliked: msg.Disliked || false
 					}));
@@ -289,7 +295,7 @@ export default {
 			// Validate that we have a nodeId
 			if (!currentNodeId.value) {
 				console.error('Cannot send message: No node selected');
-				alert('Please select a node first');
+				toast?.warning('Please select a node first');
 				return;
 			}
 
@@ -329,6 +335,7 @@ export default {
 					content: 'thinking...',
 					timestamp: new Date().toISOString(),
 					markedAsSolution: false,
+					solutionPending: false,
 					liked: false,
 					disliked: false,
 					thinking: true,
@@ -346,6 +353,7 @@ export default {
 					content: "Sorry, I'm having trouble processing your request. Please try again later.",
 					timestamp: new Date().toISOString(),
 					markedAsSolution: false,
+					solutionPending: false,
 					liked: false,
 					disliked: false
 				};
@@ -356,11 +364,56 @@ export default {
 			}
 		};
 
-		// Check if message content contains the hidden solution marker <!-- solution:true -->
-		const hasSolution = (message) => {
-			if (!message || !message.content) return false;
-			// Look for the hidden HTML comment marker <!-- solution:true --> (case-insensitive, allow whitespace)
-			return /<!--\s*solution\s*:\s*true\s*-->/i.test(message.content);
+		const createManagerNodes = async (parentNodeId, managers) => {
+			if (!parentNodeId || !Array.isArray(managers) || managers.length === 0) {
+				return;
+			}
+
+			let projectId;
+			try {
+				const parentNode = await nodeApiService.getNode(parentNodeId);
+				projectId = parentNode?.ProjectId ?? parentNode?.projectId;
+			} catch (error) {
+				console.error('Failed to load parent node for solution output:', error);
+				toast?.error('Unable to load the parent node. Manager nodes could not be created.');
+				return;
+			}
+
+			if (!projectId) {
+				console.error('Project ID not found for solution output');
+				toast?.error('Unable to determine the project for the selected node. Manager nodes could not be created.');
+				return;
+			}
+
+			for (const manager of managers) {
+				if (!manager) {
+					continue;
+				}
+
+				const managerName = (manager.Name || manager.name || 'Manager').trim();
+				const managerJob = manager.Job || manager.job;
+
+				try {
+					const createdNode = await nodeApiService.createNode({
+						Name: managerName,
+						MessageType: 'Discussion',
+						ParentId: parentNodeId,
+						ProjectId: parseInt(projectId, 10),
+						Status: 'Active',
+						Properties: managerJob ? { Job: managerJob } : {},
+					});
+
+					triggerEvent(EVENT_TYPES.NODE_CREATED_FROM_API, {
+						nodeData: createdNode,
+						parentId: parentNodeId,
+					});
+				} catch (error) {
+					console.error('Failed to create manager node from solution output:', error);
+					toast?.error('Failed to create a manager node from the solution output.');
+				}
+			}
+
+			triggerEvent(EVENT_TYPES.ARRANGE_NODES);
 		};
 
 		// Build solution from AI message
@@ -368,21 +421,22 @@ export default {
 			if (isLoading.value) return;
 
 			isLoading.value = true;
+			message.solutionPending = true;
 
 			try {
 				// Call the mark as solution API
 				await chatApiService.markAsSolution(message.id, currentNodeId.value);
 
-				// Update UI to reflect the change
 				message.markedAsSolution = true;
-
+				message.solutionPending = false;
 				console.log('Solution built for message:', message.id);
 
 			} catch (error) {
 				console.error('Error building solution:', error);
 				// Revert UI change on error
 				message.markedAsSolution = false;
-				alert('Failed to build solution. Please try again.');
+				message.solutionPending = false;
+				toast?.error('Failed to build solution. Please try again.');
 			} finally {
 				isLoading.value = false;
 			}
@@ -399,7 +453,7 @@ export default {
 				message.Disliked = result.Disliked;
 			} catch (error) {
 				console.error('Error liking message:', error);
-				alert('Failed to like message. Please try again.');
+				toast?.error('Failed to like message. Please try again.');
 			}
 		};
 
@@ -414,7 +468,7 @@ export default {
 				message.Disliked = result.Disliked;
 			} catch (error) {
 				console.error('Error disliking message:', error);
-				alert('Failed to dislike message. Please try again.');
+				toast?.error('Failed to dislike message. Please try again.');
 			}
 		};
 
@@ -480,6 +534,7 @@ export default {
 					timestamp: data.timestamp,
 					thinking: true,
 					markedAsSolution: false,
+					solutionPending: false,
 					Liked: false,
 					Disliked: false,
 				};
@@ -508,12 +563,63 @@ export default {
 				content: data.content,
 				timestamp: data.timestamp,
 				markedAsSolution: false,
+				solutionPending: false,
 				Liked: false,
 				Disliked: false,
 			};
 
 			chatData.messages.push(aiMessage);
 			scrollToBottom();
+		};
+
+		const handleSolutionOutputReceived = async (data) => {
+			if (!data || !data.nodeId) {
+				return;
+			}
+
+			if (!data.content) {
+				console.warn('Solution output missing content');
+				return;
+			}
+
+			let solutionPayload;
+			try {
+				solutionPayload = JSON.parse(data.content);
+			} catch (error) {
+				console.error('Failed to parse solution output JSON:', error);
+				chatData.messages.push({
+					id: `solution-parse-error-${Date.now()}`,
+					type: 'ai',
+					content: 'The solution output could not be applied because the AI returned invalid data. Please try again.',
+					timestamp: new Date().toISOString(),
+					markedAsSolution: false,
+					solutionPending: false,
+					Liked: false,
+					Disliked: false,
+				});
+				return;
+			}
+
+			const solutionMessage = solutionPayload?.Message ?? solutionPayload?.message;
+			if (solutionMessage && data.messageId && data.nodeId === currentNodeId.value) {
+				const targetMessage = chatData.messages.find(msg => msg.id === data.messageId);
+				if (targetMessage) {
+					targetMessage.content = solutionMessage;
+					targetMessage.markedAsSolution = true;
+					targetMessage.solutionPending = false;
+				}
+			}
+
+			const managers = Array.isArray(solutionPayload?.Managers)
+				? solutionPayload.Managers
+				: Array.isArray(solutionPayload?.managers)
+					? solutionPayload.managers
+					: [];
+			if (!managers.length) {
+				return;
+			}
+
+			await createManagerNodes(data.nodeId, managers);
 		};
 
 		// Load initial data on mount
@@ -525,6 +631,7 @@ export default {
 			eventListeners.push(listenEvent(EVENT_TYPES.PROJECT_CONTEXT_CHANGED, handleProjectContextChange));
 			// Listen for AI responses from SignalR
 			eventListeners.push(listenEvent(EVENT_TYPES.SIGNALR_AI_RESPONSE_RECEIVED, handleAIResponseReceived));
+			eventListeners.push(listenEvent(EVENT_TYPES.SOLUTION_OUTPUT_RECEIVED, handleSolutionOutputReceived));
 		});
 
 		onBeforeUnmount(() => {
@@ -552,7 +659,6 @@ export default {
 			formatTime,
 			sendMessage,
 			buildSolution,
-			hasSolution,
 			likeMessage,
 			dislikeMessage,
 			copyMessage,

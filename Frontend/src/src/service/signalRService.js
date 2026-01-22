@@ -255,6 +255,9 @@ class SignalRService {
 			if (data.messageType === 'ai' || data.messageType === 'thinking' || data.sender === 'assistant') {
 				// AI chat messages and thinking progress messages
 				triggerEvent(EVENT_TYPES.SIGNALR_AI_RESPONSE_RECEIVED, data);
+				if (data.solutionOutput) {
+					triggerEvent(EVENT_TYPES.SOLUTION_OUTPUT_RECEIVED, data);
+				}
 			} else {
 				// Other message types can be handled here in the future
 				console.log('Unhandled message type:', data);

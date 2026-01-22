@@ -91,6 +91,7 @@ public class ChatStreamWorker : BackgroundService
         try
         {
             var fields = envelope.Fields;
+            var isSolutionJob = fields.TryGetValue("jobType", out var jobType) && jobType == "solution";
             
             // Log high-level information about the Redis job entry
             _logger.LogInformation("=== Processing Redis Job Entry ===");
@@ -116,6 +117,11 @@ public class ChatStreamWorker : BackgroundService
             {
                 _logger.LogWarning("Invalid chatId format: {ChatId}", chatId);
                 return true; // Ack anyway to remove from queue
+            }
+
+            if (isSolutionJob)
+            {
+                _logger.LogInformation("Processing solution job for chatId {ChatId}", chatId);
             }
 
             // Create database session
@@ -250,6 +256,13 @@ public class ChatStreamWorker : BackgroundService
                 options = LlmChatService.BuildOptionsFromAIModel(matchingAiModel)
             };
 
+            var shouldUseStructuredSolutionFormat = ShouldApplyDirectorSolutionFormat(node, isSolutionJob);
+            if (shouldUseStructuredSolutionFormat)
+            {
+                _logger.LogInformation("Applying Director solution schema for solution job, chatId {ChatId}", chatId);
+                ollamaRequest.response_format = BuildDirectorSolutionSchema();
+            }
+
             _logger.LogInformation("Prepared Ollama request with {MessageCount} messages for chatId {ChatId} (including memory context)", 
                 messages.Count, chatId);
             _logger.LogInformation("Ollama Request Details - Model: {Model}, SystemPrompts: {SystemPromptCount}, History: {HistoryCount}, UserMessage Length: {UserMessageLength}", 
@@ -356,6 +369,11 @@ public class ChatStreamWorker : BackgroundService
                     aiMessage.Oid);
             }
 
+            if (isSolutionJob)
+            {
+                resultEnvelope["solutionOutput"] = "true";
+            }
+
             var entryId = await _redisService.Add("signalr:updates", resultEnvelope);
 
             _logger.LogInformation("=== Published Result to SignalR ===");
@@ -388,6 +406,67 @@ public class ChatStreamWorker : BackgroundService
         await base.StopAsync(cancellationToken);
         
         _logger.LogInformation("ChatStreamWorker stopped");
+    }
+
+    private static bool ShouldApplyDirectorSolutionFormat(Node node, bool isSolutionJob)
+    {
+        return isSolutionJob && node.NodeType == NodeType.Director;
+    }
+
+    private static ResponseFormat BuildDirectorSolutionSchema()
+    {
+        return new ResponseFormat
+        {
+            type = "json_schema",
+            schema = new JsonSchema
+            {
+                type = "object",
+                properties = new Dictionary<string, JsonSchema>
+                {
+                    {
+                        "Message",
+                        new JsonSchema
+                        {
+                            type = "string",
+                            description = "Summary message for the director response."
+                        }
+                    },
+                    {
+                        "Managers",
+                        new JsonSchema
+                        {
+                            type = "array",
+                            description = "List of manager nodes to create.",
+                            items = new JsonSchema
+                            {
+                                type = "object",
+                                properties = new Dictionary<string, JsonSchema>
+                                {
+                                    {
+                                        "Name",
+                                        new JsonSchema
+                                        {
+                                            type = "string",
+                                            description = "Manager node name."
+                                        }
+                                    },
+                                    {
+                                        "Job",
+                                        new JsonSchema
+                                        {
+                                            type = "string",
+                                            description = "Manager job responsibilities."
+                                        }
+                                    }
+                                },
+                                required = new List<string> { "Name", "Job" }
+                            }
+                        }
+                    }
+                },
+                required = new List<string> { "Message", "Managers" }
+            }
+        };
     }
 
     /// <summary>
