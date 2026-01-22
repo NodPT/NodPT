@@ -2,19 +2,19 @@
 	<div class="chat-container">
 		<div class="chat-messages" ref="chatMessages">
 			<div v-for="message in chatData.messages" :key="message.id"
-				:class="['message', message.type === 'ai' ? 'ai-message' : 'user-message']">
+				:class="['message', message.type === 'ai' || message.type === 'thinking' ? 'ai-message' : 'user-message']">
 				<!-- message content -->
 				<div class="message-content" :class="[message.thinking ? 'thinking' : '']"
 					v-html="renderMarkdown(message.content)"></div>
 				<!-- Copy button available for user messages -->
-				<div v-if="message.type !== 'ai'"
+				<div v-if="message.type !== 'ai' && message.type !== 'thinking'"
 					class="message-controls d-flex justify-content-start align-items-center mt-1">
 					<button @click="copyMessage(message)" class="action-btn" :disabled="isLoading"
 						:title="message._copied ? 'Copied' : 'Copy to clipboard'">
 						<i :class="['bi', message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold']"></i>
 					</button>
 				</div>
-				<div class="message-actions" v-if="message.type === 'ai'">
+				<div class="message-actions" v-if="message.type === 'ai' || message.type === 'thinking'">
 					<!-- Chat response buttons -->
 					<div class="chat-response-buttons" v-if="!message.thinking">
 						<button @click="likeMessage(message)" class="action-btn" :disabled="isLoading"
@@ -461,6 +461,61 @@ export default {
 			await resetChatMessages();
 		};
 
+		// Handle AI response received from SignalR
+		// This is triggered when Executor processes a chat message and sends response via Redis/SignalR
+		const handleAIResponseReceived = (data) => {
+			console.log('AI response received via SignalR:', data);
+
+			// Check if this is a thinking/progress message
+			if (data.messageType === 'thinking') {
+				// Remove existing thinking message if any
+				removeThinkingMessage();
+
+				// Add or update the thinking message with UUID-like ID to prevent collisions
+				// Note: type is 'thinking' to distinguish from actual AI replies
+				const thinkingMessage = {
+					id: 'thinking-' + Date.now().toString(36) + Math.random().toString(36).slice(2),
+					type: 'thinking',
+					content: data.content,
+					timestamp: data.timestamp,
+					thinking: true,
+					markedAsSolution: false,
+					Liked: false,
+					Disliked: false,
+				};
+
+				chatData.messages.push(thinkingMessage);
+				thinking.value = true;
+				scrollToBottom();
+				return;
+			}
+
+			// This is a regular AI response - remove any thinking messages
+			removeThinkingMessage();
+			thinking.value = false;
+			isLoading.value = false;
+
+			// Validate that the response is for the current node
+			if (currentNodeId.value && data.nodeId && data.nodeId !== currentNodeId.value) {
+				console.warn('Received AI response for different node, ignoring:', data.nodeId);
+				return;
+			}
+
+			// Add the AI message to the chat
+			const aiMessage = {
+				id: data.messageId,
+				type: 'ai',
+				content: data.content,
+				timestamp: data.timestamp,
+				markedAsSolution: false,
+				Liked: false,
+				Disliked: false,
+			};
+
+			chatData.messages.push(aiMessage);
+			scrollToBottom();
+		};
+
 		// Load initial data on mount
 		onMounted(() => {
 			loadChatData('default');
@@ -468,6 +523,8 @@ export default {
 			// Listen for node selection events
 			eventListeners.push(listenEvent(EVENT_TYPES.NODE_SELECTED, handleNodeSelection));
 			eventListeners.push(listenEvent(EVENT_TYPES.PROJECT_CONTEXT_CHANGED, handleProjectContextChange));
+			// Listen for AI responses from SignalR
+			eventListeners.push(listenEvent(EVENT_TYPES.SIGNALR_AI_RESPONSE_RECEIVED, handleAIResponseReceived));
 		});
 
 		onBeforeUnmount(() => {

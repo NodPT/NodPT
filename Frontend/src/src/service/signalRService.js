@@ -245,6 +245,21 @@ class SignalRService {
 			console.log('Editor command from server:', command);
 			triggerEvent(EVENT_TYPES.EDITOR_COMMAND_FROM_SERVER, command);
 		});
+
+		// Listen for all message types from backend using the consolidated ReceiveMessage event
+		// This handles AI responses, thinking messages, and other message types
+		this.connection.on('ReceiveMessage', (data) => {
+			console.log('Received message from server:', data);
+			
+			// Route based on messageType or sender to appropriate event handlers
+			if (data.messageType === 'ai' || data.messageType === 'thinking' || data.sender === 'assistant') {
+				// AI chat messages and thinking progress messages
+				triggerEvent(EVENT_TYPES.SIGNALR_AI_RESPONSE_RECEIVED, data);
+			} else {
+				// Other message types can be handled here in the future
+				console.log('Unhandled message type:', data);
+			}
+		});
 	}
 
 	/**

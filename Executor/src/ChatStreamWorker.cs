@@ -154,6 +154,16 @@ public class ChatStreamWorker : BackgroundService
                 return true; // Ack anyway - no node association
             }
 
+            string nodeId = node.Id!;
+            var connectionId = chatMessage.ConnectionId;
+
+            // Send initial thinking message to frontend
+            // Let the user know we've started processing their message
+            if (!string.IsNullOrEmpty(connectionId))
+            {
+                await SendThinkingMessageAsync(connectionId, nodeId, "Starting to work on your request...");
+            }
+
             // Step 6: Get projectId from node data to get project data
             var project = node.Project;
             if (project == null)
@@ -190,7 +200,11 @@ public class ChatStreamWorker : BackgroundService
             _logger.LogInformation("Using model: {ModelName} (from AIModel: {AIModelName})", 
                 modelName, matchingAiModel?.Name ?? "default");
 
-            string nodeId = node.Id!;
+            // Send thinking message about loading memory context
+            if (!string.IsNullOrEmpty(connectionId))
+            {
+                await SendThinkingMessageAsync(connectionId, nodeId, "Loading conversation context...");
+            }
 
             // Step 10: Load memory summary and history for the node
             var summary = await _memoryService.LoadSummaryAsync(nodeId, session);
@@ -251,6 +265,12 @@ public class ChatStreamWorker : BackgroundService
                 : "Config Default";
             _logger.LogInformation("Using LLM Endpoint: {Endpoint} (Source: {EndpointSource})", 
                 endpoint, endpointSource);
+
+            // Send thinking message before sending to LLM
+            if (!string.IsNullOrEmpty(connectionId))
+            {
+                await SendThinkingMessageAsync(connectionId, nodeId, "Generating response...");
+            }
 
             //! STEP 12-13: SEND MESSAGE TO OLLAMA AND WAIT FOR RESPONSE
             // Use AIModel's endpoint and options if available
@@ -368,5 +388,40 @@ public class ChatStreamWorker : BackgroundService
         await base.StopAsync(cancellationToken);
         
         _logger.LogInformation("ChatStreamWorker stopped");
+    }
+
+    /// <summary>
+    /// Send a thinking/progress message to the frontend via SignalR
+    /// These messages show the user that processing is happening
+    /// </summary>
+    /// <param name="connectionId">SignalR connection ID</param>
+    /// <param name="nodeId">Node ID for context</param>
+    /// <param name="message">Progress message to display</param>
+    private async Task SendThinkingMessageAsync(string connectionId, string nodeId, string message)
+    {
+        try
+        {
+            // Create a temporary message envelope for thinking/progress messages
+            // These use a different structure than regular chat messages
+            var thinkingEnvelope = new Dictionary<string, string>
+            {
+                { "connectionId", connectionId },
+                { "nodeId", nodeId },
+                { "content", message },
+                { "messageType", "thinking" }, // Mark as thinking type
+                { "timestamp", DateTime.UtcNow.ToString("o") }
+            };
+
+            // Send to signalr:updates stream for immediate delivery
+            await _redisService.Add("signalr:updates", thinkingEnvelope);
+            
+            _logger.LogDebug("Sent thinking message to SignalR: {Message}", message);
+        }
+        catch (Exception ex)
+        {
+            // Don't fail the whole job if thinking message fails
+            // Avoid logging the message content to prevent exposure of sensitive information
+            _logger.LogWarning(ex, "Failed to send thinking message to connectionId: {ConnectionId}", connectionId);
+        }
     }
 }
