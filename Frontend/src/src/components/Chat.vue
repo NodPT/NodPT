@@ -2,19 +2,19 @@
 	<div class="chat-container">
 		<div class="chat-messages" ref="chatMessages">
 			<div v-for="message in chatData.messages" :key="message.id"
-				:class="['message', message.type === 'ai' ? 'ai-message' : 'user-message']">
+				:class="['message', message.type === 'ai' || message.type === 'thinking' ? 'ai-message' : 'user-message']">
 				<!-- message content -->
 				<div class="message-content" :class="[message.thinking ? 'thinking' : '']"
 					v-html="renderMarkdown(message.content)"></div>
 				<!-- Copy button available for user messages -->
-				<div v-if="message.type !== 'ai'"
+				<div v-if="message.type !== 'ai' && message.type !== 'thinking'"
 					class="message-controls d-flex justify-content-start align-items-center mt-1">
 					<button @click="copyMessage(message)" class="action-btn" :disabled="isLoading"
 						:title="message._copied ? 'Copied' : 'Copy to clipboard'">
 						<i :class="['bi', message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold']"></i>
 					</button>
 				</div>
-				<div class="message-actions" v-if="message.type === 'ai'">
+				<div class="message-actions" v-if="message.type === 'ai' || message.type === 'thinking'">
 					<!-- Chat response buttons -->
 					<div class="chat-response-buttons" v-if="!message.thinking">
 						<button @click="likeMessage(message)" class="action-btn" :disabled="isLoading"
@@ -472,9 +472,10 @@ export default {
 				removeThinkingMessage();
 
 				// Add or update the thinking message with UUID to prevent ID collisions
+				// Note: type is 'thinking' to distinguish from actual AI replies
 				const thinkingMessage = {
 					id: 'thinking-' + crypto.randomUUID(),
-					type: 'ai',
+					type: 'thinking',
 					content: data.content,
 					timestamp: data.timestamp,
 					thinking: true,
