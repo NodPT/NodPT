@@ -61,6 +61,8 @@ export const EVENT_TYPES = {
 	SIGNALR_HELLO_RECEIVED: 'signalr:hello-received',
 	NODE_UPDATED_FROM_SERVER: 'signalr:node-updated',
 	EDITOR_COMMAND_FROM_SERVER: 'signalr:editor-command',
+	SIGNALR_AI_RESPONSE_RECEIVED: 'signalr:ai-response-received',
+	SIGNALR_CONNECTION_FAILED: 'signalr:connection-failed',
 
 	// Auth lifecycle events
 	AUTH_SIGNED_IN: 'auth:signed-in',

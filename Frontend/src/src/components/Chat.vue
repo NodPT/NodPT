@@ -461,6 +461,60 @@ export default {
 			await resetChatMessages();
 		};
 
+		// Handle AI response received from SignalR
+		// This is triggered when Executor processes a chat message and sends response via Redis/SignalR
+		const handleAIResponseReceived = (data) => {
+			console.log('AI response received via SignalR:', data);
+
+			// Check if this is a thinking/progress message
+			if (data.thinking === true) {
+				// Remove existing thinking message if any
+				removeThinkingMessage();
+
+				// Add or update the thinking message
+				const thinkingMessage = {
+					id: 'thinking-' + Date.now(),
+					type: 'ai',
+					content: data.content,
+					timestamp: data.timestamp,
+					thinking: true,
+					markedAsSolution: false,
+					Liked: false,
+					Disliked: false,
+				};
+
+				chatData.messages.push(thinkingMessage);
+				thinking.value = true;
+				scrollToBottom();
+				return;
+			}
+
+			// This is a regular AI response - remove any thinking messages
+			removeThinkingMessage();
+			thinking.value = false;
+			isLoading.value = false;
+
+			// Validate that the response is for the current node
+			if (currentNodeId.value && data.nodeId && data.nodeId !== currentNodeId.value) {
+				console.warn('Received AI response for different node, ignoring:', data.nodeId);
+				return;
+			}
+
+			// Add the AI message to the chat
+			const aiMessage = {
+				id: data.messageId,
+				type: 'ai',
+				content: data.content,
+				timestamp: data.timestamp,
+				markedAsSolution: false,
+				Liked: false,
+				Disliked: false,
+			};
+
+			chatData.messages.push(aiMessage);
+			scrollToBottom();
+		};
+
 		// Load initial data on mount
 		onMounted(() => {
 			loadChatData('default');
@@ -468,6 +522,8 @@ export default {
 			// Listen for node selection events
 			eventListeners.push(listenEvent(EVENT_TYPES.NODE_SELECTED, handleNodeSelection));
 			eventListeners.push(listenEvent(EVENT_TYPES.PROJECT_CONTEXT_CHANGED, handleProjectContextChange));
+			// Listen for AI responses from SignalR
+			eventListeners.push(listenEvent(EVENT_TYPES.SIGNALR_AI_RESPONSE_RECEIVED, handleAIResponseReceived));
 		});
 
 		onBeforeUnmount(() => {

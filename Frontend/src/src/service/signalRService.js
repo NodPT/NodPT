@@ -245,6 +245,13 @@ class SignalRService {
 			console.log('Editor command from server:', command);
 			triggerEvent(EVENT_TYPES.EDITOR_COMMAND_FROM_SERVER, command);
 		});
+
+		// Listen for AI responses from backend (via Executor -> Redis -> SignalR)
+		// This handles the AI chat message responses sent to specific clients
+		this.connection.on('ReceiveAIResponse', (data) => {
+			console.log('Received AI response from server:', data);
+			triggerEvent(EVENT_TYPES.SIGNALR_AI_RESPONSE_RECEIVED, data);
+		});
 	}
 
 	/**

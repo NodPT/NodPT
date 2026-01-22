@@ -68,7 +68,14 @@ public class SignalRUpdateListener : BackgroundService
         {
             var fields = envelope.Fields;
             
-            // Extract required fields
+            // Check if this is a thinking/progress message (doesn't have chatId, has messageType)
+            if (fields.TryGetValue("messageType", out var messageType) && messageType == "thinking")
+            {
+                // Handle thinking message - no database lookup needed
+                return await HandleThinkingMessage(fields, cancellationToken);
+            }
+            
+            // Extract required fields for regular AI response messages
             if (!fields.TryGetValue("chatId", out var chatId) || string.IsNullOrEmpty(chatId))
             {
                 _logger.LogWarning("SignalR update missing chatId, skipping");
@@ -143,6 +150,56 @@ public class SignalRUpdateListener : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling SignalR update for entry {EntryId}", envelope.EntryId);
+            return false; // Fail, will retry
+        }
+    }
+
+    /// <summary>
+    /// Handle thinking/progress messages sent from Executor
+    /// These messages show real-time progress to the user
+    /// </summary>
+    private async Task<bool> HandleThinkingMessage(Dictionary<string, string> fields, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Extract required fields for thinking messages
+            if (!fields.TryGetValue("connectionId", out var connectionId) || string.IsNullOrEmpty(connectionId))
+            {
+                _logger.LogWarning("Thinking message missing connectionId, skipping");
+                return true; // Ack anyway
+            }
+
+            if (!fields.TryGetValue("content", out var content) || string.IsNullOrEmpty(content))
+            {
+                _logger.LogWarning("Thinking message missing content, skipping");
+                return true; // Ack anyway
+            }
+
+            fields.TryGetValue("nodeId", out var nodeId);
+            fields.TryGetValue("timestamp", out var timestamp);
+
+            // Send thinking message to the specific client via SignalR
+            await _hubContext.Clients.Client(connectionId).SendAsync(
+                "ReceiveAIResponse",
+                new
+                {
+                    chatId = (string?)null, // No chatId for thinking messages
+                    messageId = (int?)null, // No messageId for thinking messages
+                    content = content,
+                    sender = "assistant",
+                    timestamp = timestamp ?? DateTime.UtcNow.ToString("o"),
+                    nodeId = nodeId,
+                    thinking = true // Mark as thinking message
+                },
+                cancellationToken);
+
+            _logger.LogDebug("Sent thinking message to client {ConnectionId}: {Content}", connectionId, content);
+
+            return true; // Success, ack the message
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling thinking message");
             return false; // Fail, will retry
         }
     }
