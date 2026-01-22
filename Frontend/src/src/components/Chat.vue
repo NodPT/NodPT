@@ -467,7 +467,7 @@ export default {
 			console.log('AI response received via SignalR:', data);
 
 			// Check if this is a thinking/progress message
-			if (data.thinking === true) {
+			if (data.messageType === 'thinking') {
 				// Remove existing thinking message if any
 				removeThinkingMessage();
 
