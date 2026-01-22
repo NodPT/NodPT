@@ -49,7 +49,8 @@ namespace NodPT.Data.Services
                 MarkedAsSolution = m.MarkedAsSolution,
                 NodeId = m.Node?.Id,
                 Liked = m.Liked,
-                Disliked = m.Disliked
+                Disliked = m.Disliked,
+                ConnectionId = m.ConnectionId
             }).ToList();
         }
 
@@ -66,7 +67,8 @@ namespace NodPT.Data.Services
                 MarkedAsSolution = messageDto.MarkedAsSolution,
                 Liked = false,
                 Disliked = false,
-                User = user
+                User = user,
+                ConnectionId = messageDto.ConnectionId
             };
 
             // If nodeId is provided, associate the message with the node

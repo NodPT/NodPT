@@ -221,7 +221,8 @@ namespace NodPT.API.Controllers
                     NodeId = message.Node?.Id,
                     MarkedAsSolution = message.MarkedAsSolution,
                     Liked = message.Liked,
-                    Disliked = message.Disliked
+                    Disliked = message.Disliked,
+                    ConnectionId = message.ConnectionId
                 });
             }
             catch (Exception ex)
@@ -259,7 +260,8 @@ namespace NodPT.API.Controllers
                     NodeId = message.Node?.Id,
                     MarkedAsSolution = message.MarkedAsSolution,
                     Liked = message.Liked,
-                    Disliked = message.Disliked
+                    Disliked = message.Disliked,
+                    ConnectionId = message.ConnectionId
                 });
             }
             catch (Exception ex)
