@@ -91,6 +91,7 @@ public class ChatStreamWorker : BackgroundService
         try
         {
             var fields = envelope.Fields;
+            var isSolutionJob = fields.TryGetValue("jobType", out var jobType) && jobType == "solution";
             
             // Log high-level information about the Redis job entry
             _logger.LogInformation("=== Processing Redis Job Entry ===");
@@ -190,6 +191,8 @@ public class ChatStreamWorker : BackgroundService
                 .Select(p => p.Content!)
                 .ToList();
 
+            var responseFormat = BuildSolutionResponseFormat(node, isSolutionJob);
+
             _logger.LogInformation("Found {PromptCount} matching prompts for NodeType={NodeType}, MessageType={MessageType}", 
                 promptContents.Count, node.NodeType, node.MessageType);
 
@@ -241,6 +244,11 @@ public class ChatStreamWorker : BackgroundService
             
             // Add current user message
             messages.Add(new OllamaMessage { role = "user", content = userMessage });
+
+            if (!string.IsNullOrWhiteSpace(responseFormat))
+            {
+                messages.Add(new OllamaMessage { role = "system", content = responseFormat });
+            }
             
             // Build Ollama request with options from AIModel
             var ollamaRequest = new OllamaRequest
@@ -249,6 +257,11 @@ public class ChatStreamWorker : BackgroundService
                 messages = messages,
                 options = LlmChatService.BuildOptionsFromAIModel(matchingAiModel)
             };
+
+            if (isSolutionJob)
+            {
+                ollamaRequest.response_format = BuildDirectorSolutionSchema();
+            }
 
             _logger.LogInformation("Prepared Ollama request with {MessageCount} messages for chatId {ChatId} (including memory context)", 
                 messages.Count, chatId);
@@ -354,6 +367,11 @@ public class ChatStreamWorker : BackgroundService
                     "AI message missing ConnectionId when publishing to Redis. ChatId: {ChatId}, NewChatId: {NewChatId}",
                     chatId,
                     aiMessage.Oid);
+            }
+
+            if (isSolutionJob)
+            {
+                resultEnvelope["solutionOutput"] = "true";
             }
 
             var entryId = await _redisService.Add("signalr:updates", resultEnvelope);
