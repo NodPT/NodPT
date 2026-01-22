@@ -129,9 +129,10 @@ public class SignalRUpdateListener : BackgroundService
                 _logger.LogDebug("Retrieved connectionId {ConnectionId} from database for chatId {ChatId}", connectionId, chatId);
             }
 
-            // Send to the specific client connection via SignalR
+            // Send to the specific client connection via SignalR using the standard ReceiveMessage event
+            // This consolidates all message types under one event to reduce redundancy
             await _hubContext.Clients.Client(connectionId).SendAsync(
-                "ReceiveAIResponse",
+                "ReceiveMessage",
                 new
                 {
                     chatId = chatId,
@@ -139,7 +140,8 @@ public class SignalRUpdateListener : BackgroundService
                     content = aiResponseMessage.Message,
                     sender = aiResponseMessage.Sender,
                     timestamp = aiResponseMessage.Timestamp,
-                    nodeId = aiResponseMessage.Node?.Id
+                    nodeId = aiResponseMessage.Node?.Id,
+                    messageType = "ai" // Indicates this is an AI response message
                 },
                 cancellationToken);
 
@@ -178,9 +180,10 @@ public class SignalRUpdateListener : BackgroundService
             fields.TryGetValue("nodeId", out var nodeId);
             fields.TryGetValue("timestamp", out var timestamp);
 
-            // Send thinking message to the specific client via SignalR
+            // Send thinking message to the specific client via SignalR using the standard ReceiveMessage event
+            // This consolidates all message types under one event to reduce redundancy
             await _hubContext.Clients.Client(connectionId).SendAsync(
-                "ReceiveAIResponse",
+                "ReceiveMessage",
                 new
                 {
                     chatId = (string?)null, // No chatId for thinking messages
@@ -189,7 +192,8 @@ public class SignalRUpdateListener : BackgroundService
                     sender = "assistant",
                     timestamp = timestamp ?? DateTime.UtcNow.ToString("o"),
                     nodeId = nodeId,
-                    thinking = true // Mark as thinking message
+                    messageType = "thinking", // Indicates this is a progress/thinking message
+                    thinking = true // Additional flag for backward compatibility
                 },
                 cancellationToken);
 
