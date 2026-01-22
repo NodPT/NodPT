@@ -420,7 +420,8 @@ public class ChatStreamWorker : BackgroundService
         catch (Exception ex)
         {
             // Don't fail the whole job if thinking message fails
-            _logger.LogWarning(ex, "Failed to send thinking message: {Message}", message);
+            // Avoid logging the message content to prevent exposure of sensitive information
+            _logger.LogWarning(ex, "Failed to send thinking message to connectionId: {ConnectionId}", connectionId);
         }
     }
 }

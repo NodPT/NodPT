@@ -471,9 +471,9 @@ export default {
 				// Remove existing thinking message if any
 				removeThinkingMessage();
 
-				// Add or update the thinking message
+				// Add or update the thinking message with UUID to prevent ID collisions
 				const thinkingMessage = {
-					id: 'thinking-' + Date.now(),
+					id: 'thinking-' + crypto.randomUUID(),
 					type: 'ai',
 					content: data.content,
 					timestamp: data.timestamp,
