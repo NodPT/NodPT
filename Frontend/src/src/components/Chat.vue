@@ -30,7 +30,8 @@
 							:title="message._copied ? 'Copied' : 'Copy to clipboard'">
 							<i :class="['bi', message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold']"></i>
 						</button>
-						<button v-if="!message.markedAsSolution" @click="buildSolution(message)" class="action-btn"
+						<button v-if="message.type === 'ai' && !message.markedAsSolution" @click="buildSolution(message)"
+							class="action-btn"
 							:disabled="isLoading" title="Mark as solution">
 							<i class="bi bi-check2-circle fw-bold"></i>
 						</button>
@@ -579,6 +580,7 @@ export default {
 				const targetMessage = chatData.messages.find(msg => msg.id === data.messageId);
 				if (targetMessage) {
 					targetMessage.content = solutionPayload.message;
+					targetMessage.markedAsSolution = true;
 				}
 			}
 

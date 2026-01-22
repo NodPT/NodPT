@@ -191,8 +191,6 @@ public class ChatStreamWorker : BackgroundService
                 .Select(p => p.Content!)
                 .ToList();
 
-            var responseFormat = BuildSolutionResponseFormat(node, isSolutionJob);
-
             _logger.LogInformation("Found {PromptCount} matching prompts for NodeType={NodeType}, MessageType={MessageType}", 
                 promptContents.Count, node.NodeType, node.MessageType);
 
@@ -242,11 +240,6 @@ public class ChatStreamWorker : BackgroundService
                 });
             }
             
-            if (!string.IsNullOrWhiteSpace(responseFormat))
-            {
-                messages.Add(new OllamaMessage { role = "system", content = responseFormat });
-            }
-
             // Add current user message
             messages.Add(new OllamaMessage { role = "user", content = userMessage });
             
@@ -258,7 +251,8 @@ public class ChatStreamWorker : BackgroundService
                 options = LlmChatService.BuildOptionsFromAIModel(matchingAiModel)
             };
 
-            if (ShouldApplyDirectorSolutionFormat(node, isSolutionJob))
+            var shouldUseStructuredSolutionFormat = ShouldApplyDirectorSolutionFormat(node, isSolutionJob);
+            if (shouldUseStructuredSolutionFormat)
             {
                 ollamaRequest.response_format = BuildDirectorSolutionSchema();
             }
@@ -411,18 +405,6 @@ public class ChatStreamWorker : BackgroundService
     private static bool ShouldApplyDirectorSolutionFormat(Node node, bool isSolutionJob)
     {
         return isSolutionJob && node.NodeType == NodeType.Director;
-    }
-
-    private static string BuildSolutionResponseFormat(Node node, bool isSolutionJob)
-    {
-        if (!ShouldApplyDirectorSolutionFormat(node, isSolutionJob))
-        {
-            return string.Empty;
-        }
-
-        return "Return only a JSON object with: message (string) and managers (array). " +
-               "Each manager must include name (string) and job (string). " +
-               "Use managers to decide how many manager nodes to create and what their jobs are.";
     }
 
     private static ResponseFormat BuildDirectorSolutionSchema()
