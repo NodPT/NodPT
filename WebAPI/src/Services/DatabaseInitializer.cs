@@ -31,11 +31,7 @@ public static class DatabaseInitializer
 
         builder.Services.AddXpoDefaultUnitOfWork(true, options =>
             options.UseConnectionString(connectionString)
-#if DEBUG
                 .UseAutoCreationOption(AutoCreateOption.DatabaseAndSchema)
-#else
-                .UseAutoCreationOption(AutoCreateOption.SchemaAlreadyExists)
-#endif
                 // Register known entity types used by the application so XPO can discover mappings.
                 // StatisticInfo was not defined in the project; explicitly register the real model types.
                 .UseEntityTypes(new Type[] {
