@@ -35,6 +35,9 @@
 							:disabled="isLoading" title="Mark as solution">
 							<i class="bi bi-check2-circle fw-bold"></i>
 						</button>
+						<span v-if="message.solutionPending" class="badge bg-warning text-dark ms-2">
+							<span>Processing</span>
+						</span>
 						<span v-if="message.markedAsSolution" class="badge bg-success ms-2">
 							<i class="bi bi-check2-square me-1 fw-bold"></i>
 							<span>Solution</span>
@@ -137,6 +140,7 @@ export default {
 			content: 'How can I help you today?',
 			timestamp: new Date().toISOString(),
 			markedAsSolution: false,
+			solutionPending: false,
 			liked: false,
 			disliked: false,
 		});
@@ -205,6 +209,7 @@ export default {
 						content: msg.Message,
 						timestamp: msg.Timestamp,
 						markedAsSolution: msg.MarkedAsSolution,
+						solutionPending: false,
 						Liked: msg.Liked || false,
 						Disliked: msg.Disliked || false
 					}));
@@ -329,6 +334,7 @@ export default {
 					content: 'thinking...',
 					timestamp: new Date().toISOString(),
 					markedAsSolution: false,
+					solutionPending: false,
 					liked: false,
 					disliked: false,
 					thinking: true,
@@ -346,6 +352,7 @@ export default {
 					content: "Sorry, I'm having trouble processing your request. Please try again later.",
 					timestamp: new Date().toISOString(),
 					markedAsSolution: false,
+					solutionPending: false,
 					liked: false,
 					disliked: false
 				};
@@ -367,11 +374,13 @@ export default {
 				projectId = parentNode?.ProjectId ?? parentNode?.projectId;
 			} catch (error) {
 				console.error('Failed to load parent node for solution output:', error);
+				window.alert('Unable to load the parent node. Manager nodes could not be created. Please try again.');
 				return;
 			}
 
 			if (!projectId) {
 				console.error('Project ID not found for solution output');
+				window.alert('Unable to determine the project for the selected node. Manager nodes could not be created.');
 				return;
 			}
 
@@ -380,7 +389,7 @@ export default {
 					continue;
 				}
 
-				const managerName = (manager.name || manager.Name || 'Manager').trim();
+				const managerName = (manager.Name || manager.name || 'Manager').trim();
 				const managerJob = manager.job || manager.Job;
 
 				try {
@@ -399,6 +408,7 @@ export default {
 					});
 				} catch (error) {
 					console.error('Failed to create manager node from solution output:', error);
+					window.alert('Failed to create a manager node from the solution output. Please try again.');
 				}
 			}
 
@@ -410,13 +420,11 @@ export default {
 			if (isLoading.value) return;
 
 			isLoading.value = true;
+			message.solutionPending = true;
 
 			try {
 				// Call the mark as solution API
 				await chatApiService.markAsSolution(message.id, currentNodeId.value);
-
-				// Update UI to reflect the change
-				message.markedAsSolution = true;
 
 				console.log('Solution built for message:', message.id);
 
@@ -424,6 +432,7 @@ export default {
 				console.error('Error building solution:', error);
 				// Revert UI change on error
 				message.markedAsSolution = false;
+				message.solutionPending = false;
 				alert('Failed to build solution. Please try again.');
 			} finally {
 				isLoading.value = false;
@@ -522,6 +531,7 @@ export default {
 					timestamp: data.timestamp,
 					thinking: true,
 					markedAsSolution: false,
+					solutionPending: false,
 					Liked: false,
 					Disliked: false,
 				};
@@ -550,6 +560,7 @@ export default {
 				content: data.content,
 				timestamp: data.timestamp,
 				markedAsSolution: false,
+				solutionPending: false,
 				Liked: false,
 				Disliked: false,
 			};
@@ -573,6 +584,15 @@ export default {
 				solutionPayload = JSON.parse(data.content);
 			} catch (error) {
 				console.error('Failed to parse solution output JSON:', error);
+				chatData.messages.push({
+					id: `solution-parse-error-${Date.now()}`,
+					type: 'ai',
+					content: 'The solution output could not be applied because the AI returned invalid data. Please try again.',
+					timestamp: new Date().toISOString(),
+					markedAsSolution: false,
+					Liked: false,
+					Disliked: false,
+				});
 				return;
 			}
 
@@ -581,6 +601,7 @@ export default {
 				if (targetMessage) {
 					targetMessage.content = solutionPayload.message;
 					targetMessage.markedAsSolution = true;
+					targetMessage.solutionPending = false;
 				}
 			}
 

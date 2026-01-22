@@ -119,6 +119,11 @@ public class ChatStreamWorker : BackgroundService
                 return true; // Ack anyway to remove from queue
             }
 
+            if (isSolutionJob)
+            {
+                _logger.LogInformation("Processing solution job for chatId {ChatId}", chatId);
+            }
+
             // Create database session
             var session = DatabaseHelper.GetSession();
             if (session == null)
@@ -254,6 +259,7 @@ public class ChatStreamWorker : BackgroundService
             var shouldUseStructuredSolutionFormat = ShouldApplyDirectorSolutionFormat(node, isSolutionJob);
             if (shouldUseStructuredSolutionFormat)
             {
+                _logger.LogInformation("Applying Director solution schema for solution job, chatId {ChatId}", chatId);
                 ollamaRequest.response_format = BuildDirectorSolutionSchema();
             }
 
