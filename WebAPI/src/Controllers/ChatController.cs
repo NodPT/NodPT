@@ -178,9 +178,13 @@ namespace NodPT.API.Controllers
 
                 if (string.IsNullOrEmpty(connectionId))
                 {
-                    _logger.LogWarning("Missing SignalR ConnectionId when marking as solution - real-time notifications may not work");
-                    // Don't fail the operation, just use the existing connectionId from the message
+                    // Fallback to existing connectionId from the message (if any)
                     connectionId = message.ConnectionId;
+                    
+                    if (string.IsNullOrEmpty(connectionId))
+                    {
+                        _logger.LogWarning("Missing SignalR ConnectionId when marking as solution - real-time notifications will not be sent");
+                    }
                 }
                 else
                 {
