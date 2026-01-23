@@ -68,20 +68,34 @@ public class SignalRUpdateListener : BackgroundService
         {
             var fields = envelope.Fields;
             
-            // Extract required fields
+            // Check if this is a thinking/progress message (doesn't have chatId, has messageType)
+            if (fields.TryGetValue("messageType", out var messageType) && messageType == "thinking")
+            {
+                // Handle thinking message - no database lookup needed
+                return await HandleThinkingMessage(fields, cancellationToken);
+            }
+            
+            // Extract required fields for regular AI response messages
             if (!fields.TryGetValue("chatId", out var chatId) || string.IsNullOrEmpty(chatId))
             {
                 _logger.LogWarning("SignalR update missing chatId, skipping");
                 return true; // Ack anyway to remove from queue
             }
 
-            if (!fields.TryGetValue("connectionId", out var connectionId) || string.IsNullOrEmpty(connectionId))
+            // Try to get connectionId from Redis payload first
+            string? connectionId = null;
+            if (fields.TryGetValue("connectionId", out var redisConnectionId) && !string.IsNullOrEmpty(redisConnectionId))
             {
-                _logger.LogWarning("SignalR update missing connectionId for chatId {ChatId}, skipping", chatId);
-                return true; // Ack anyway to remove from queue
+                connectionId = redisConnectionId;
+                _logger.LogDebug("Processing SignalR update for chatId {ChatId}, connectionId {ConnectionId} (from Redis)", chatId, connectionId);
+            }
+            else
+            {
+                // Fallback: Fetch connectionId from database for backward compatibility
+                _logger.LogWarning("SignalR update missing connectionId in Redis for chatId {ChatId}, attempting database fallback", chatId);
             }
 
-            _logger.LogInformation("Processing SignalR update for chatId {ChatId}, connectionId {ConnectionId}", chatId, connectionId);
+            var isSolutionOutput = fields.TryGetValue("solutionOutput", out var solutionFlag) && solutionFlag == "true";
 
             // Fetch the AI response from database
             using var scope = _serviceProvider.CreateScope();
@@ -94,39 +108,43 @@ public class SignalRUpdateListener : BackgroundService
                 return true; // Ack anyway to remove from queue
             }
 
-            // Find the original chat message
-            var originalMessage = session.FindObject<ChatMessage>(CriteriaOperator.Parse("Oid = ?", chatIdInt));
-            if (originalMessage == null)
+            // Fetch the AI response message
+            // (the chatId in Redis is the database ID of the AI response message)
+            var aiResponseMessage = session.FindObject<ChatMessage>(CriteriaOperator.Parse("Oid = ?", chatIdInt));
+            if (aiResponseMessage == null)
             {
                 _logger.LogWarning("ChatMessage not found for chatId {ChatId}", chatId);
                 return true; // Ack anyway to remove from queue
             }
 
-            // Get the AI response (latest assistant message for the same node)
-            using var aiResponses = new XPCollection<ChatMessage>(session,
-                CriteriaOperator.Parse("Node.Id = ? AND Sender = ? AND Timestamp >= ?", 
-                    originalMessage.Node?.Id, "assistant", originalMessage.Timestamp),
-                new SortProperty("Timestamp", DevExpress.Xpo.DB.SortingDirection.Descending));
-
-            if (aiResponses.Count == 0)
+            // If connectionId not in Redis payload, get it from the database message
+            if (connectionId == null)
             {
-                _logger.LogWarning("No AI response found for chatId {ChatId}", chatId);
-                return false; // Don't ack, might be too early, retry later
+                connectionId = aiResponseMessage.ConnectionId;
+
+                if (string.IsNullOrEmpty(connectionId))
+                {
+                    _logger.LogWarning("ConnectionId not found for chatId {ChatId}, skipping SignalR delivery", chatId);
+                    return true; // Ack anyway to remove from queue
+                }
+
+                _logger.LogDebug("Retrieved connectionId {ConnectionId} from database for chatId {ChatId}", connectionId, chatId);
             }
 
-            var latestResponse = aiResponses[0];
-
-            // Send to the specific client connection via SignalR
+            // Send to the specific client connection via SignalR using the standard ReceiveMessage event
+            // This consolidates all message types under one event to reduce redundancy
             await _hubContext.Clients.Client(connectionId).SendAsync(
-                "ReceiveAIResponse",
+                "ReceiveMessage",
                 new
                 {
                     chatId = chatId,
-                    messageId = latestResponse.Oid,
-                    content = latestResponse.Message,
-                    sender = latestResponse.Sender,
-                    timestamp = latestResponse.Timestamp,
-                    nodeId = originalMessage.Node?.Id
+                    messageId = aiResponseMessage.Oid,
+                    content = aiResponseMessage.Message,
+                    sender = aiResponseMessage.Sender,
+                    timestamp = aiResponseMessage.Timestamp,
+                    nodeId = aiResponseMessage.Node?.Id,
+                    messageType = "ai", // Indicates this is an AI response message
+                    solutionOutput = isSolutionOutput
                 },
                 cancellationToken);
 
@@ -137,6 +155,58 @@ public class SignalRUpdateListener : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling SignalR update for entry {EntryId}", envelope.EntryId);
+            return false; // Fail, will retry
+        }
+    }
+
+    /// <summary>
+    /// Handle thinking/progress messages sent from Executor
+    /// These messages show real-time progress to the user
+    /// </summary>
+    private async Task<bool> HandleThinkingMessage(Dictionary<string, string> fields, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Extract required fields for thinking messages
+            if (!fields.TryGetValue("connectionId", out var connectionId) || string.IsNullOrEmpty(connectionId))
+            {
+                _logger.LogWarning("Thinking message missing connectionId, skipping");
+                return true; // Ack anyway
+            }
+
+            if (!fields.TryGetValue("content", out var content) || string.IsNullOrEmpty(content))
+            {
+                _logger.LogWarning("Thinking message missing content, skipping");
+                return true; // Ack anyway
+            }
+
+            fields.TryGetValue("nodeId", out var nodeId);
+            fields.TryGetValue("timestamp", out var timestamp);
+
+            // Send thinking message to the specific client via SignalR using the standard ReceiveMessage event
+            // This consolidates all message types under one event to reduce redundancy
+            await _hubContext.Clients.Client(connectionId).SendAsync(
+                "ReceiveMessage",
+                new
+                {
+                    chatId = (string?)null, // No chatId for thinking messages
+                    messageId = (int?)null, // No messageId for thinking messages
+                    content = content,
+                    sender = "assistant",
+                    timestamp = timestamp ?? DateTime.UtcNow.ToString("o"),
+                    nodeId = nodeId,
+                    messageType = "thinking", // Indicates this is a progress/thinking message
+                    thinking = true // Additional flag for backward compatibility
+                },
+                cancellationToken);
+
+            _logger.LogDebug("Sent thinking message to client {ConnectionId}: {Content}", connectionId, content);
+
+            return true; // Success, ack the message
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling thinking message");
             return false; // Fail, will retry
         }
     }

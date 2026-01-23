@@ -27,6 +27,20 @@ namespace NodPT.API.Controllers
             _session = session;
         }
 
+        /// <summary>
+        /// Helper method to retrieve connectionId from DTO or HTTP header
+        /// </summary>
+        private string? GetConnectionId(string? dtoConnectionId)
+        {
+            if (!string.IsNullOrEmpty(dtoConnectionId))
+            {
+                return dtoConnectionId;
+            }
+            
+            // Fallback to header for backward compatibility
+            return Request.Headers["X-SignalR-ConnectionId"].FirstOrDefault();
+        }
+
         [HttpGet("node/{nodeId}")]
         public IActionResult GetMessagesByNodeId(string nodeId)
         {
@@ -73,12 +87,7 @@ namespace NodPT.API.Controllers
                 }
 
                 // Get the connectionId from the DTO (should be sent by frontend)
-                var connectionId = userMessage.ConnectionId;
-                if (string.IsNullOrEmpty(connectionId))
-                {
-                    // Fallback to header for backward compatibility
-                    connectionId = Request.Headers["X-SignalR-ConnectionId"].FirstOrDefault();
-                }
+                var connectionId = GetConnectionId(userMessage.ConnectionId);
 
                 if (string.IsNullOrEmpty(connectionId))
                 {
@@ -104,7 +113,7 @@ namespace NodPT.API.Controllers
                 // Add to Redis stream for executor processing
                 var entryId = await _redisService.Add("jobs:chat", envelope);
 
-                _logger.LogInformation($"Chat message queued for processing: ChatId={savedMessage.Oid}, ConnectionId={connectionId}, EntryId={entryId}");
+                _logger.LogInformation("Chat message queued for processing: ChatId={ChatId}, ConnectionId={ConnectionId}, EntryId={EntryId}", savedMessage.Oid, connectionId, entryId);
 
                 return Ok(new
                 {
@@ -141,7 +150,7 @@ namespace NodPT.API.Controllers
         }
 
         [HttpPost("mark-solution")]
-        public IActionResult MarkAsSolution([FromBody] MarkSolutionRequestDto request)
+        public async Task<IActionResult> MarkAsSolution([FromBody] MarkSolutionRequestDto request)
         {
             if (request == null) return BadRequest("Request cannot be null");
 
@@ -164,6 +173,37 @@ namespace NodPT.API.Controllers
                     return NotFound(new { error = "Message not found" });
                 }
 
+                // Get connectionId from request or header (optional)
+                var connectionId = GetConnectionId(request.ConnectionId);
+
+                if (string.IsNullOrEmpty(connectionId))
+                {
+                    // Fallback to existing connectionId from the message (if any)
+                    connectionId = message.ConnectionId;
+                    
+                    if (string.IsNullOrEmpty(connectionId))
+                    {
+                        _logger.LogWarning("Missing SignalR ConnectionId when marking as solution - real-time notifications will not be sent");
+                    }
+                }
+                else
+                {
+                    // Update the message with the current connectionId to ensure proper delivery
+                    message.ConnectionId = connectionId;
+                }
+                
+                // Commit the solution marking and any connectionId update in a single transaction
+                await _session.CommitChangesAsync();
+
+                var solutionEnvelope = new Dictionary<string, string>
+                {
+                    { "chatId", message.Oid.ToString() },
+                    { "jobType", "solution" }
+                };
+
+                var entryId = await _redisService.Add("jobs:chat", solutionEnvelope);
+                _logger.LogInformation("Solution chat queued for processing: ChatId={ChatId}, ConnectionId={ConnectionId}, EntryId={EntryId}", message.Oid, connectionId, entryId);
+
                 return Ok(new ChatMessageDto
                 {
                     Id = message.Oid,
@@ -173,7 +213,8 @@ namespace NodPT.API.Controllers
                     NodeId = message.Node?.Id,
                     MarkedAsSolution = message.MarkedAsSolution,
                     Liked = message.Liked,
-                    Disliked = message.Disliked
+                    Disliked = message.Disliked,
+                    ConnectionId = message.ConnectionId
                 });
             }
             catch (ArgumentException ex)
@@ -221,7 +262,8 @@ namespace NodPT.API.Controllers
                     NodeId = message.Node?.Id,
                     MarkedAsSolution = message.MarkedAsSolution,
                     Liked = message.Liked,
-                    Disliked = message.Disliked
+                    Disliked = message.Disliked,
+                    ConnectionId = message.ConnectionId
                 });
             }
             catch (Exception ex)
@@ -259,7 +301,8 @@ namespace NodPT.API.Controllers
                     NodeId = message.Node?.Id,
                     MarkedAsSolution = message.MarkedAsSolution,
                     Liked = message.Liked,
-                    Disliked = message.Disliked
+                    Disliked = message.Disliked,
+                    ConnectionId = message.ConnectionId
                 });
             }
             catch (Exception ex)

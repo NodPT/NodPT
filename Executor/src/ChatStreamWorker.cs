@@ -91,6 +91,7 @@ public class ChatStreamWorker : BackgroundService
         try
         {
             var fields = envelope.Fields;
+            var isSolutionJob = fields.TryGetValue("jobType", out var jobType) && jobType == "solution";
             
             // Log high-level information about the Redis job entry
             _logger.LogInformation("=== Processing Redis Job Entry ===");
@@ -116,6 +117,11 @@ public class ChatStreamWorker : BackgroundService
             {
                 _logger.LogWarning("Invalid chatId format: {ChatId}", chatId);
                 return true; // Ack anyway to remove from queue
+            }
+
+            if (isSolutionJob)
+            {
+                _logger.LogInformation("Processing solution job for chatId {ChatId}", chatId);
             }
 
             // Create database session
@@ -154,6 +160,16 @@ public class ChatStreamWorker : BackgroundService
                 return true; // Ack anyway - no node association
             }
 
+            string nodeId = node.Id!;
+            var connectionId = chatMessage.ConnectionId;
+
+            // Send initial thinking message to frontend
+            // Let the user know we've started processing their message
+            if (!string.IsNullOrEmpty(connectionId))
+            {
+                await SendThinkingMessageAsync(connectionId, nodeId, "Starting to work on your request...");
+            }
+
             // Step 6: Get projectId from node data to get project data
             var project = node.Project;
             if (project == null)
@@ -190,7 +206,11 @@ public class ChatStreamWorker : BackgroundService
             _logger.LogInformation("Using model: {ModelName} (from AIModel: {AIModelName})", 
                 modelName, matchingAiModel?.Name ?? "default");
 
-            string nodeId = node.Id!;
+            // Send thinking message about loading memory context
+            if (!string.IsNullOrEmpty(connectionId))
+            {
+                await SendThinkingMessageAsync(connectionId, nodeId, "Loading conversation context...");
+            }
 
             // Step 10: Load memory summary and history for the node
             var summary = await _memoryService.LoadSummaryAsync(nodeId, session);
@@ -236,6 +256,13 @@ public class ChatStreamWorker : BackgroundService
                 options = LlmChatService.BuildOptionsFromAIModel(matchingAiModel)
             };
 
+            var shouldUseStructuredSolutionFormat = ShouldApplyDirectorSolutionFormat(node, isSolutionJob);
+            if (shouldUseStructuredSolutionFormat)
+            {
+                _logger.LogInformation("Applying Director solution schema for solution job, chatId {ChatId}", chatId);
+                ollamaRequest.response_format = BuildDirectorSolutionSchema();
+            }
+
             _logger.LogInformation("Prepared Ollama request with {MessageCount} messages for chatId {ChatId} (including memory context)", 
                 messages.Count, chatId);
             _logger.LogInformation("Ollama Request Details - Model: {Model}, SystemPrompts: {SystemPromptCount}, History: {HistoryCount}, UserMessage Length: {UserMessageLength}", 
@@ -251,6 +278,12 @@ public class ChatStreamWorker : BackgroundService
                 : "Config Default";
             _logger.LogInformation("Using LLM Endpoint: {Endpoint} (Source: {EndpointSource})", 
                 endpoint, endpointSource);
+
+            // Send thinking message before sending to LLM
+            if (!string.IsNullOrEmpty(connectionId))
+            {
+                await SendThinkingMessageAsync(connectionId, nodeId, "Generating response...");
+            }
 
             //! STEP 12-13: SEND MESSAGE TO OLLAMA AND WAIT FOR RESPONSE
             // Use AIModel's endpoint and options if available
@@ -316,12 +349,30 @@ public class ChatStreamWorker : BackgroundService
 
             _logger.LogInformation("Updated memory with AI response for node {NodeId}", nodeId);
 
-            // Step 19: Prepare new Redis data (data B) with new chatId only
-            // Other data (connectionId, nodeId, userId, projectId) are already saved in the ChatMessage
+            // Step 19: Prepare new Redis data (data B) with chatId and connectionId
+            // Include connectionId so SignalRUpdateListener can send directly without DB lookup
             var resultEnvelope = new Dictionary<string, string>
             {
                 { "chatId", aiMessage.Oid.ToString() }
             };
+
+            // Add connectionId if available, otherwise log a warning for observability
+            if (!string.IsNullOrEmpty(aiMessage.ConnectionId))
+            {
+                resultEnvelope["connectionId"] = aiMessage.ConnectionId;
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "AI message missing ConnectionId when publishing to Redis. ChatId: {ChatId}, NewChatId: {NewChatId}",
+                    chatId,
+                    aiMessage.Oid);
+            }
+
+            if (isSolutionJob)
+            {
+                resultEnvelope["solutionOutput"] = "true";
+            }
 
             var entryId = await _redisService.Add("signalr:updates", resultEnvelope);
 
@@ -355,5 +406,101 @@ public class ChatStreamWorker : BackgroundService
         await base.StopAsync(cancellationToken);
         
         _logger.LogInformation("ChatStreamWorker stopped");
+    }
+
+    private static bool ShouldApplyDirectorSolutionFormat(Node node, bool isSolutionJob)
+    {
+        return isSolutionJob && node.NodeType == NodeType.Director;
+    }
+
+    private static ResponseFormat BuildDirectorSolutionSchema()
+    {
+        return new ResponseFormat
+        {
+            type = "json_schema",
+            schema = new JsonSchema
+            {
+                type = "object",
+                properties = new Dictionary<string, JsonSchema>
+                {
+                    {
+                        "Message",
+                        new JsonSchema
+                        {
+                            type = "string",
+                            description = "Summary message for the director response."
+                        }
+                    },
+                    {
+                        "Managers",
+                        new JsonSchema
+                        {
+                            type = "array",
+                            description = "List of manager nodes to create.",
+                            items = new JsonSchema
+                            {
+                                type = "object",
+                                properties = new Dictionary<string, JsonSchema>
+                                {
+                                    {
+                                        "Name",
+                                        new JsonSchema
+                                        {
+                                            type = "string",
+                                            description = "Manager node name."
+                                        }
+                                    },
+                                    {
+                                        "Job",
+                                        new JsonSchema
+                                        {
+                                            type = "string",
+                                            description = "Manager job responsibilities."
+                                        }
+                                    }
+                                },
+                                required = new List<string> { "Name", "Job" }
+                            }
+                        }
+                    }
+                },
+                required = new List<string> { "Message", "Managers" }
+            }
+        };
+    }
+
+    /// <summary>
+    /// Send a thinking/progress message to the frontend via SignalR
+    /// These messages show the user that processing is happening
+    /// </summary>
+    /// <param name="connectionId">SignalR connection ID</param>
+    /// <param name="nodeId">Node ID for context</param>
+    /// <param name="message">Progress message to display</param>
+    private async Task SendThinkingMessageAsync(string connectionId, string nodeId, string message)
+    {
+        try
+        {
+            // Create a temporary message envelope for thinking/progress messages
+            // These use a different structure than regular chat messages
+            var thinkingEnvelope = new Dictionary<string, string>
+            {
+                { "connectionId", connectionId },
+                { "nodeId", nodeId },
+                { "content", message },
+                { "messageType", "thinking" }, // Mark as thinking type
+                { "timestamp", DateTime.UtcNow.ToString("o") }
+            };
+
+            // Send to signalr:updates stream for immediate delivery
+            await _redisService.Add("signalr:updates", thinkingEnvelope);
+            
+            _logger.LogDebug("Sent thinking message to SignalR: {Message}", message);
+        }
+        catch (Exception ex)
+        {
+            // Don't fail the whole job if thinking message fails
+            // Avoid logging the message content to prevent exposure of sensitive information
+            _logger.LogWarning(ex, "Failed to send thinking message to connectionId: {ConnectionId}", connectionId);
+        }
     }
 }

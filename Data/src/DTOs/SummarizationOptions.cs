@@ -19,11 +19,11 @@ namespace NodPT.Data.DTOs
         /// <summary>
         /// Timeout in seconds for summarization requests.
         /// </summary>
-        public int TimeoutSeconds { get; set; } = 60;
+        public int TimeoutSeconds { get; set; } = 180;
 
         /// <summary>
         /// Maximum length of the summary in characters.
         /// </summary>
-        public int MaxSummaryLength { get; set; } = 2000;
+        public int MaxSummaryLength { get; set; } = 4000;
     }
 }
