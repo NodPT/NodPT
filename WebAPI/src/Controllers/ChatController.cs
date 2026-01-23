@@ -27,6 +27,20 @@ namespace NodPT.API.Controllers
             _session = session;
         }
 
+        /// <summary>
+        /// Helper method to retrieve connectionId from DTO or HTTP header
+        /// </summary>
+        private string? GetConnectionId(string? dtoConnectionId)
+        {
+            if (!string.IsNullOrEmpty(dtoConnectionId))
+            {
+                return dtoConnectionId;
+            }
+            
+            // Fallback to header for backward compatibility
+            return Request.Headers["X-SignalR-ConnectionId"].FirstOrDefault();
+        }
+
         [HttpGet("node/{nodeId}")]
         public IActionResult GetMessagesByNodeId(string nodeId)
         {
@@ -73,12 +87,7 @@ namespace NodPT.API.Controllers
                 }
 
                 // Get the connectionId from the DTO (should be sent by frontend)
-                var connectionId = userMessage.ConnectionId;
-                if (string.IsNullOrEmpty(connectionId))
-                {
-                    // Fallback to header for backward compatibility
-                    connectionId = Request.Headers["X-SignalR-ConnectionId"].FirstOrDefault();
-                }
+                var connectionId = GetConnectionId(userMessage.ConnectionId);
 
                 if (string.IsNullOrEmpty(connectionId))
                 {
@@ -167,12 +176,7 @@ namespace NodPT.API.Controllers
                 await _session.CommitChangesAsync();
 
                 // Get connectionId from request or header
-                var connectionId = request.ConnectionId;
-                if (string.IsNullOrEmpty(connectionId))
-                {
-                    // Fallback to header for backward compatibility
-                    connectionId = Request.Headers["X-SignalR-ConnectionId"].FirstOrDefault();
-                }
+                var connectionId = GetConnectionId(request.ConnectionId);
 
                 if (string.IsNullOrEmpty(connectionId))
                 {
