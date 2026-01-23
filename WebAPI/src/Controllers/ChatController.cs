@@ -173,19 +173,26 @@ namespace NodPT.API.Controllers
                     return NotFound(new { error = "Message not found" });
                 }
 
-                // Get connectionId from request or header
+                // Get connectionId from request or header (optional)
                 var connectionId = GetConnectionId(request.ConnectionId);
 
                 if (string.IsNullOrEmpty(connectionId))
                 {
-                    _logger.LogWarning("Missing SignalR ConnectionId when marking as solution");
-                    return BadRequest(new { error = "ConnectionId is required" });
+                    // Fallback to existing connectionId from the message (if any)
+                    connectionId = message.ConnectionId;
+                    
+                    if (string.IsNullOrEmpty(connectionId))
+                    {
+                        _logger.LogWarning("Missing SignalR ConnectionId when marking as solution - real-time notifications will not be sent");
+                    }
                 }
-
-                // Update the message with the current connectionId to ensure proper delivery
-                message.ConnectionId = connectionId;
+                else
+                {
+                    // Update the message with the current connectionId to ensure proper delivery
+                    message.ConnectionId = connectionId;
+                }
                 
-                // Commit both the solution marking and connectionId update in a single transaction
+                // Commit the solution marking and any connectionId update in a single transaction
                 await _session.CommitChangesAsync();
 
                 var solutionEnvelope = new Dictionary<string, string>
