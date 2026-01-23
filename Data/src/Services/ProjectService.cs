@@ -64,9 +64,9 @@ namespace NodPT.Data.Services
             };
 
             // Map MatchingAIModel if available
-            if (node.GetMatchingAIModel() != null)
+            var aiModel = node.GetMatchingAIModel()!;
+            if (aiModel != null)
             {
-                var aiModel = node.GetMatchingAIModel()!;
                 dto.MatchingAIModel = new AIModelDto
                 {
                     Id = aiModel.Oid,
@@ -117,7 +117,7 @@ namespace NodPT.Data.Services
         public ProjectDto? GetProject(int id)
         {
 
-            var project = user!.Projects.FirstOrDefault(x => x.Oid == id); 
+            var project = user!.Projects.FirstOrDefault(x => x.Oid == id);
 
             if (project == null)
             {
@@ -180,7 +180,7 @@ namespace NodPT.Data.Services
         /// <exception cref="InvalidOperationException">Thrown when service was not initialized with user</exception>
         public ProjectDto CreateProject(ProjectDto projectDto)
         {
-           
+
             try
             {
 
@@ -231,7 +231,7 @@ namespace NodPT.Data.Services
                     // Attach welcome message to the default Director node
                     var nodeService = new NodeService(session);
                     nodeService.AttachWelcomeMessage(defaultNode, this.user);
-                
+
                 }
 
                 session.CommitTransaction();
@@ -277,7 +277,7 @@ namespace NodPT.Data.Services
                     throw new InvalidOperationException("You don't have permission to update this project");
                 }
 
-              
+
                 var template = projectDto.TemplateId.HasValue
                     ? session.GetObjectByKey<Template>(projectDto.TemplateId.Value)
                     : null;

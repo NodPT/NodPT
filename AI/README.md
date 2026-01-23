@@ -6,8 +6,7 @@ AI inference service using Ollama for large language model processing. This serv
 
 - **Ollama**: Open-source LLM inference engine
 - **Docker**: Containerized deployment
-- **NVIDIA GPU**: Required for optimal performance
-- **CUDA**: GPU acceleration support
+- **GPU Acceleration (Optional)**: NVIDIA GPU + CUDA when available
 
 ### Supported Models
 
@@ -42,13 +41,18 @@ AI Response
 
 ```
 AI/
-├── docker-compose.yml    # Docker Compose configuration
+├── docker-compose.yml         # CPU-only Docker Compose configuration (default)
+├── docker-compose.gpu.yml     # NVIDIA GPU-enabled Docker Compose configuration
 └── README.md            # This file
 ```
 
 ## 🚀 Getting Started
 
 ### Prerequisites
+
+- **Docker & Docker Compose**: Container runtime
+
+Optional (for NVIDIA GPU acceleration):
 
 - **NVIDIA GPU**: CUDA-compatible GPU (RTX 2060 or better recommended)
 - **NVIDIA Docker Runtime**: GPU support in Docker
@@ -84,25 +88,36 @@ sudo systemctl restart docker
 
 ## 🐳 Docker Deployment
 
-### Build and Run
+### Build and Run (CPU)
 
 ```bash
 # Navigate to AI directory
 cd AI
 
 # Start Ollama service
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop service
-docker-compose down
+docker compose down
+
+### Build and Run (NVIDIA GPU)
+
+Use this only if you have an NVIDIA GPU and Docker GPU support configured.
+
+```bash
+cd AI
+docker compose -f docker-compose.gpu.yml up -d
+```
 ```
 
 The service will be accessible at `http://localhost:11434`
 
 ### Docker Compose Configuration
+
+CPU (default):
 
 ```yaml
 services:
@@ -110,19 +125,6 @@ services:
     image: ollama/ollama:latest
     container_name: ollama
     restart: unless-stopped
-    
-    # Enable NVIDIA GPU
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [ gpu ]
-    
-    # OR for older Docker versions:
-    # runtime: nvidia
-
-    # enable all GPUs
-    gpus: all
     
     # Environment variables for remote access
     environment:
@@ -138,6 +140,8 @@ services:
 volumes:
   ollama_data:
 ```
+
+NVIDIA GPU: see `docker-compose.gpu.yml`.
 
 ### Remote Access Configuration
 
@@ -498,3 +502,7 @@ For issues and questions:
 - Test API: `curl http://localhost:11434/api/tags`
 - Open an issue on GitHub
 - Contact the development team
+
+# development models
+- ollama pull deepseek-coder:1.3b
+- ollama pull gemma3:1b

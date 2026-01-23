@@ -8,9 +8,16 @@ services:
     container_name: ollama
     restart: unless-stopped
 
-    # CPU-only by default (works on AMD laptops / WSL without NVIDIA runtime)
+    # NVIDIA GPU (requires NVIDIA GPU + drivers + Docker Desktop NVIDIA integration)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [ gpu ]
 
-    # Environment variables for remote access
+    # enable all GPUs
+    gpus: all
+
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
       - OLLAMA_ORIGINS=*
@@ -21,11 +28,8 @@ services:
     ports:
       - "11434:11434"
 
-    # Connect to backend network for communication with Executor
     networks:
       - backend_network
 
 volumes:
   ollama_data:
-
-
