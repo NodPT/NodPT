@@ -4,5 +4,6 @@ namespace NodPT.Data.DTOs
     {
         public string? NodeId { get; set; }
         public int? MessageId { get; set; }
+        public string? ConnectionId { get; set; }
     }
 }
