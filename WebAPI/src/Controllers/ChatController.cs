@@ -113,7 +113,7 @@ namespace NodPT.API.Controllers
                 // Add to Redis stream for executor processing
                 var entryId = await _redisService.Add("jobs:chat", envelope);
 
-                _logger.LogInformation($"Chat message queued for processing: ChatId={savedMessage.Oid}, ConnectionId={connectionId}, EntryId={entryId}");
+                _logger.LogInformation("Chat message queued for processing: ChatId={ChatId}, ConnectionId={ConnectionId}, EntryId={EntryId}", savedMessage.Oid, connectionId, entryId);
 
                 return Ok(new
                 {
@@ -173,8 +173,6 @@ namespace NodPT.API.Controllers
                     return NotFound(new { error = "Message not found" });
                 }
 
-                await _session.CommitChangesAsync();
-
                 // Get connectionId from request or header
                 var connectionId = GetConnectionId(request.ConnectionId);
 
@@ -186,6 +184,8 @@ namespace NodPT.API.Controllers
 
                 // Update the message with the current connectionId to ensure proper delivery
                 message.ConnectionId = connectionId;
+                
+                // Commit both the solution marking and connectionId update in a single transaction
                 await _session.CommitChangesAsync();
 
                 var solutionEnvelope = new Dictionary<string, string>
