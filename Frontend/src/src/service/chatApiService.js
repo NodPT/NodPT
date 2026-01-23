@@ -60,9 +60,12 @@ class ChatApiService {
 				throw new Error('messageId is required for marking as solution');
 			}
 
+			this.connectionId = localStorage.getItem('connectionId'); // Get current SignalR connection ID
+			
 			const response = await this.api.post(`${this.baseURL}/mark-solution`, {
 				MessageId: messageId,
 				NodeId: nodeId,
+				ConnectionId: this.connectionId || null,
 			});
 			return response;
 		} catch (error) {

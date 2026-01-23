@@ -27,6 +27,20 @@ namespace NodPT.API.Controllers
             _session = session;
         }
 
+        /// <summary>
+        /// Helper method to retrieve connectionId from DTO or HTTP header
+        /// </summary>
+        private string? GetConnectionId(string? dtoConnectionId)
+        {
+            if (!string.IsNullOrEmpty(dtoConnectionId))
+            {
+                return dtoConnectionId;
+            }
+            
+            // Fallback to header for backward compatibility
+            return Request.Headers["X-SignalR-ConnectionId"].FirstOrDefault();
+        }
+
         [HttpGet("node/{nodeId}")]
         public IActionResult GetMessagesByNodeId(string nodeId)
         {
@@ -73,12 +87,7 @@ namespace NodPT.API.Controllers
                 }
 
                 // Get the connectionId from the DTO (should be sent by frontend)
-                var connectionId = userMessage.ConnectionId;
-                if (string.IsNullOrEmpty(connectionId))
-                {
-                    // Fallback to header for backward compatibility
-                    connectionId = Request.Headers["X-SignalR-ConnectionId"].FirstOrDefault();
-                }
+                var connectionId = GetConnectionId(userMessage.ConnectionId);
 
                 if (string.IsNullOrEmpty(connectionId))
                 {
@@ -104,7 +113,7 @@ namespace NodPT.API.Controllers
                 // Add to Redis stream for executor processing
                 var entryId = await _redisService.Add("jobs:chat", envelope);
 
-                _logger.LogInformation($"Chat message queued for processing: ChatId={savedMessage.Oid}, ConnectionId={connectionId}, EntryId={entryId}");
+                _logger.LogInformation("Chat message queued for processing: ChatId={ChatId}, ConnectionId={ConnectionId}, EntryId={EntryId}", savedMessage.Oid, connectionId, entryId);
 
                 return Ok(new
                 {
@@ -164,6 +173,19 @@ namespace NodPT.API.Controllers
                     return NotFound(new { error = "Message not found" });
                 }
 
+                // Get connectionId from request or header
+                var connectionId = GetConnectionId(request.ConnectionId);
+
+                if (string.IsNullOrEmpty(connectionId))
+                {
+                    _logger.LogWarning("Missing SignalR ConnectionId when marking as solution");
+                    return BadRequest(new { error = "ConnectionId is required" });
+                }
+
+                // Update the message with the current connectionId to ensure proper delivery
+                message.ConnectionId = connectionId;
+                
+                // Commit both the solution marking and connectionId update in a single transaction
                 await _session.CommitChangesAsync();
 
                 var solutionEnvelope = new Dictionary<string, string>
@@ -173,7 +195,7 @@ namespace NodPT.API.Controllers
                 };
 
                 var entryId = await _redisService.Add("jobs:chat", solutionEnvelope);
-                _logger.LogInformation("Solution chat queued for processing: ChatId={ChatId}, EntryId={EntryId}", message.Oid, entryId);
+                _logger.LogInformation("Solution chat queued for processing: ChatId={ChatId}, ConnectionId={ConnectionId}, EntryId={EntryId}", message.Oid, connectionId, entryId);
 
                 return Ok(new ChatMessageDto
                 {
