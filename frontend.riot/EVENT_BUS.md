@@ -135,7 +135,7 @@ Visit `/event-bus-demo` in the application to see a working example of two compo
 2. A Riot.js plugin injects it into all components:
    ```javascript
    export default function eventBusPlugin(component) {
-     component.prototype.$eventBus = eventBus;
+     component.$eventBus = eventBus;
    }
    ```
 
