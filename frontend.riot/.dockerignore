@@ -1,0 +1,29 @@
+# Node / build artifacts
+node_modules
+dist
+.vite
+*.log
+
+# Environment & local config
+.env.local
+.env.development
+.env.test
+.env.production.local
+.env
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+
+# Git
+.git
+.gitignore
+
+# Docker files not needed in build context
+docker-compose.yml
+
+# Test files
+__tests__/
+coverage/

@@ -1,0 +1,104 @@
+.landing-page {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1e3e 55%, #0f1b3d 100%);
+  color: #f8f9fa;
+}
+
+.landing-header {
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.landing-header.scrolled {
+  background-color: rgba(10, 14, 39, 0.95);
+  box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.25);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #0d6efd, #9d4edd 55%, #ff6ea7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.landing-nav-link {
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.landing-nav-link:hover,
+.landing-nav-link:focus {
+  color: #ffffff;
+}
+
+.landing-hero {
+  min-height: 100vh;
+}
+
+.hero-background {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ai-particles {
+  position: absolute;
+  inset: 0;
+}
+
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: rgba(13, 110, 253, 0.7);
+  box-shadow: 0 0 10px rgba(13, 110, 253, 0.6);
+  animation: landing-particle 16s ease-in-out infinite;
+}
+
+@keyframes landing-particle {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate(36px, -36px);
+    opacity: 0.85;
+  }
+}
+
+.use-case-grid .card {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(6px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.use-case-grid .card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.35);
+}
+
+.multitasking-diagram {
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.trust-section {
+  position: relative;
+  overflow: hidden;
+}
+
+.trust-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top, rgba(13, 110, 253, 0.15), transparent 65%);
+  pointer-events: none;
+}
+
+.landing-footer {
+  background-color: rgba(7, 11, 30, 0.9);
+}
