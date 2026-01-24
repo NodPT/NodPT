@@ -9,4 +9,9 @@ export default [
     label: "About",
     componentName: "about",
   },
+  {
+    path: "/event-bus-demo",
+    label: "Event Bus Demo",
+    componentName: "event-bus-demo",
+  },
 ];
