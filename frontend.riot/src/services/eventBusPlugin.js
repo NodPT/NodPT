@@ -32,9 +32,9 @@ import eventBus from './eventBus.js';
  *   - Document the data structure passed with each event
  */
 export default function eventBusPlugin(component) {
-  // Add $eventBus to the component prototype
-  // This makes it available as this.$eventBus in all components
-  component.prototype.$eventBus = eventBus;
+  // Add $eventBus to each component instance
+  // riot.install calls this function for each component instance
+  component.$eventBus = eventBus;
 }
 
 // Also export the event bus for direct use outside components

@@ -63,17 +63,16 @@ describe("Event Bus Plugin Unit Test", () => {
     expect(callCount).toBe(1);
   });
 
-  it("Plugin adds $eventBus to component prototype", () => {
-    // Create a mock component class
-    const MockComponent = function() {};
-    MockComponent.prototype = {};
+  it("Plugin adds $eventBus to component instance", () => {
+    // Create a mock component instance
+    const mockComponentInstance = {};
     
-    // Install the plugin
-    eventBusPlugin(MockComponent);
+    // Install the plugin on the component instance
+    eventBusPlugin(mockComponentInstance);
     
-    // Check if $eventBus is added to the prototype
-    expect(MockComponent.prototype.$eventBus).toBeDefined();
-    expect(MockComponent.prototype.$eventBus).toBe(eventBus);
+    // Check if $eventBus is added to the instance
+    expect(mockComponentInstance.$eventBus).toBeDefined();
+    expect(mockComponentInstance.$eventBus).toBe(eventBus);
   });
 
   it("Multiple components can communicate through event bus", () => {
