@@ -1,9 +1,12 @@
 import "litegraph.js/css/litegraph.css"
 import { LiteGraph, LGraph, LGraphCanvas } from "litegraph.js"
-let bus = null
-let EVENT_TYPES = null
+let bus
+let EVENT_TYPES
 
 export const setBus = (busInstance, eventTypes) => {
+  if (!busInstance || !eventTypes) {
+    return
+  }
   bus = busInstance
   EVENT_TYPES = eventTypes
 }
