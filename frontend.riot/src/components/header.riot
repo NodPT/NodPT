@@ -200,19 +200,32 @@
           rename: 'renameProjectModal',
           delete: 'deleteProjectModal'
         }
-        if (modalMap[action]) {
-          const modal = new Modal(document.getElementById(modalMap[action]))
-          modal.show()
-          return
+        const modalId = modalMap[action]
+        if (modalId) {
+          const modalElement = document.getElementById(modalId)
+          if (typeof Modal !== 'undefined' && modalElement) {
+            const modal = new Modal(modalElement)
+            modal.show()
+            return
+          } else {
+            console.warn(`Modal element "${modalId}" not found or Modal is unavailable; falling back to PROJECT_ACTION "${action}".`)
+          }
         }
         this.bus.trigger(this.EVENT_TYPES.PROJECT_ACTION, action)
       },
       nodeAction(event, action) {
         event.preventDefault()
         if (action === 'add') {
-          const modal = new Modal(document.getElementById('addNodeModal'))
-          modal.show()
-          return
+          const modalElement = document.getElementById('addNodeModal')
+          if (typeof Modal !== 'undefined' && modalElement) {
+            const modal = new Modal(modalElement)
+            modal.show()
+            return
+          } else {
+            console.warn('Modal element "addNodeModal" not found or Modal is unavailable; falling back to NODE_ACTION "add".')
+            this.bus.trigger(this.EVENT_TYPES.NODE_ACTION, action)
+            return
+          }
         }
         if (action === 'delete') {
           if (this.state.isDirectorSelected) return
