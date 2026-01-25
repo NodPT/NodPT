@@ -63,9 +63,9 @@
       <div class="d-flex align-items-center">
         <div class="input-group me-2">
           <input type="text" class="form-control" placeholder="Search nodes..." value={state.searchTerm} oninput={handleSearchInput} onkeyup={handleSearchKey} ref={searchInputRef} />
-        <button if={state.searchTerm} class="btn btn-outline-secondary" type="button" onclick={clearSearch} title="Clear search">
-          <i class="bi bi-x"></i>
-        </button>
+          <button if={state.searchTerm} class="btn btn-outline-secondary" type="button" onclick={clearSearch} title="Clear search">
+            <i class="bi bi-x"></i>
+          </button>
         </div>
         <button class="btn btn-outline-secondary btn-sm" onclick={closeSearchPopup} title="Close search">
           <i class="bi bi-x-lg"></i>
