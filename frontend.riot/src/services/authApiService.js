@@ -114,9 +114,10 @@ class AuthApiService {
 	async loginAndStore(rememberMe = false, provider = 'Google') {
 		const isDevelopment = import.meta.env.VITE_ENV === 'Development';
 		let firebaseToken = 'dev-mock-token';
+		const providerName = this.loginProviders[provider] ? provider : 'Google';
 
 		if (!isDevelopment) {
-			const loginFn = this.loginProviders[provider];
+			const loginFn = this.loginProviders[providerName];
 			if (!loginFn) {
 				throw new Error('Login provider is not configured');
 			}
@@ -126,7 +127,7 @@ class AuthApiService {
 			firebaseToken = await user.getIdToken();
 		}
 
-		const response = await this.login(firebaseToken, rememberMe, provider);
+		const response = await this.login(firebaseToken, rememberMe, providerName);
 		this.notifySignIn();
 		return response;
 	}
