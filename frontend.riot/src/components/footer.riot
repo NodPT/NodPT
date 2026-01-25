@@ -49,6 +49,7 @@
         if (import.meta.env && import.meta.env.VITE_ENV === 'QA') {
           this.update({ isQAMode: true })
         }
+        this.progressContainer = this.root.querySelector('.footer-progress')
         this.applyProgressWidth()
       },
       onUpdated() {
@@ -87,9 +88,8 @@
         return Math.max(0, Math.min(100, value))
       },
       applyProgressWidth() {
-        const container = this.root.querySelector('.footer-progress')
-        if (container) {
-          container.style.setProperty('--progress-width', `${this.progressValue}%`)
+        if (this.progressContainer) {
+          this.progressContainer.style.setProperty('--progress-width', `${this.progressValue}%`)
         }
       },
       handleZoomFit() {

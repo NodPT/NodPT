@@ -11,6 +11,11 @@ class AuthApiService {
 	constructor() {
 		this.baseURL = '/auth';
 		this.api = null;
+		this.loginProviders = {
+			Google: this.loginWithGoogle.bind(this),
+			Facebook: this.loginWithFacebook.bind(this),
+			Microsoft: this.loginWithMicrosoft.bind(this),
+		};
 	}
 
 	/**
@@ -111,13 +116,7 @@ class AuthApiService {
 		let firebaseToken = 'dev-mock-token';
 
 		if (!isDevelopment) {
-			const providerMap = {
-				Google: this.loginWithGoogle.bind(this),
-				Facebook: this.loginWithFacebook.bind(this),
-				Microsoft: this.loginWithMicrosoft.bind(this),
-			};
-
-			const loginFn = providerMap[provider];
+			const loginFn = this.loginProviders[provider];
 			if (!loginFn) {
 				throw new Error('Login provider is not configured');
 			}
