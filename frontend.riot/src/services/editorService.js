@@ -7,6 +7,9 @@ export const setBus = (busInstance, eventTypes) => {
   if (!busInstance || typeof busInstance.trigger !== 'function' || !eventTypes || typeof eventTypes !== 'object') {
     return false
   }
+  if (!eventTypes.NODE_ADDED || !eventTypes.NODE_DELETED) {
+    return false
+  }
   bus = busInstance
   EVENT_TYPES = eventTypes
   return true
@@ -14,8 +17,9 @@ export const setBus = (busInstance, eventTypes) => {
 
 /**
  * Emit an event if the bus and event types are initialized.
- * @param {string} eventType - Event name to trigger.
+ * @param {string} eventType - Event name from EVENT_TYPES to trigger.
  * @param {Object} payload - Event payload.
+ * @returns {void} Does nothing when bus/event types are not set.
  */
 const emitEvent = (eventType, payload) => {
   if (!bus || !EVENT_TYPES) {
