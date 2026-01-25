@@ -1,10 +1,10 @@
-import { auth, googleProvider, facebookProvider, microsoftProvider, signOutAll as firebaseSignOutAll } from '../firebase';
+import { auth, googleProvider, facebookProvider, microsoftProvider, signOutAll as firebaseSignOutAll } from '../plugins/firebase';
 import {
 	createUserWithEmailAndPassword,
 	signInWithEmailAndPassword,
 	signInWithPopup,
 } from 'firebase/auth';
-import { this.bus.trigger, EVENT_TYPES } from '../rete/bus';
+import { bus, EVENT_TYPES } from '../plugins/bus';
 
 class AuthApiService {
 	constructor() {
@@ -58,7 +58,7 @@ class AuthApiService {
 	 * Should be called after Firebase authentication completes
 	 */
 	notifySignIn() {
-		this.bus.trigger(EVENT_TYPES.AUTH_SIGNED_IN);
+		bus.trigger(EVENT_TYPES.AUTH_SIGNED_IN);
 	}
 
 	/**
