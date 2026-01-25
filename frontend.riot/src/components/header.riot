@@ -172,13 +172,17 @@
         this.update({ searchTerm: '', searchResults: [], currentSearchIndex: 0, hasSearched: false })
         this.bus.trigger(this.EVENT_TYPES.SEARCH_CLEAR)
       },
+      searchInputRef(el) {
+        // Callback ref assigned in the template: ref={searchInputRef}
+        this.searchInputEl = el
+      },
       toggleSearchPopup() {
         const nextVisible = !this.state.searchPopupVisible
         this.update({ searchPopupVisible: nextVisible })
         if (nextVisible) {
           setTimeout(() => {
-            if (this.refs?.searchInputRef) {
-              this.refs.searchInputRef.focus()
+            if (this.searchInputEl) {
+              this.searchInputEl.focus()
             }
           }, 0)
         }
