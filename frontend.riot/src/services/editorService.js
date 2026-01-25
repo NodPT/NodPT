@@ -5,10 +5,18 @@ let EVENT_TYPES
 
 export const setBus = (busInstance, eventTypes) => {
   if (!busInstance || !eventTypes) {
-    return
+    return false
   }
   bus = busInstance
   EVENT_TYPES = eventTypes
+  return true
+}
+
+const emitEvent = (eventType, payload) => {
+  if (!bus || !EVENT_TYPES) {
+    return
+  }
+  bus.trigger(eventType, payload)
 }
 
 let activeGraphState = null
@@ -121,9 +129,7 @@ export const AddNode = (id, title, nodeType, outputs = [], connectFrom = null) =
     }
   }
 
-  if (bus && EVENT_TYPES) {
-    bus.trigger(EVENT_TYPES.NODE_ADDED, { id: node.id, title: node.title, nodeType: node.properties.nodeType })
-  }
+  emitEvent(EVENT_TYPES?.NODE_ADDED, { id: node.id, title: node.title, nodeType: node.properties.nodeType })
   return node
 }
 
@@ -144,9 +150,7 @@ export const RemoveNode = (id) => {
   }
 
   graph.remove(node)
-  if (bus && EVENT_TYPES) {
-    bus.trigger(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
-  }
+  emitEvent(EVENT_TYPES?.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
   return true
 }
 
@@ -165,9 +169,7 @@ export const Clear = () => {
       return
     }
     graph.remove(node)
-    if (bus && EVENT_TYPES) {
-      bus.trigger(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
-    }
+    emitEvent(EVENT_TYPES?.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
     removed += 1
   })
 
@@ -260,9 +262,7 @@ export const initGraph = (canvas, container, options = {}) => {
     if (node?.properties?.nodeType === NODE_TYPES.DIRECTOR) {
       return
     }
-    if (bus && EVENT_TYPES) {
-      bus.trigger(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
-    }
+    emitEvent(EVENT_TYPES?.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
   }
 
   // create some demo nodes
