@@ -1,22 +1,33 @@
 # NodPT frontend.riot (Riot + Vite)
 
+# app brief documentation
+- this is the app visualize the AI nodes graph and manage the projects.
+- there are 4 node types:
+  nodeTypes:
+  - Director (cannot delete or clear)
+  - Manager
+  - Inspector
+  - Worker
+
+- file `components/graph.riot` is the main graph editor component. used litegraph.js to visualize the nodes and connections. use `editorService.js` to control the graph with public functions of AddNode, RemoveNode, Clear. Important: Director node is always present and cannot be removed.
+
 ## folder structure
 frontend.riot
 - src
--- components: all the components that are being used in the pages, only .riot files are here
+-- components: all the components that are being used in the pages folder, only .riot files are here
 -- services: all the services of data and logic
 -- plugins: all the tools
 -- styles: all the global styles (dark/light themes)
 -- nginx: nginx config for production
--- pages: page components (lazy loaded), only .riot files are here
 
 ## Stack and entry points
 - Riot 10 + Vite; components live in .riot files (no <template> tag).
 - App boot: src/index.js mounts src/app.riot and registers globals via src/register-global-components.js.
 - UI uses Bootstrap 5 and bootstrap-icons; 
-- litegraph.js is a core dependency for visualizing the AI nodes on the main editor. https://github.com/jagenjo/litegraph.js
+- litegraph.js is a core dependency for visualizing the AI nodes on the main editor. https://github.com/jagenjo/litegraph.js and https://paladium-developpement.github.io/litegraph.js/
 - pure javaScript (ES6+), no TypeScript.
 - pure CSS (no SASS/LESS).
+
 
 ## Routing and page structure
 - @riotjs/route is wired in src/app.riot; 
@@ -39,7 +50,7 @@ frontend.riot
 
   <script>
     import { Router, Route } from '@riotjs/route'
-
+    // riot cannot load route by array of components. add route mannually as above.
     export default {
       components: { Router, Route }
     }

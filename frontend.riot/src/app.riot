@@ -1,14 +1,14 @@
 <app>
   <router>
-    <div if={state.showNotFound}>
-      <not-found />
-    </div>
-    <div if={!state.showNotFound}>
     <route path="/">
-      <Home name={route[0]} />
+      <Home />
     </route>
-      
-    </div>
+    <route path="/terms">
+      <Terms />
+    </route>
+    <route path="/editor">
+      <Graph />
+    </route>
   </router>
 
   <script>
@@ -24,21 +24,13 @@
         NotFound,
         Home: lazy(Loader, () => import('./pages/home.riot')),
         About: lazy(Loader, () => import('./pages/about.riot')),
+        Terms: lazy(Loader, () => import('./pages/terms.riot')),
+        Graph: lazy(Loader, () => import('./components/graph.riot')),
       },
       state: {
         showNotFound: false,
-        activePage: null
       },
       onBeforeMount() {
-        this.anyRouteStream = route('(.*)')
-        this.anyRouteStream.on.value(this.onAnyRoute)
-      },
-      onAnyRoute(path) {
-        const activePage = pages.find(page => match(path.pathname, toRegexp(page.path)))
-        this.update({
-          activePage,
-          showNotFound: !activePage
-        })
       },
       onBeforeUnmount() {
         this.anyRouteStream.end()
