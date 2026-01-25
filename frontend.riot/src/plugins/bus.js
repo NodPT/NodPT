@@ -6,7 +6,7 @@ import observable from '@riotjs/observable';
 const bus = observable({});
 
 // Event names constants to avoid typos across the application
-export const EVENT_TYPES = {
+const EVENT_TYPES = {
   // Node events
   NODE_ADDED: 'node:added',
   NODE_SELECTED: 'node:selected',
@@ -80,5 +80,4 @@ export default function eventBusPlugin(component) {
 }
 
 // Also export the event bus for direct use outside components
-export { bus, eventBusPlugin };
-
+export { bus, eventBusPlugin, EVENT_TYPES };
