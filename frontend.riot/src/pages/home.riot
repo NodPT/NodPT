@@ -535,7 +535,7 @@
         this.applyBodyTheme(nextThemeIsDark)
       },
       navigateToProject() {
-        route('/project')
+        route('/editor')
       },
       scrollToUseCases() {
         const element = this.root.querySelector('#use-cases')
@@ -557,7 +557,7 @@
       },
       tryScenario(useCase) {
         console.log('Trying scenario:', useCase.title)
-        route('/project')
+        route('/editor')
       },
       createParticles() {
         const particlesContainer = this.root.querySelector('.ai-particles')

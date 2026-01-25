@@ -1,0 +1,100 @@
+<footer-bar>
+  <footer class="navbar studio-footer p-0 fixed-bottom">
+    <div class="container-fluid d-flex align-items-center py-1">
+      <div class="d-flex align-items-center me-3">
+        <span if={props.selectedNode} class="badge text-bg-primary me-2">
+          <i class="bi bi-node-plus"></i> {props.selectedNode.label}
+        </span>
+        <span class="badge text-bg-secondary me-2">
+          <i class="bi bi-diagram-3"></i> {props.totalNodes}
+        </span>
+      </div>
+
+      <div class="progress flex-grow-1 mx-2" style="height: 10px">
+        <div class="progress-bar bg-info" role="progressbar" style={"width: " + props.progress + "%"} aria-valuenow={props.progress} aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
+
+      <div class="d-flex align-items-center ms-2">
+        <span class={"badge " + connectionStatusClass} title={connectionStatusTitle} onclick={handleSignalRClick} style={state.isQAMode ? 'cursor: pointer;' : ''}>
+          <i class={"bi " + connectionStatusIcon}></i>
+        </span>
+      </div>
+
+      <button class="btn btn-sm ms-2 shadow-none" onclick={handleZoomFit} title="Zoom to Fit All Nodes">
+        <i class="bi bi-arrows-fullscreen"></i>
+      </button>
+
+      <button class="btn btn-sm ms-2 shadow-none" onclick={handleArrangeNodes} title="Auto Arrange Nodes">
+        <i class="bi bi-grid-3x3"></i>
+      </button>
+
+      <button class="btn btn-sm ms-2 shadow-none" onclick={handleToggleMinimap} title="Toggle Minimap">
+        <i class={"bi " + (props.minimapVisible ? 'bi-eye-slash' : 'bi-eye')}></i>
+      </button>
+
+      <button class="btn btn-sm ms-2 shadow-none" onclick={handleToggleRightPanel} title="Toggle Right Panel">
+        <i class="bi bi-layout-sidebar-reverse"></i>
+      </button>
+    </div>
+  </footer>
+
+  <script>
+    import { bus, EVENT_TYPES } from '../plugins/bus'
+
+    export default {
+      state: {
+        isQAMode: false
+      },
+      onMounted() {
+        if (import.meta.env && import.meta.env.VITE_ENV === 'QA') {
+          this.update({ isQAMode: true })
+        }
+      },
+      get connectionStatusClass() {
+        const statusMap = {
+          connected: 'text-bg-success',
+          connecting: 'text-bg-warning',
+          reconnecting: 'text-bg-warning',
+          disconnected: 'text-bg-secondary'
+        }
+        return statusMap[this.props.connectionStatus] || 'text-bg-secondary'
+      },
+      get connectionStatusIcon() {
+        const iconMap = {
+          connected: 'bi-wifi',
+          connecting: 'bi-hourglass-split',
+          reconnecting: 'bi-arrow-repeat',
+          disconnected: 'bi-wifi-off'
+        }
+        return iconMap[this.props.connectionStatus] || 'bi-wifi-off'
+      },
+      get connectionStatusTitle() {
+        const titleMap = {
+          connected: 'SignalR: Connected',
+          connecting: 'SignalR: Connecting...',
+          reconnecting: 'SignalR: Reconnecting...',
+          disconnected: 'SignalR: Disconnected'
+        }
+        const baseTitle = titleMap[this.props.connectionStatus] || 'SignalR: Disconnected'
+        return this.state.isQAMode ? `${baseTitle} (Click to toggle)` : baseTitle
+      },
+      handleZoomFit() {
+        bus.trigger(EVENT_TYPES.ZOOM_FIT)
+      },
+      handleArrangeNodes() {
+        bus.trigger(EVENT_TYPES.ARRANGE_NODES)
+      },
+      handleToggleMinimap() {
+        bus.trigger(EVENT_TYPES.TOGGLE_MINIMAP)
+      },
+      handleToggleRightPanel() {
+        bus.trigger(EVENT_TYPES.TOGGLE_RIGHT_PANEL)
+      },
+      handleSignalRClick() {
+        if (this.state.isQAMode) {
+          bus.trigger(EVENT_TYPES.SIGNALR_TOGGLE_CONNECTION)
+        }
+      }
+    }
+  </script>
+</footer-bar>
