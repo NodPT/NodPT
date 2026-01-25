@@ -1,6 +1,12 @@
 import "litegraph.js/css/litegraph.css"
 import { LiteGraph, LGraph, LGraphCanvas } from "litegraph.js"
-import { bus, EVENT_TYPES } from "../plugins/bus.js"
+let bus = null
+let EVENT_TYPES = null
+
+export const setBus = (busInstance, eventTypes) => {
+  bus = busInstance
+  EVENT_TYPES = eventTypes
+}
 
 let activeGraphState = null
 let allowConnections = true
@@ -112,7 +118,9 @@ export const AddNode = (id, title, nodeType, outputs = [], connectFrom = null) =
     }
   }
 
-  bus.trigger(EVENT_TYPES.NODE_ADDED, { id: node.id, title: node.title, nodeType: node.properties.nodeType })
+  if (bus && EVENT_TYPES) {
+    bus.trigger(EVENT_TYPES.NODE_ADDED, { id: node.id, title: node.title, nodeType: node.properties.nodeType })
+  }
   return node
 }
 
@@ -133,7 +141,9 @@ export const RemoveNode = (id) => {
   }
 
   graph.remove(node)
-  bus.trigger(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
+  if (bus && EVENT_TYPES) {
+    bus.trigger(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
+  }
   return true
 }
 
@@ -152,7 +162,9 @@ export const Clear = () => {
       return
     }
     graph.remove(node)
-    bus.trigger(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
+    if (bus && EVENT_TYPES) {
+      bus.trigger(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
+    }
     removed += 1
   })
 
@@ -245,7 +257,9 @@ export const initGraph = (canvas, container, options = {}) => {
     if (node?.properties?.nodeType === NODE_TYPES.DIRECTOR) {
       return
     }
-    bus.trigger(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
+    if (bus && EVENT_TYPES) {
+      bus.trigger(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
+    }
   }
 
   // create some demo nodes

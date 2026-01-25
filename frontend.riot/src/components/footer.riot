@@ -39,8 +39,6 @@
   </footer>
 
   <script>
-    import { bus, EVENT_TYPES } from '../plugins/bus'
-
     export default {
       state: {
         isQAMode: false
@@ -98,20 +96,20 @@
         this.lastProgressValue = this.progressValue
       },
       handleZoomFit() {
-        bus.trigger(EVENT_TYPES.ZOOM_FIT)
+        this.bus.trigger(this.EVENT_TYPES.ZOOM_FIT)
       },
       handleArrangeNodes() {
-        bus.trigger(EVENT_TYPES.ARRANGE_NODES)
+        this.bus.trigger(this.EVENT_TYPES.ARRANGE_NODES)
       },
       handleToggleMinimap() {
-        bus.trigger(EVENT_TYPES.TOGGLE_MINIMAP)
+        this.bus.trigger(this.EVENT_TYPES.TOGGLE_MINIMAP)
       },
       handleToggleRightPanel() {
-        bus.trigger(EVENT_TYPES.TOGGLE_RIGHT_PANEL)
+        this.bus.trigger(this.EVENT_TYPES.TOGGLE_RIGHT_PANEL)
       },
       handleSignalRClick() {
         if (this.state.isQAMode) {
-          bus.trigger(EVENT_TYPES.SIGNALR_TOGGLE_CONNECTION)
+          this.bus.trigger(this.EVENT_TYPES.SIGNALR_TOGGLE_CONNECTION)
         }
       }
     }

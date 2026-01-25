@@ -20,7 +20,7 @@
     import FooterBar from '../components/footer.riot'
     import Graph from '../components/graph.riot'
     import signalRService from '../plugins/signalRService'
-    import { bus, EVENT_TYPES } from '../plugins/bus'
+    import { setBus as setEditorBus } from '../services/editorService'
     import '../styles/main-editor.css'
     import '../styles/main-editor-dark.css'
     import '../styles/components-dark.css'
@@ -45,8 +45,9 @@
         this.handleSignalRStatus = (status) => this.update({ connectionStatus: status })
         this.handleNodeSelected = (nodeData) => this.update({ selectedNode: nodeData })
 
-        bus.on(EVENT_TYPES.SIGNALR_STATUS_CHANGED, this.handleSignalRStatus)
-        bus.on(EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
+        this.bus.on(this.EVENT_TYPES.SIGNALR_STATUS_CHANGED, this.handleSignalRStatus)
+        this.bus.on(this.EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
+        setEditorBus(this.bus, this.EVENT_TYPES)
 
         signalRService.initialize().then(() => {
           this.update({ connectionStatus: signalRService.getConnectionStatus() })
@@ -55,8 +56,8 @@
         })
       },
       onBeforeUnmount() {
-        if (this.handleSignalRStatus) bus.off(EVENT_TYPES.SIGNALR_STATUS_CHANGED, this.handleSignalRStatus)
-        if (this.handleNodeSelected) bus.off(EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
+        if (this.handleSignalRStatus) this.bus.off(this.EVENT_TYPES.SIGNALR_STATUS_CHANGED, this.handleSignalRStatus)
+        if (this.handleNodeSelected) this.bus.off(this.EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
         signalRService.stop().catch((error) => console.error('Error stopping SignalR:', error))
       },
       applyBodyTheme(isDark) {

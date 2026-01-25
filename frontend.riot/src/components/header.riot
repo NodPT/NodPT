@@ -75,7 +75,6 @@
   </div>
 
   <script>
-    import { bus, EVENT_TYPES } from '../plugins/bus'
     import { route } from '@riotjs/route'
     import authApiService from '../services/authApiService'
     import { Modal } from 'bootstrap'
@@ -109,13 +108,13 @@
           this.update({ isDirectorSelected: nodeData && nodeData.type === 'director' })
         }
 
-        bus.on(EVENT_TYPES.PROJECT_NAME_UPDATE, this.projectNameHandler)
-        bus.on(EVENT_TYPES.SELECTED_NODE_CHANGED, this.selectedNodeHandler)
+        this.bus.on(this.EVENT_TYPES.PROJECT_NAME_UPDATE, this.projectNameHandler)
+        this.bus.on(this.EVENT_TYPES.SELECTED_NODE_CHANGED, this.selectedNodeHandler)
       },
       onBeforeUnmount() {
         document.removeEventListener('click', this.handleClickOutside, true)
-        if (this.projectNameHandler) bus.off(EVENT_TYPES.PROJECT_NAME_UPDATE, this.projectNameHandler)
-        if (this.selectedNodeHandler) bus.off(EVENT_TYPES.SELECTED_NODE_CHANGED, this.selectedNodeHandler)
+        if (this.projectNameHandler) this.bus.off(this.EVENT_TYPES.PROJECT_NAME_UPDATE, this.projectNameHandler)
+        if (this.selectedNodeHandler) this.bus.off(this.EVENT_TYPES.SELECTED_NODE_CHANGED, this.selectedNodeHandler)
       },
       toggleMenu(menu) {
         this.update({ openMenu: this.state.openMenu === menu ? null : menu })
@@ -153,7 +152,7 @@
         }
 
         this.update({ hasSearched: true })
-        bus.trigger(EVENT_TYPES.SEARCH_NODES, {
+        this.bus.trigger(this.EVENT_TYPES.SEARCH_NODES, {
           searchTerm: term,
           callback: (results) => {
             this.update({ searchResults: results, currentSearchIndex: 0 })
@@ -166,12 +165,12 @@
       focusCurrentResult() {
         const currentNode = this.state.searchResults[this.state.currentSearchIndex]
         if (currentNode) {
-          bus.trigger(EVENT_TYPES.SEARCH_FOCUS_NODE, { nodeId: currentNode.node.id })
+          this.bus.trigger(this.EVENT_TYPES.SEARCH_FOCUS_NODE, { nodeId: currentNode.node.id })
         }
       },
       clearSearch() {
         this.update({ searchTerm: '', searchResults: [], currentSearchIndex: 0, hasSearched: false })
-        bus.trigger(EVENT_TYPES.SEARCH_CLEAR)
+        this.bus.trigger(this.EVENT_TYPES.SEARCH_CLEAR)
       },
       toggleSearchPopup() {
         const nextVisible = !this.state.searchPopupVisible
@@ -202,7 +201,7 @@
           modal.show()
           return
         }
-        bus.trigger(EVENT_TYPES.PROJECT_ACTION, action)
+        this.bus.trigger(this.EVENT_TYPES.PROJECT_ACTION, action)
       },
       nodeAction(event, action) {
         event.preventDefault()
@@ -213,10 +212,10 @@
         }
         if (action === 'delete') {
           if (this.state.isDirectorSelected) return
-          bus.trigger(EVENT_TYPES.DELETE_NODE)
+          this.bus.trigger(this.EVENT_TYPES.DELETE_NODE)
           return
         }
-        bus.trigger(EVENT_TYPES.NODE_ACTION, action)
+        this.bus.trigger(this.EVENT_TYPES.NODE_ACTION, action)
       },
       async userAction(event, action) {
         event.preventDefault()
@@ -238,7 +237,7 @@
           }
           return
         }
-        bus.trigger(EVENT_TYPES.USER_ACTION, action)
+        this.bus.trigger(this.EVENT_TYPES.USER_ACTION, action)
       },
       async logoutApi() {
         try {

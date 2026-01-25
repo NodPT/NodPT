@@ -76,9 +76,9 @@ export default function eventBusPlugin(component) {
   // Add bus to each component instance
   // riot.install calls this function for each component instance
   component.bus = bus;
+  component.EVENT_TYPES = EVENT_TYPES;
 }
 
 // Also export the event bus for direct use outside components
 export { bus, eventBusPlugin };
-
 
