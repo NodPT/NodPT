@@ -5,6 +5,7 @@ import {
 	signInWithPopup,
 } from 'firebase/auth';
 import { bus, EVENT_TYPES } from '../plugins/bus';
+import { storeToken } from '../plugins/tokenStorage';
 
 class AuthApiService {
 	constructor() {
@@ -67,7 +68,7 @@ class AuthApiService {
 	 * @param {boolean} rememberMe - Whether to remember the user
 	 * @returns {Promise<Object>} API response with auth tokens
 	 */
-	async login(FirebaseToken, rememberMe = false) {
+	async login(FirebaseToken, rememberMe = false, providerName = 'Google') {
 		try {
 			// Check if we're in Development mode
 			const isDevelopment = import.meta.env.VITE_ENV === 'Development';
@@ -90,11 +91,45 @@ class AuthApiService {
 				storage.setItem('userData', JSON.stringify(response.User));
 			}
 
+			storeToken('FirebaseToken', tokenToSend, rememberMe);
+			if (response?.AccessToken) {
+				storeToken('AccessToken', response.AccessToken, rememberMe);
+			}
+			if (response?.refreshToken && rememberMe) {
+				storeToken('refreshToken', response.refreshToken, true);
+			}
+
 			return response;
 		} catch (error) {
 			console.error('Failed to login:', error);
 			throw error;
 		}
+	}
+
+	async loginAndStore(rememberMe = false, provider = 'Google') {
+		const isDevelopment = import.meta.env.VITE_ENV === 'Development';
+		let firebaseToken = 'dev-mock-token';
+
+		if (!isDevelopment) {
+			const providerMap = {
+				Google: this.loginWithGoogle.bind(this),
+				Facebook: this.loginWithFacebook.bind(this),
+				Microsoft: this.loginWithMicrosoft.bind(this),
+			};
+
+			const loginFn = providerMap[provider];
+			if (!loginFn) {
+				throw new Error('Login provider is not configured');
+			}
+
+			const result = await loginFn();
+			const user = result.user;
+			firebaseToken = await user.getIdToken();
+		}
+
+		const response = await this.login(firebaseToken, rememberMe, provider);
+		this.notifySignIn();
+		return response;
 	}
 
 	/**

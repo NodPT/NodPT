@@ -10,12 +10,12 @@
         </span>
       </div>
 
-      <div class="progress flex-grow-1 mx-2" style="height: 10px">
-        <div class="progress-bar bg-info" role="progressbar" style={"width: " + props.progress + "%"} aria-valuenow={props.progress} aria-valuemin="0" aria-valuemax="100"></div>
+      <div class="progress flex-grow-1 mx-2 footer-progress">
+        <div class={"progress-bar bg-info " + progressWidthClass} role="progressbar" aria-valuenow={props.progress} aria-valuemin="0" aria-valuemax="100"></div>
       </div>
 
       <div class="d-flex align-items-center ms-2">
-        <span class={"badge " + connectionStatusClass} title={connectionStatusTitle} onclick={handleSignalRClick} style={state.isQAMode ? 'cursor: pointer;' : ''}>
+        <span class={"badge " + connectionStatusClass + (state.isQAMode ? ' qa-toggle' : '')} title={connectionStatusTitle} onclick={handleSignalRClick}>
           <i class={"bi " + connectionStatusIcon}></i>
         </span>
       </div>
@@ -77,6 +77,12 @@
         }
         const baseTitle = titleMap[this.props.connectionStatus] || 'SignalR: Disconnected'
         return this.state.isQAMode ? `${baseTitle} (Click to toggle)` : baseTitle
+      },
+      get progressWidthClass() {
+        const value = Number(this.props.progress) || 0
+        const clamped = Math.max(0, Math.min(100, value))
+        const rounded = Math.round(clamped / 5) * 5
+        return `progress-width-${rounded}`
       },
       handleZoomFit() {
         bus.trigger(EVENT_TYPES.ZOOM_FIT)

@@ -41,7 +41,7 @@
               <div class="card shadow-sm my-5">
                 <div class="card-body p-4">
                   <a href="/" class="text-decoration-none">
-                    <img src="/images/logo.png" alt="NodPT Logo" class="ms-0" style="height: 40px; vertical-align: middle;" />
+                    <img src="/images/logo.png" alt="NodPT Logo" class="ms-0 login-logo" />
                   </a>
                   <h2 class="h4 fw-bold mb-1">Welcome Back</h2>
                   <p class="text-muted mb-3">Sign in to your account using your social network</p>
@@ -78,7 +78,6 @@
   <script>
     import { route } from '@riotjs/route'
     import authApiService from '../services/authApiService'
-    import { storeToken } from '../plugins/tokenStorage'
 
     export default {
       state: {
@@ -120,36 +119,14 @@
           this.update({ loginMessage: '', loginMessageClass: '' })
         }, 5000)
       },
-      async handleSocialLogin(loginFunction, providerName) {
+      async handleSocialLogin(providerName) {
         if (this.state.isLoading) return
 
         this.update({ isLoading: true, loginMessage: '', loginMessageClass: '' })
 
         try {
-          let firebaseToken = 'dev-mock-token'
-
-          if (!this.state.isDevelopment) {
-            if (!loginFunction) {
-              throw new Error('Login provider is not configured')
-            }
-            const result = await loginFunction()
-            const user = result.user
-            firebaseToken = await user.getIdToken()
-          }
-
-          const apiResponse = await authApiService.login(firebaseToken, this.state.rememberMe)
-
+          await authApiService.loginAndStore(this.state.rememberMe, providerName)
           this.showMessage('Login successful! Redirecting...', false)
-
-          storeToken('FirebaseToken', firebaseToken, this.state.rememberMe)
-          if (apiResponse?.AccessToken) {
-            storeToken('AccessToken', apiResponse.AccessToken, this.state.rememberMe)
-          }
-          if (apiResponse?.refreshToken && this.state.rememberMe) {
-            storeToken('refreshToken', apiResponse.refreshToken, true)
-          }
-
-          authApiService.notifySignIn()
 
           setTimeout(() => {
             route('/editor')
@@ -169,8 +146,7 @@
         }
       },
       async onGoogle() {
-        const loginFunction = this.state.isDevelopment ? null : authApiService.loginWithGoogle
-        await this.handleSocialLogin(loginFunction, 'Google')
+        await this.handleSocialLogin('Google')
       }
     }
   </script>

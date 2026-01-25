@@ -6,7 +6,7 @@
           <img class="rounded-2" src="/images/logo-small.png" alt="NodPT" />
         </a>
         <button class="btn btn-sm dropdown-toggle" type="button" aria-expanded={state.openMenu === 'user'} onclick={() => toggleMenu('user')}>
-          <img if={state.userPhotoUrl} src={state.userPhotoUrl} alt="Profile" class="rounded-circle me-1" style="width: 24px; height: 24px; object-fit: cover;" onerror={clearPhoto} />
+          <img if={state.userPhotoUrl} src={state.userPhotoUrl} alt="Profile" class="rounded-circle me-1 user-photo" onerror={clearPhoto} />
           <i if={!state.userPhotoUrl} class="bi bi-person-circle me-1"></i>
         </button>
         <ul class={"dropdown-menu dropdown-menu-end " + (state.openMenu === 'user' ? 'show' : '')}>
@@ -58,14 +58,14 @@
     </div>
   </nav>
 
-  <div if={state.searchPopupVisible} class="search-popup position-fixed w-50 shadow-lg align-self-end rounded-3" role="dialog" aria-label="Search nodes" style="top: var(--navbar-height, 40px); z-index: 1050; right:10px;">
+  <div if={state.searchPopupVisible} class="search-popup position-fixed w-50 shadow-lg align-self-end rounded-3 search-popup-panel" role="dialog" aria-label="Search nodes">
     <div class="container-fluid bg-white border-bottom p-2 rounded-3">
       <div class="d-flex align-items-center">
         <div class="input-group me-2">
           <input type="text" class="form-control" placeholder="Search nodes..." value={state.searchTerm} oninput={handleSearchInput} onkeyup={handleSearchKey} ref={searchInputRef} />
-          <button if={state.searchTerm} class="btn btn-outline-secondary" type="button" onclick={clearSearch} title="Clear search">
-            <i class="bi bi-x"></i>
-          </button>
+        <button if={state.searchTerm} class="btn btn-outline-secondary" type="button" onclick={clearSearch} title="Clear search">
+          <i class="bi bi-x"></i>
+        </button>
         </div>
         <button class="btn btn-outline-secondary btn-sm" onclick={closeSearchPopup} title="Close search">
           <i class="bi bi-x-lg"></i>
