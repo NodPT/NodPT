@@ -356,3 +356,31 @@
   color: #e8eaf6;
 }
 
+.login-logo {
+  height: 40px;
+  vertical-align: middle;
+}
+
+.user-photo {
+  width: 24px;
+  height: 24px;
+  object-fit: cover;
+}
+
+.search-popup-panel {
+  top: var(--navbar-height, 40px);
+  right: 10px;
+  z-index: 1050;
+}
+
+.footer-progress {
+  height: 10px;
+}
+
+.footer-progress-bar {
+  width: var(--progress-width, 0%);
+}
+
+.qa-toggle {
+  cursor: pointer;
+}

@@ -6,13 +6,16 @@
     <route path="/terms">
       <Terms />
     </route>
+    <route path="/login">
+      <Login />
+    </route>
     <route path="/editor">
-      <Graph />
+      <Editor />
     </route>
   </router>
 
   <script>
-    import { Router, Route, route, toRegexp, match } from '@riotjs/route'
+    import { Router, Route } from '@riotjs/route'
     import lazy from '@riotjs/lazy'
     import Loader from './components/loader.riot'
     import NotFound from './pages/not-found.riot'
@@ -25,16 +28,14 @@
         Home: lazy(Loader, () => import('./pages/home.riot')),
         About: lazy(Loader, () => import('./pages/about.riot')),
         Terms: lazy(Loader, () => import('./pages/terms.riot')),
-        Graph: lazy(Loader, () => import('./components/graph.riot')),
+        Login: lazy(Loader, () => import('./pages/login.riot')),
+        Editor: lazy(Loader, () => import('./pages/editor.riot')),
       },
       state: {
         showNotFound: false,
       },
-      onBeforeMount() {
-      },
-      onBeforeUnmount() {
-        this.anyRouteStream.end()
-      }
+       onBeforeMount() {
+       }
     }
   </script>
 </app>

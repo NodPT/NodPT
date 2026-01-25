@@ -4,6 +4,7 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import "./styles/landing-page.css";
 import "./styles/landing-page-dark.css";
 import "./styles/landing-page-light-scoped.css";
+import "./styles/components-dark.css";
 import { component, install } from "riot";
 import App from "./app.riot";
 import eventBusPlugin from "./plugins/bus.js";

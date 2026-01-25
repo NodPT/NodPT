@@ -1,0 +1,272 @@
+<header-bar>
+  <nav class="navbar studio-navbar fixed-top p-0" data-theme={props.isDarkTheme ? 'dark' : 'light'}>
+    <div class="container-fluid d-flex align-items-center justify-content-start">
+      <div class="dropdown">
+        <a class="navbar-brand" href="/">
+          <img class="rounded-2" src="/images/logo-small.png" alt="NodPT" />
+        </a>
+        <button class="btn btn-sm dropdown-toggle" type="button" aria-expanded={state.openMenu === 'user'} onclick={() => toggleMenu('user')}>
+          <img if={state.userPhotoUrl} src={state.userPhotoUrl} alt="Profile" class="rounded-circle me-1 user-photo" onerror={clearPhoto} />
+          <i if={!state.userPhotoUrl} class="bi bi-person-circle me-1"></i>
+        </button>
+        <ul class={"dropdown-menu dropdown-menu-end " + (state.openMenu === 'user' ? 'show' : '')}>
+          <li><a class="dropdown-item" href="#" onclick={(event) => userAction(event, 'profile')}>Profile</a></li>
+          <li><a class="dropdown-item" href="#" onclick={(event) => userAction(event, 'settings')}>Settings</a></li>
+          <li><a class="dropdown-item" href="#" onclick={(event) => userAction(event, 'help')}>Help</a></li>
+          <li><hr class="dropdown-divider" /></li>
+          <li><a class="dropdown-item text-danger" href="#" onclick={(event) => userAction(event, 'logout')}>Logout</a></li>
+        </ul>
+      </div>
+
+      <div class="d-flex align-items-center gap-3" if={props.showMenu}>
+        <div class="dropdown">
+          <button class="btn btn-sm dropdown-toggle" type="button" aria-expanded={state.openMenu === 'project'} onclick={() => toggleMenu('project')}>
+            <i class="bi bi-folder2"></i> File
+          </button>
+          <ul class={"dropdown-menu " + (state.openMenu === 'project' ? 'show' : '')}>
+            <li><a class="dropdown-item" href="#" onclick={(event) => projectAction(event, 'new')}>New Project</a></li>
+            <li><a class="dropdown-item" href="#" onclick={(event) => projectAction(event, 'open')}>Open Project</a></li>
+            <li><a class="dropdown-item" href="#" onclick={(event) => projectAction(event, 'save')}>Save Project</a></li>
+            <li><hr class="dropdown-divider" /></li>
+            <li><a class="dropdown-item" href="#" onclick={(event) => projectAction(event, 'copy')}>Copy Project</a></li>
+            <li><a class="dropdown-item" href="#" onclick={(event) => projectAction(event, 'rename')}>Rename Project</a></li>
+            <li><a class="dropdown-item text-danger" href="#" onclick={(event) => projectAction(event, 'delete')}>Delete Project</a></li>
+          </ul>
+        </div>
+
+        <div class="dropdown">
+          <button class="btn btn-sm dropdown-toggle" type="button" aria-expanded={state.openMenu === 'nodes'} onclick={() => toggleMenu('nodes')}>
+            <i class="bi bi-diagram-3"></i> Nodes
+          </button>
+          <ul class={"dropdown-menu " + (state.openMenu === 'nodes' ? 'show' : '')}>
+            <li><a class="dropdown-item" href="#" onclick={(event) => nodeAction(event, 'add')}>Add Node</a></li>
+            <li><a class={"dropdown-item " + (state.isDirectorSelected ? 'disabled' : '')} href="#" onclick={(event) => nodeAction(event, 'delete')}>Delete</a></li>
+            <li><hr class="dropdown-divider" /></li>
+            <li><a class="dropdown-item" href="#" onclick={(event) => nodeAction(event, 'lock')}>Lock</a></li>
+            <li><a class="dropdown-item" href="#" onclick={(event) => nodeAction(event, 'unlock')}>Unlock</a></li>
+          </ul>
+        </div>
+
+        <button class="btn btn-sm" onclick={toggleSearchPopup} title="Search nodes">
+          <i class="bi bi-search"></i>
+        </button>
+
+        <span if={state.projectName} class="navbar-text text-muted ms-2">
+          {state.projectName}
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <div if={state.searchPopupVisible} class="search-popup position-fixed w-50 shadow-lg align-self-end rounded-3 search-popup-panel" role="dialog" aria-label="Search nodes">
+    <div class="container-fluid bg-white border-bottom p-2 rounded-3">
+      <div class="d-flex align-items-center">
+        <div class="input-group me-2">
+          <input type="text" class="form-control" placeholder="Search nodes..." value={state.searchTerm} oninput={handleSearchInput} onkeyup={handleSearchKey} ref={searchInputRef} />
+          <button if={state.searchTerm} class="btn btn-outline-secondary" type="button" onclick={clearSearch} title="Clear search">
+            <i class="bi bi-x"></i>
+          </button>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" onclick={closeSearchPopup} title="Close search">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { route } from '@riotjs/route'
+    import authApiService from '../services/authApiService'
+    import { Modal } from 'bootstrap'
+
+    export default {
+      state: {
+        searchTerm: '',
+        searchResults: [],
+        currentSearchIndex: 0,
+        hasSearched: false,
+        openMenu: null,
+        projectName: '',
+        searchPopupVisible: false,
+        userPhotoUrl: '',
+        isDirectorSelected: false
+      },
+      onBeforeMount() {
+        authApiService.setApi(this.api)
+      },
+      onMounted() {
+        this.handleClickOutside = this.handleClickOutside.bind(this)
+        document.addEventListener('click', this.handleClickOutside, true)
+
+        const userData = authApiService.getUserData()
+        if (userData?.PhotoUrl) {
+          this.update({ userPhotoUrl: userData.PhotoUrl })
+        }
+
+        this.projectNameHandler = (name) => this.update({ projectName: name })
+        this.selectedNodeHandler = (nodeData) => {
+          this.update({ isDirectorSelected: nodeData && nodeData.type === 'director' })
+        }
+
+        this.bus.on(this.EVENT_TYPES.PROJECT_NAME_UPDATE, this.projectNameHandler)
+        this.bus.on(this.EVENT_TYPES.SELECTED_NODE_CHANGED, this.selectedNodeHandler)
+      },
+      onBeforeUnmount() {
+        document.removeEventListener('click', this.handleClickOutside, true)
+        if (this.projectNameHandler) this.bus.off(this.EVENT_TYPES.PROJECT_NAME_UPDATE, this.projectNameHandler)
+        if (this.selectedNodeHandler) this.bus.off(this.EVENT_TYPES.SELECTED_NODE_CHANGED, this.selectedNodeHandler)
+      },
+      toggleMenu(menu) {
+        this.update({ openMenu: this.state.openMenu === menu ? null : menu })
+      },
+      closeMenu() {
+        this.update({ openMenu: null })
+      },
+      handleClickOutside(event) {
+        if (!this.root.contains(event.target)) {
+          this.closeMenu()
+        }
+      },
+      clearPhoto(event) {
+        if (event?.target) {
+          event.target.onerror = null
+        }
+        this.update({ userPhotoUrl: '' })
+      },
+      handleSearchInput(event) {
+        this.update({ searchTerm: event.target.value })
+      },
+      handleSearchKey(event) {
+        if (event.key === 'Enter') {
+          this.handleSearch()
+        }
+        if (event.key === 'Escape') {
+          this.closeSearchPopup()
+        }
+      },
+      handleSearch() {
+        const term = this.state.searchTerm.trim()
+        if (!term) {
+          this.clearSearch()
+          return
+        }
+
+        this.update({ hasSearched: true })
+        this.bus.trigger(this.EVENT_TYPES.SEARCH_NODES, {
+          searchTerm: term,
+          callback: (results) => {
+            this.update({ searchResults: results, currentSearchIndex: 0 })
+            if (results.length > 0) {
+              this.focusCurrentResult()
+            }
+          }
+        })
+      },
+      focusCurrentResult() {
+        const currentNode = this.state.searchResults[this.state.currentSearchIndex]
+        if (currentNode) {
+          this.bus.trigger(this.EVENT_TYPES.SEARCH_FOCUS_NODE, { nodeId: currentNode.node.id })
+        }
+      },
+      clearSearch() {
+        this.update({ searchTerm: '', searchResults: [], currentSearchIndex: 0, hasSearched: false })
+        this.bus.trigger(this.EVENT_TYPES.SEARCH_CLEAR)
+      },
+      searchInputRef(el) {
+        // Callback ref assigned in the template: ref={searchInputRef}
+        this.searchInputEl = el
+      },
+      toggleSearchPopup() {
+        const nextVisible = !this.state.searchPopupVisible
+        this.update({ searchPopupVisible: nextVisible })
+        if (nextVisible) {
+          setTimeout(() => {
+            if (this.searchInputEl) {
+              this.searchInputEl.focus()
+            }
+          }, 0)
+        }
+      },
+      closeSearchPopup() {
+        this.update({ searchPopupVisible: false })
+        this.clearSearch()
+      },
+      projectAction(event, action) {
+        event.preventDefault()
+        const modalMap = {
+          new: 'newProjectModal',
+          open: 'openProjectModal',
+          copy: 'copyProjectModal',
+          rename: 'renameProjectModal',
+          delete: 'deleteProjectModal'
+        }
+        const modalId = modalMap[action]
+        if (modalId) {
+          const modalElement = document.getElementById(modalId)
+          if (typeof Modal !== 'undefined' && modalElement) {
+            const modal = new Modal(modalElement)
+            modal.show()
+            return
+          } else {
+            console.warn(`Modal element "${modalId}" not found or Modal is unavailable; falling back to PROJECT_ACTION "${action}".`)
+          }
+        }
+        this.bus.trigger(this.EVENT_TYPES.PROJECT_ACTION, action)
+      },
+      nodeAction(event, action) {
+        event.preventDefault()
+        if (action === 'add') {
+          const modalElement = document.getElementById('addNodeModal')
+          if (typeof Modal !== 'undefined' && modalElement) {
+            const modal = new Modal(modalElement)
+            modal.show()
+            return
+          } else {
+            console.warn('Modal element "addNodeModal" not found or Modal is unavailable; falling back to NODE_ACTION "add".')
+            this.bus.trigger(this.EVENT_TYPES.NODE_ACTION, action)
+            return
+          }
+        }
+        if (action === 'delete') {
+          if (this.state.isDirectorSelected) return
+          this.bus.trigger(this.EVENT_TYPES.DELETE_NODE)
+          return
+        }
+        this.bus.trigger(this.EVENT_TYPES.NODE_ACTION, action)
+      },
+      async userAction(event, action) {
+        event.preventDefault()
+        if (action === 'profile') {
+          route('/profile')
+          return
+        }
+        if (action === 'logout') {
+          try {
+            await this.logoutApi()
+            await authApiService.logout()
+          } catch (error) {
+            console.error('Logout error:', error)
+            try { await authApiService.logout() } catch (secondError) {
+              console.error('Logout fallback error:', secondError)
+            }
+          } finally {
+            route('/login')
+          }
+          return
+        }
+        this.bus.trigger(this.EVENT_TYPES.USER_ACTION, action)
+      },
+      async logoutApi() {
+        try {
+          const response = await this.api.get('/auth/logout')
+          localStorage.removeItem('userData')
+          sessionStorage.removeItem('userData')
+          return response
+        } catch (error) {
+          console.error('Failed to logout:', error)
+          throw error
+        }
+      }
+    }
+  </script>
+</header-bar>

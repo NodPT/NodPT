@@ -1,6 +1,32 @@
 import "litegraph.js/css/litegraph.css"
 import { LiteGraph, LGraph, LGraphCanvas } from "litegraph.js"
-import { bus, EVENT_TYPES } from "../plugins/bus.js"
+let bus
+let EVENT_TYPES
+
+export const setBus = (busInstance, eventTypes) => {
+  if (!busInstance || typeof busInstance.trigger !== 'function' || !eventTypes || typeof eventTypes !== 'object') {
+    return false
+  }
+  if (!eventTypes.NODE_ADDED || !eventTypes.NODE_DELETED) {
+    return false
+  }
+  bus = busInstance
+  EVENT_TYPES = eventTypes
+  return true
+}
+
+/**
+ * Emit an event if the bus and event types are initialized.
+ * @param {string} eventType - Event name from EVENT_TYPES to trigger.
+ * @param {Object} payload - Event payload.
+ * @returns {void} Does nothing when bus/event types are not set.
+ */
+const emitEvent = (eventType, payload) => {
+  if (!bus || !EVENT_TYPES) {
+    return
+  }
+  bus.trigger(eventType, payload)
+}
 
 let activeGraphState = null
 let allowConnections = true
@@ -112,7 +138,7 @@ export const AddNode = (id, title, nodeType, outputs = [], connectFrom = null) =
     }
   }
 
-  bus.trigger(EVENT_TYPES.NODE_ADDED, { id: node.id, title: node.title, nodeType: node.properties.nodeType })
+  emitEvent(EVENT_TYPES.NODE_ADDED, { id: node.id, title: node.title, nodeType: node.properties.nodeType })
   return node
 }
 
@@ -133,7 +159,7 @@ export const RemoveNode = (id) => {
   }
 
   graph.remove(node)
-  bus.trigger(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
+  emitEvent(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
   return true
 }
 
@@ -152,7 +178,7 @@ export const Clear = () => {
       return
     }
     graph.remove(node)
-    bus.trigger(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
+    emitEvent(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
     removed += 1
   })
 
@@ -245,7 +271,7 @@ export const initGraph = (canvas, container, options = {}) => {
     if (node?.properties?.nodeType === NODE_TYPES.DIRECTOR) {
       return
     }
-    bus.trigger(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
+    emitEvent(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
   }
 
   // create some demo nodes

@@ -1,0 +1,76 @@
+<editor-page>
+  <div class="app-container main-editor" data-theme={state.isDarkTheme ? 'dark' : 'light'}>
+    <HeaderBar isDarkTheme={state.isDarkTheme} showMenu={true} />
+
+    <div class="main-content main-editor-content position-relative">
+      <Graph />
+    </div>
+
+    <FooterBar
+      selectedNode={state.selectedNode}
+      totalNodes={state.totalNodes}
+      progress={state.buildProgress}
+      minimapVisible={state.minimapVisible}
+      connectionStatus={state.connectionStatus}
+    />
+  </div>
+
+  <script>
+    import HeaderBar from '../components/header.riot'
+    import FooterBar from '../components/footer.riot'
+    import Graph from '../components/graph.riot'
+    import signalRService from '../plugins/signalRService'
+    import { setBus as setEditorBus } from '../services/editorService'
+    import '../styles/main-editor.css'
+    import '../styles/main-editor-dark.css'
+    import '../styles/components-dark.css'
+    import '../styles/rete.css'
+
+    export default {
+      components: {
+        HeaderBar,
+        FooterBar,
+        Graph
+      },
+      state: {
+        minimapVisible: false,
+        selectedNode: null,
+        totalNodes: 0,
+        buildProgress: 0,
+        connectionStatus: 'disconnected',
+        isDarkTheme: true
+      },
+      onMounted() {
+        this.loadTheme()
+        this.handleSignalRStatus = (status) => this.update({ connectionStatus: status })
+        this.handleNodeSelected = (nodeData) => this.update({ selectedNode: nodeData })
+
+        this.bus.on(this.EVENT_TYPES.SIGNALR_STATUS_CHANGED, this.handleSignalRStatus)
+        this.bus.on(this.EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
+        setEditorBus(this.bus, this.EVENT_TYPES)
+
+        signalRService.initialize().then(() => {
+          this.update({ connectionStatus: signalRService.getConnectionStatus() })
+        }).catch((error) => {
+          console.error('Failed to initialize SignalR:', error)
+        })
+      },
+      onBeforeUnmount() {
+        if (this.handleSignalRStatus) this.bus.off(this.EVENT_TYPES.SIGNALR_STATUS_CHANGED, this.handleSignalRStatus)
+        if (this.handleNodeSelected) this.bus.off(this.EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
+        signalRService.stop().catch((error) => console.error('Error stopping SignalR:', error))
+      },
+      applyBodyTheme(isDark) {
+        if (typeof document !== 'undefined' && document.body) {
+          document.body.setAttribute('data-theme', isDark ? 'dark' : 'light')
+        }
+      },
+      loadTheme() {
+        const savedTheme = localStorage.getItem('appTheme')
+        const isDark = savedTheme ? savedTheme === 'dark' : true
+        this.update({ isDarkTheme: isDark })
+        this.applyBodyTheme(isDark)
+      }
+    }
+  </script>
+</editor-page>
