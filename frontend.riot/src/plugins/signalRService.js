@@ -1,5 +1,4 @@
 import * as signalR from '@microsoft/signalr';
-import { triggerEvent, listenEvent, EVENT_TYPES } from '../rete/eventBus';
 import { getToken } from './tokenStorage';
 
 class SignalRService {
@@ -23,14 +22,14 @@ class SignalRService {
 		// Track authentication state but don't auto-start SignalR
 		// Connection will be started explicitly when navigating to /editor
 		this.authListenerCleanups.push(
-			listenEvent(EVENT_TYPES.AUTH_SIGNED_IN, () => {
+			this.bus.on(EVENT_TYPES.AUTH_SIGNED_IN, () => {
 				this.isAuthenticated = true;
 			}),
 		);
 
 		// Stop hub when user signs out
 		this.authListenerCleanups.push(
-			listenEvent(EVENT_TYPES.AUTH_SIGNED_OUT, async () => {
+			this.bus.on(EVENT_TYPES.AUTH_SIGNED_OUT, async () => {
 				this.isAuthenticated = false;
 				await this.stop();
 			}),
@@ -38,7 +37,7 @@ class SignalRService {
 
 		// Stop hub and clear state when relogin is required
 		this.authListenerCleanups.push(
-			listenEvent(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, async () => {
+			this.bus.on(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, async () => {
 				this.isAuthenticated = false;
 				await this.stop();
 			}),
@@ -121,7 +120,7 @@ class SignalRService {
 
 			// Emit a popup event including the hub url so UI can show the address
 			try {
-				triggerEvent(EVENT_TYPES.SIGNALR_CONNECTION_FAILED, {
+				this.bus.trigger(EVENT_TYPES.SIGNALR_CONNECTION_FAILED, {
 					title: 'SignalR initialization failed',
 					message: `Failed to initialize SignalR connection to ${hubUrl}.`,
 					hubUrl,
@@ -159,7 +158,7 @@ class SignalRService {
 		if (this.retryCount >= this.maxRetries) {
 			console.error('Max auth retry attempts reached, signing out');
 			this.retryCount = 0;
-			triggerEvent(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, { reason: 'signalr-auth-failed' });
+			this.bus.trigger(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, { reason: 'signalr-auth-failed' });
 			return;
 		}
 
@@ -181,7 +180,7 @@ class SignalRService {
 			console.error('Reconnect failed:', retryError);
 
 			if (this.retryCount >= this.maxRetries) {
-				triggerEvent(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, { reason: 'signalr-reconnect-failed' });
+				this.bus.trigger(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, { reason: 'signalr-reconnect-failed' });
 			}
 		}
 	}
@@ -202,7 +201,7 @@ class SignalRService {
 					this.handleAuthError(error);
 				} else {
 					try {
-						triggerEvent(EVENT_TYPES.SIGNALR_CONNECTION_FAILED, {
+						this.bus.trigger(EVENT_TYPES.SIGNALR_CONNECTION_FAILED, {
 							title: 'SignalR connection closed',
 							message: `Connection to ${hubUrl} was closed.`,
 							hubUrl,
@@ -232,18 +231,18 @@ class SignalRService {
 		// Listen for Hello message from server
 		this.connection.on('Hello', (message) => {
 			console.log('Received Hello from server:', message);
-			triggerEvent(EVENT_TYPES.SIGNALR_HELLO_RECEIVED, message);
+			this.bus.trigger(EVENT_TYPES.SIGNALR_HELLO_RECEIVED, message);
 		});
 
 		// Listen to server messages (examples - customize based on your needs)
 		this.connection.on('NodeUpdated', (nodeData) => {
 			console.log('Node updated from server:', nodeData);
-			triggerEvent(EVENT_TYPES.NODE_UPDATED_FROM_SERVER, nodeData);
+			this.bus.trigger(EVENT_TYPES.NODE_UPDATED_FROM_SERVER, nodeData);
 		});
 
 		this.connection.on('EditorCommand', (command) => {
 			console.log('Editor command from server:', command);
-			triggerEvent(EVENT_TYPES.EDITOR_COMMAND_FROM_SERVER, command);
+			this.bus.trigger(EVENT_TYPES.EDITOR_COMMAND_FROM_SERVER, command);
 		});
 
 		// Listen for all message types from backend using the consolidated ReceiveMessage event
@@ -254,9 +253,9 @@ class SignalRService {
 			// Route based on messageType or sender to appropriate event handlers
 			if (data.messageType === 'ai' || data.messageType === 'thinking' || data.sender === 'assistant') {
 				// AI chat messages and thinking progress messages
-				triggerEvent(EVENT_TYPES.SIGNALR_AI_RESPONSE_RECEIVED, data);
+				this.bus.trigger(EVENT_TYPES.SIGNALR_AI_RESPONSE_RECEIVED, data);
 				if (data.solutionOutput) {
-					triggerEvent(EVENT_TYPES.SOLUTION_OUTPUT_RECEIVED, data);
+					this.bus.trigger(EVENT_TYPES.SOLUTION_OUTPUT_RECEIVED, data);
 				}
 			} else {
 				// Other message types can be handled here in the future
@@ -287,7 +286,7 @@ class SignalRService {
 			// Emit popup with hub url to help user identify which address failed
 			const hubUrl = this.getHubUrl();
 			try {
-				triggerEvent(EVENT_TYPES.SIGNALR_CONNECTION_FAILED, {
+				this.bus.trigger(EVENT_TYPES.SIGNALR_CONNECTION_FAILED, {
 					title: 'SignalR connection failed',
 					message: `Failed to start SignalR connection to ${hubUrl}.`,
 					hubUrl,
@@ -351,7 +350,7 @@ class SignalRService {
 	updateConnectionStatus(status) {
 		this.connectionStatus = status;
 		// Trigger event for components to update UI
-		triggerEvent(EVENT_TYPES.SIGNALR_STATUS_CHANGED, status);
+		this.bus.trigger(EVENT_TYPES.SIGNALR_STATUS_CHANGED, status);
 
 		// Notify all listeners
 		this.listeners.forEach((listener) => listener(status));

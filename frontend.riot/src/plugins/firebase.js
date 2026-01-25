@@ -1,7 +1,7 @@
 // src/firebase.js
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, FacebookAuthProvider, OAuthProvider, signOut as firebaseSignOut } from 'firebase/auth';
-import { triggerEvent, EVENT_TYPES } from './rete/eventBus';
+import { this.bus.trigger, EVENT_TYPES } from './plugins/bus';
 
 // console.log('Firebase config string:', import.meta.env.VITE_FIREBASE_SHIT);
 const firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_SHIT);
@@ -55,7 +55,7 @@ export async function getFreshIdToken() {
 		return tokenResult.token;
 	} catch (error) {
 		if (error.code === 'auth/user-token-expired' || error.code === 'auth/id-token-revoked' || error.code === 'auth/user-disabled') {
-			triggerEvent(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, { reason: error.code });
+			this.bus.trigger(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, { reason: error.code });
 			return null;
 		}
 		console.error('Error getting token:', error);
@@ -76,7 +76,7 @@ export async function signOutAll() {
 		sessionStorage.removeItem('refreshToken');
 
 		await firebaseSignOut(auth);
-		triggerEvent(EVENT_TYPES.AUTH_SIGNED_OUT);
+		this.bus.trigger(EVENT_TYPES.AUTH_SIGNED_OUT);
 	} catch (error) {
 		console.error('Error during sign out:', error);
 	}

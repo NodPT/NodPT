@@ -1,3 +1,11 @@
+import { auth, googleProvider, facebookProvider, microsoftProvider, signOutAll as firebaseSignOutAll } from '../firebase';
+import {
+	createUserWithEmailAndPassword,
+	signInWithEmailAndPassword,
+	signInWithPopup,
+} from 'firebase/auth';
+import { this.bus.trigger, EVENT_TYPES } from '../rete/bus';
+
 class AuthApiService {
 	constructor() {
 		this.baseURL = '/auth';
@@ -10,6 +18,47 @@ class AuthApiService {
 	 */
 	setApi(api) {
 		this.api = api;
+	}
+
+	registerWithEmail(email, pw) {
+		return createUserWithEmailAndPassword(auth, email, pw);
+	}
+
+	loginWithEmail(email, pw) {
+		return signInWithEmailAndPassword(auth, email, pw);
+	}
+
+	loginWithGoogle() {
+		return signInWithPopup(auth, googleProvider);
+	}
+
+	loginWithFacebook() {
+		return signInWithPopup(auth, facebookProvider);
+	}
+
+	loginWithMicrosoft() {
+		return signInWithPopup(auth, microsoftProvider);
+	}
+
+	/**
+	 * Logout and clean up all sessions
+	 */
+	async logout() {
+		try {
+			await firebaseSignOutAll();
+			// Event is emitted by signOutAll function
+		} catch (error) {
+			console.error('Logout error:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Emit sign-in event after successful authentication
+	 * Should be called after Firebase authentication completes
+	 */
+	notifySignIn() {
+		this.bus.trigger(EVENT_TYPES.AUTH_SIGNED_IN);
 	}
 
 	/**

@@ -1,0 +1,18 @@
+{
+  "default": {
+    "content": "# Workflow Notes\n\nUse this space to document your workflow design and implementation details.\n\n## Getting Started\n- Add nodes to build your workflow\n- Connect nodes to define data flow\n- Configure node properties\n- Test and iterate\n\n## Tips\n- Use meaningful node names\n- Document complex logic\n- Test with sample data",
+    "lastModified": "2024-01-20T10:00:00Z"
+  },
+  "Process Data": {
+    "content": "# Data Processing Node\n\n## Purpose\nThis node handles data transformation and cleaning operations.\n\n## Configuration\n- **Input Format**: CSV, JSON\n- **Processing Type**: ETL (Extract, Transform, Load)\n- **Output Format**: Processed JSON\n\n## Implementation Notes\n```javascript\n// Sample transformation logic\nfunction processData(input) {\n  return input\n    .filter(item => item.isValid)\n    .map(item => ({\n      ...item,\n      processed: true,\n      timestamp: new Date().toISOString()\n    }));\n}\n```\n\n## Performance Considerations\n- Batch size: 1000 records\n- Memory usage: ~50MB\n- Average processing time: 2.3s\n\n## Testing\n- [x] Unit tests passed\n- [x] Integration tests passed\n- [ ] Performance benchmarks",
+    "lastModified": "2024-01-20T14:30:00Z"
+  },
+  "Filter Results": {
+    "content": "# Filter Results Node\n\n## Purpose\nFilters and refines data based on specified criteria.\n\n## Configuration\n- **Filter Type**: Rule-based, Pattern matching\n- **Input Format**: JSON, CSV\n- **Output Format**: Filtered dataset\n\n## Filter Options\n```javascript\n// Sample filter logic\nfunction filterData(input, criteria) {\n  return input.filter(item => {\n    return criteria.every(rule => \n      applyRule(item, rule)\n    );\n  });\n}\n```\n\n## Performance\n- Average filter time: 0.8s\n- Memory usage: ~20MB\n- Filter accuracy: 99.5%",
+    "lastModified": "2024-01-20T14:30:00Z"
+  },
+  "Output": {
+    "content": "# Output Node\n\n## Purpose\nExports processed data to various formats and destinations.\n\n## Supported Outputs\n- File exports (JSON, CSV, XML)\n- Database connections\n- API endpoints\n- Cloud storage\n\n## Configuration Examples\n\n### File Export\n```json\n{\n  \"type\": \"file\",\n  \"format\": \"json\",\n  \"path\": \"/exports/data.json\",\n  \"compression\": \"gzip\"\n}\n```\n\n### Database Export\n```json\n{\n  \"type\": \"database\",\n  \"connection\": \"postgresql://...\",\n  \"table\": \"processed_data\",\n  \"mode\": \"insert\"\n}\n```\n\n## Monitoring\n- Export success rate: 99.2%\n- Average export time: 1.8s\n- Last successful export: 2024-01-20T15:45:00Z",
+    "lastModified": "2024-01-20T15:45:00Z"
+  }
+}

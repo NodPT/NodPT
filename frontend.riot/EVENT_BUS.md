@@ -12,7 +12,7 @@ The event bus plugin provides a global event system that allows components to:
 
 ## Installation
 
-The event bus is already installed and configured in this project. It's automatically available in all Riot.js components via `this.$eventBus`.
+The event bus is already installed and configured in this project. It's automatically available in all Riot.js components via `this.bus`.
 
 ## Usage
 
@@ -23,7 +23,7 @@ The event bus is already installed and configured in this project. It's automati
 ```javascript
 export default {
   sendMessage() {
-    this.$eventBus.trigger('my-event', { 
+    this.bus.trigger('my-event', { 
       message: 'Hello World',
       timestamp: Date.now()
     });
@@ -37,11 +37,11 @@ export default {
 export default {
   onMounted() {
     // Add event listener
-    this.$eventBus.on('my-event', this.handleEvent);
+    this.bus.on('my-event', this.handleEvent);
   },
   onBeforeUnmount() {
     // IMPORTANT: Always remove listeners to prevent memory leaks
-    this.$eventBus.off('my-event', this.handleEvent);
+    this.bus.off('my-event', this.handleEvent);
   },
   handleEvent(data) {
     console.log('Event received:', data);
@@ -55,7 +55,7 @@ export default {
 export default {
   onMounted() {
     // Listen only once, then automatically remove
-    this.$eventBus.one('my-event', (data) => {
+    this.bus.one('my-event', (data) => {
       console.log('This will only fire once:', data);
     });
   }
@@ -67,11 +67,11 @@ export default {
 You can also use the event bus outside of components by importing it directly:
 
 ```javascript
-import { eventBus } from './services/eventBusPlugin.js';
+import { bus } from './services/eventBusPlugin.js';
 
-eventBus.trigger('my-event', { data: 'value' });
+bus.trigger('my-event', { data: 'value' });
 
-eventBus.on('my-event', (data) => {
+bus.on('my-event', (data) => {
   console.log('Event received:', data);
 });
 ```
@@ -91,13 +91,13 @@ eventBus.on('my-event', (data) => {
 
 ```javascript
 // Simple event
-this.$eventBus.trigger('user-login');
+this.bus.trigger('user-login');
 
 // Event with data
-this.$eventBus.trigger('user-login', { userId: 123, username: 'john' });
+this.bus.trigger('user-login', { userId: 123, username: 'john' });
 
 // Event with complex data
-this.$eventBus.trigger('data-updated', {
+this.bus.trigger('data-updated', {
   type: 'project',
   id: 456,
   changes: { name: 'New Name' }
@@ -120,7 +120,7 @@ Visit `/event-bus-demo` in the application to see a working example of two compo
 
 ### Files
 
-- **`src/services/eventBus.js`** - Core event bus using @riotjs/observable
+- **`src/services/bus.js`** - Core event bus using @riotjs/observable
 - **`src/services/eventBusPlugin.js`** - Riot.js plugin wrapper
 - **`src/index.js`** - Plugin installation via `riot.install()`
 
@@ -129,13 +129,13 @@ Visit `/event-bus-demo` in the application to see a working example of two compo
 1. The event bus is created using `@riotjs/observable`:
    ```javascript
    import observable from '@riotjs/observable';
-   const eventBus = observable({});
+   const bus = observable({});
    ```
 
 2. A Riot.js plugin injects it into all components:
    ```javascript
    export default function eventBusPlugin(component) {
-     component.$eventBus = eventBus;
+     component.bus = bus;
    }
    ```
 
