@@ -102,10 +102,11 @@ export const AddNode = (id, title, nodeType, outputs = [], connectFrom = null) =
 
   node.inputs = []
   node.outputs = []
-  // node.horizontal = true
+  node.horizontal = false
   node.addInput("input")
   outputs.forEach((outputName) => {
-    node.addOutput(outputName)
+    const label = outputName// ? outputName.trim().charAt(0).toUpperCase() : ""
+    node.addOutput(outputName, 0, { label })
   })
 
   if (node.widgets && node.widgets.length) {
@@ -183,6 +184,59 @@ export const Clear = () => {
   })
 
   return removed
+}
+
+export const arrangeNodes = (layout = 'vertical', margin = 50) => {
+  const state = getGraphState()
+  if (!state || !state.graph) {
+    return false
+  }
+  const layoutMode = layout === 'vertical' ? LiteGraph.VERTICAL_LAYOUT : undefined
+  state.graph.arrange(margin, layoutMode)
+  state.graph.setDirtyCanvas?.(true, true)
+  return true
+}
+
+export const zoomFit = (padding = 80, maxScale = 1) => {
+  const state = getGraphState()
+  if (!state || !state.graph || !state.graphCanvas) {
+    return false
+  }
+
+  const graphCanvas = state.graphCanvas
+  const nodes = state.graph._nodes || []
+  if (!nodes.length) {
+    return false
+  }
+
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+
+  nodes.forEach((node) => {
+    const bounds = node.getBounding?.(null, true) || [node.pos[0], node.pos[1], node.size?.[0] || 0, node.size?.[1] || 0]
+    const [x, y, w, h] = bounds
+    minX = Math.min(minX, x)
+    minY = Math.min(minY, y)
+    maxX = Math.max(maxX, x + w)
+    maxY = Math.max(maxY, y + h)
+  })
+
+  const width = Math.max(1, maxX - minX)
+  const height = Math.max(1, maxY - minY)
+  const canvasWidth = Math.max(1, graphCanvas.canvas.width)
+  const canvasHeight = Math.max(1, graphCanvas.canvas.height)
+
+  const scaleX = canvasWidth / (width + padding * 2)
+  const scaleY = canvasHeight / (height + padding * 2)
+  const scale = Math.min(scaleX, scaleY, maxScale)
+
+  graphCanvas.ds.scale = scale
+  graphCanvas.ds.offset[0] = canvasWidth * 0.5 - (minX + width * 0.5) * scale
+  graphCanvas.ds.offset[1] = canvasHeight * 0.5 - (minY + height * 0.5) * scale
+  graphCanvas.setDirty(true, true)
+  return true
 }
 
 const createDemoNodes = () => {

@@ -1,12 +1,22 @@
 <editor-page>
   <div class="app-container main-editor" data-theme={state.isDarkTheme ? 'dark' : 'light'}>
-    <HeaderBar isDarkTheme={state.isDarkTheme} showMenu={true} />
+    <header-bar isDarkTheme={state.isDarkTheme} showMenu={true} />
 
     <div class="main-content main-editor-content position-relative">
-      <Graph />
+      <div class="editor-split">
+        <div class="editor-left">
+          <Graph />
+        </div>
+        <div class={"editor-splitter " + (state.rightPanelVisible ? '' : 'is-hidden')} onmousedown={startResize}></div>
+        <div class={"editor-right " + (state.rightPanelVisible ? '' : 'is-hidden')} style={rightPanelStyle}>
+          <div class="main-editor-right-panel docked">
+            <right-panel selectedNode={state.selectedNode} isDarkTheme={state.isDarkTheme} />
+          </div>
+        </div>
+      </div>
     </div>
 
-    <FooterBar
+    <footer-bar
       selectedNode={state.selectedNode}
       totalNodes={state.totalNodes}
       progress={state.buildProgress}
@@ -19,18 +29,18 @@
     import HeaderBar from '../components/header.riot'
     import FooterBar from '../components/footer.riot'
     import Graph from '../components/graph.riot'
-    import signalRService from '../plugins/signalRService'
-    import { setBus as setEditorBus } from '../services/editorService'
+    import RightPanel from '../components/right-panel.riot'
+    import { arrangeNodes, zoomFit } from '../services/editorService'
+    import signalRService from '../services/signalRService'
+    import '../styles/components-dark.css'
     import '../styles/main-editor.css'
     import '../styles/main-editor-dark.css'
-    import '../styles/components-dark.css'
-    import '../styles/rete.css'
-
     export default {
       components: {
         HeaderBar,
         FooterBar,
-        Graph
+        Graph,
+        RightPanel
       },
       state: {
         minimapVisible: false,
@@ -38,39 +48,76 @@
         totalNodes: 0,
         buildProgress: 0,
         connectionStatus: 'disconnected',
-        isDarkTheme: true
+        rightPanelVisible: true,
+        rightPanelWidth: 416
       },
       onMounted() {
-        this.loadTheme()
         this.handleSignalRStatus = (status) => this.update({ connectionStatus: status })
         this.handleNodeSelected = (nodeData) => this.update({ selectedNode: nodeData })
+        this.handleToggleRightPanel = () => this.update({ rightPanelVisible: !this.state.rightPanelVisible })
+        this.handleArrangeNodes = () => arrangeNodes()
+        this.handleZoomFit = () => zoomFit()
 
         this.bus.on(this.EVENT_TYPES.SIGNALR_STATUS_CHANGED, this.handleSignalRStatus)
         this.bus.on(this.EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
-        setEditorBus(this.bus, this.EVENT_TYPES)
+        this.bus.on(this.EVENT_TYPES.TOGGLE_RIGHT_PANEL, this.handleToggleRightPanel)
+        this.bus.on(this.EVENT_TYPES.ARRANGE_NODES, this.handleArrangeNodes)
+        this.bus.on(this.EVENT_TYPES.ZOOM_FIT, this.handleZoomFit)
 
-        signalRService.initialize().then(() => {
-          this.update({ connectionStatus: signalRService.getConnectionStatus() })
-        }).catch((error) => {
-          console.error('Failed to initialize SignalR:', error)
-        })
+        signalRService
+          .initialize(this.bus, this.EVENT_TYPES, this.api)
+          .then(() => {
+            this.update({ connectionStatus: signalRService.getConnectionStatus() })
+          }).catch((error) => {
+            console.error('Failed to initialize SignalR:', error)
+          })
       },
       onBeforeUnmount() {
-        if (this.handleSignalRStatus) this.bus.off(this.EVENT_TYPES.SIGNALR_STATUS_CHANGED, this.handleSignalRStatus)
-        if (this.handleNodeSelected) this.bus.off(this.EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
+        if (this.handleSignalRStatus) 
+          this.bus.off(this.EVENT_TYPES.SIGNALR_STATUS_CHANGED, this.handleSignalRStatus)
+        if (this.handleNodeSelected) 
+          this.bus.off(this.EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
+        if (this.handleToggleRightPanel)
+          this.bus.off(this.EVENT_TYPES.TOGGLE_RIGHT_PANEL, this.handleToggleRightPanel)
+        if (this.handleArrangeNodes)
+          this.bus.off(this.EVENT_TYPES.ARRANGE_NODES, this.handleArrangeNodes)
+        if (this.handleZoomFit)
+          this.bus.off(this.EVENT_TYPES.ZOOM_FIT, this.handleZoomFit)
         signalRService.stop().catch((error) => console.error('Error stopping SignalR:', error))
       },
-      applyBodyTheme(isDark) {
-        if (typeof document !== 'undefined' && document.body) {
-          document.body.setAttribute('data-theme', isDark ? 'dark' : 'light')
-        }
+      get rightPanelStyle() {
+        return `width: ${this.state.rightPanelWidth}px;`
       },
-      loadTheme() {
-        const savedTheme = localStorage.getItem('appTheme')
-        const isDark = savedTheme ? savedTheme === 'dark' : true
-        this.update({ isDarkTheme: isDark })
-        this.applyBodyTheme(isDark)
+      startResize(event) {
+        if (!this.state.rightPanelVisible) {
+          return
+        }
+        event.preventDefault()
+        this.isResizing = true
+        this.onResizeMove = this.handleResizeMove.bind(this)
+        this.onResizeUp = this.stopResize.bind(this)
+        document.addEventListener('mousemove', this.onResizeMove)
+        document.addEventListener('mouseup', this.onResizeUp)
+        document.body.style.cursor = 'ew-resize'
+        document.body.style.userSelect = 'none'
+      },
+      handleResizeMove(event) {
+        if (!this.isResizing) {
+          return
+        }
+        const minWidth = 280
+        const maxWidth = Math.min(640, window.innerWidth * 0.6)
+        const newWidth = Math.max(minWidth, Math.min(maxWidth, window.innerWidth - event.clientX))
+        this.update({ rightPanelWidth: newWidth })
+      },
+      stopResize() {
+        this.isResizing = false
+        document.removeEventListener('mousemove', this.onResizeMove)
+        document.removeEventListener('mouseup', this.onResizeUp)
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
       }
+   
     }
   </script>
 </editor-page>

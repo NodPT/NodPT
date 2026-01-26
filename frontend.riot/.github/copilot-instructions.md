@@ -111,3 +111,7 @@ Eg.
 - dev: npm run dev
 - build: npm run build
 - preview: npm run preview
+
+# important notes:
+- do not use public cdn, links, fonts. all must be local.
+- do not use inline styles in .riot components. all styles must be in src/styles folder

@@ -1,5 +1,5 @@
 import * as signalR from '@microsoft/signalr';
-import { getToken } from './tokenStorage';
+import { getToken } from '../plugins/tokenStorage';
 
 class SignalRService {
 	constructor() {
@@ -10,26 +10,33 @@ class SignalRService {
 		this.isAuthenticated = false;
 		this.retryCount = 0;
 		this.maxRetries = 1;
+		this.bus = null;
+		this.EVENT_TYPES = null;
+		this.api = null;
 
 		// Setup auth lifecycle listeners
-		this.setupAuthLifecycle();
+		// this.setupAuthLifecycle();
 	}
 
 	/**
 	 * Setup authentication lifecycle listeners
 	 */
 	setupAuthLifecycle() {
+
+		const bus = this.bus;
+		const EVENT_TYPES = this.EVENT_TYPES;
+		
 		// Track authentication state but don't auto-start SignalR
 		// Connection will be started explicitly when navigating to /editor
 		this.authListenerCleanups.push(
-			this.bus.on(EVENT_TYPES.AUTH_SIGNED_IN, () => {
+			bus.on(EVENT_TYPES.AUTH_SIGNED_IN, () => {
 				this.isAuthenticated = true;
 			}),
 		);
 
 		// Stop hub when user signs out
 		this.authListenerCleanups.push(
-			this.bus.on(EVENT_TYPES.AUTH_SIGNED_OUT, async () => {
+			bus.on(EVENT_TYPES.AUTH_SIGNED_OUT, async () => {
 				this.isAuthenticated = false;
 				await this.stop();
 			}),
@@ -37,7 +44,7 @@ class SignalRService {
 
 		// Stop hub and clear state when relogin is required
 		this.authListenerCleanups.push(
-			this.bus.on(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, async () => {
+			bus.on(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, async () => {
 				this.isAuthenticated = false;
 				await this.stop();
 			}),
@@ -76,7 +83,14 @@ class SignalRService {
 	/**
 	 * Initialize SignalR connection
 	 */
-	async initialize() {
+	async initialize(bus, EVENT_TYPES, api) {
+
+		this.bus = bus;
+		this.EVENT_TYPES = EVENT_TYPES;
+		this.api = api;
+
+		this.setupAuthLifecycle();
+
 		// Stop existing connection before starting a new one
 		if (this.connection) {
 			console.log('Stopping existing SignalR connection before initializing new one');
