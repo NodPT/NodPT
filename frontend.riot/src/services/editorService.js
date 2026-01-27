@@ -31,6 +31,7 @@ const emitEvent = (eventType, payload) => {
 
 let activeGraphState = null
 let allowConnections = true
+let suppressNodeRemoved = false
 
 const NODE_TYPES = {
   DIRECTOR: "Director",
@@ -64,6 +65,123 @@ const TWILIGHT_PALETTE = {
 
 const getGraphState = () => activeGraphState
 
+const getLinksMap = (graph) => graph?.links || graph?._links || {}
+
+const ensureInspectorSubgraph = (inspectorNode) => {
+  if (!inspectorNode?.subgraph) {
+    const subgraph = new LGraph()
+    subgraph._subgraph_node = inspectorNode
+    inspectorNode.subgraph = subgraph
+  }
+  return inspectorNode.subgraph
+}
+
+const getInspectorWorkers = (graph, inspectorNode) => {
+  const links = getLinksMap(graph)
+  const workerIds = new Set()
+
+  Object.values(links).forEach((link) => {
+    if (link?.origin_id === inspectorNode.id && link?.target_id != null) {
+      workerIds.add(link.target_id)
+    }
+  })
+
+  return (graph._nodes || []).filter((node) =>
+    node &&
+    workerIds.has(node.id) &&
+    node.properties?.nodeType === NODE_TYPES.WORKER
+  )
+}
+
+const moveWorkersIntoInspectorSubgraph = (inspectorNode, workerNodes = null) => {
+  const state = getGraphState()
+  if (!state || !state.graph || !inspectorNode) {
+    return
+  }
+  if (inspectorNode.properties?.nodeType !== NODE_TYPES.INSPECTOR) {
+    return
+  }
+
+  const graph = state.graph
+  const subgraph = ensureInspectorSubgraph(inspectorNode)
+  const nodesToMove = workerNodes && workerNodes.length
+    ? workerNodes
+    : getInspectorWorkers(graph, inspectorNode)
+
+  if (!nodesToMove.length) {
+    return
+  }
+
+  let inspectorProxy = (subgraph._nodes || []).find((node) => node?.properties?._isInspectorProxy)
+  if (!inspectorProxy) {
+    ensureAgentNodeRegistered()
+    inspectorProxy = LiteGraph.createNode("nodpt/agent")
+    inspectorProxy.title = inspectorNode.title || NODE_TYPES.INSPECTOR
+    inspectorProxy.properties = {
+      ...(inspectorProxy.properties || {}),
+      nodeType: NODE_TYPES.INSPECTOR,
+      _isInspectorProxy: true
+    }
+    inspectorProxy.inputs = []
+    inspectorProxy.outputs = []
+    inspectorProxy.horizontal = false
+    inspectorProxy.pos = [20, 20]
+    inspectorProxy.widgets = inspectorProxy.widgets || []
+    inspectorProxy.widgets.length = 0
+    inspectorProxy.addWidget?.('button', 'X', '', () => {
+      state.graphCanvas?.closeSubgraph?.()
+    })
+    subgraph.add(inspectorProxy)
+  }
+
+  suppressNodeRemoved = true
+  const sortedWorkers = nodesToMove.slice().sort((a, b) => {
+    const titleA = a?.title || ''
+    const titleB = b?.title || ''
+    return titleA.localeCompare(titleB)
+  })
+
+  const startX = 240
+  const startY = 40
+  const verticalGap = 30
+
+  sortedWorkers.forEach((workerNode, index) => {
+    if (!workerNode || workerNode.graph !== graph) {
+      return
+    }
+    graph.remove(workerNode)
+    const workerHeight = workerNode.size?.[1] ?? workerNode.height ?? 80
+      workerNode.pos = [240, 40 + index * (workerHeight + verticalGap)]
+    subgraph.add(workerNode)
+  })
+  subgraph.arrange(30)
+  suppressNodeRemoved = false
+
+  inspectorProxy.outputs = []
+  sortedWorkers.forEach((workerNode, index) => {
+    const baseLabel = workerNode.title || workerNode.id || 'Worker'
+    const outputLabel = index === 0 ? baseLabel : `${baseLabel} ${index + 1}`
+    inspectorProxy.addOutput(outputLabel, 0, { label: outputLabel })
+  })
+  const slotCount = Math.max(inspectorProxy.inputs?.length || 0, inspectorProxy.outputs?.length || 0)
+  const minHeight = LiteGraph.NODE_TITLE_HEIGHT + slotCount * LiteGraph.NODE_SLOT_HEIGHT + 8
+  if (typeof inspectorProxy.computeSize === 'function') {
+    inspectorProxy.size = inspectorProxy.computeSize()
+  }
+  inspectorProxy.size = inspectorProxy.size || [160, 80]
+  inspectorProxy.size[1] = Math.max(inspectorProxy.size[1], minHeight)
+
+  const prevAllowConnections = allowConnections
+  allowConnections = true
+  sortedWorkers.forEach((workerNode, index) => {
+    inspectorProxy.connect(index, workerNode, 0)
+  })
+  allowConnections = prevAllowConnections
+
+  graph.setDirtyCanvas?.(true, true)
+  state.graphCanvas?.setDirty(true, true)
+}
+
 const ensureAgentNodeRegistered = () => {
   if (LiteGraph.registered_node_types?.["nodpt/agent"]) {
     return
@@ -90,7 +208,7 @@ export const AddNode = (id, title, nodeType, outputs = [], connectFrom = null) =
   const node = LiteGraph.createNode("nodpt/agent")
 
   node.id = id ?? node.id
-  node.title = title || nodeType || "Node"
+  node.title = title || nodeType || ""
   node.properties = {
     ...(node.properties || {}),
     nodeType: nodeType || NODE_TYPES.WORKER
@@ -137,6 +255,10 @@ export const AddNode = (id, title, nodeType, outputs = [], connectFrom = null) =
       allowConnections = true
       sourceNode.connect(outputIndex, node, 0)
       allowConnections = prevAllowConnections
+
+      if (node.properties?.nodeType === NODE_TYPES.WORKER && sourceNode.properties?.nodeType === NODE_TYPES.INSPECTOR) {
+        moveWorkersIntoInspectorSubgraph(sourceNode, [node])
+      }
     }
   }
 
@@ -265,6 +387,7 @@ export const initGraph = (canvas, container, options = {}) => {
   graphCanvas.allow_reconnect_links = false
   graphCanvas.processContextMenu = () => {}
   graphCanvas.showLinkMenu = () => false
+  graphCanvas.drawSubgraphPanel = () => {}
   canvas.addEventListener("contextmenu", (event) => event.preventDefault())
 
   LiteGraph.shift_click_do_break_link_from = false
@@ -285,6 +408,9 @@ export const initGraph = (canvas, container, options = {}) => {
   graphCanvas.onNodeDeselected = () => emitSelection(null)
 
   graph.onNodeRemoved = (node) => {
+    if (suppressNodeRemoved) {
+      return
+    }
     if (node?.properties?.nodeType === NODE_TYPES.DIRECTOR) {
       return
     }
@@ -296,6 +422,11 @@ export const initGraph = (canvas, container, options = {}) => {
   allowConnections = true
   createDemoNodes(AddNode, NODE_TYPES, arrangeNodes)
   allowConnections = false
+  ;(graph._nodes || []).forEach((node) => {
+    if (node.properties?.nodeType === NODE_TYPES.INSPECTOR) {
+      moveWorkersIntoInspectorSubgraph(node)
+    }
+  })
   graph.start()
 
   return activeGraphState

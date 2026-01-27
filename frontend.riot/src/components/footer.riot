@@ -3,7 +3,7 @@
     <div class="container-fluid d-flex align-items-center py-1">
       <div class="d-flex align-items-center me-3">
         <span if={props.selectedNode} class="badge text-bg-primary me-2">
-          <i class="bi bi-node-plus"></i> {props.selectedNode.label}
+          <i class="bi bi-node-plus me-1"></i> {selectedNodeLabel}
         </span>
         <span class="badge text-bg-secondary me-2">
           <i class="bi bi-diagram-3"></i> {props.totalNodes}
@@ -87,6 +87,16 @@
       get progressValue() {
         const value = Number(this.props.progress) || 0
         return Math.max(0, Math.min(100, value))
+      },
+      get selectedNodeLabel() {
+        const node = this.props.selectedNode
+        if (!node) {
+          return ''
+        }
+        const typeValue = node.properties?.nodeType || node.nodeType || node.type || 'Node'
+        const type = typeValue.toString().toLowerCase()
+        const name = node.title || node.label || node.name || node.id || 'Untitled'
+        return `${type}/${name}`
       },
       applyProgressWidth() {
         if (!this.progressBar || Math.abs(this.lastProgressValue - this.progressValue) < 0.01) {

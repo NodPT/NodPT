@@ -1,0 +1,168 @@
+<project-tiles>
+  <div class="project-tiles">
+    <h5 class="mb-3">Create New Project</h5>
+
+    <div if={state.loading} class="text-center py-4">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading templates...</span>
+      </div>
+      <p class="text-muted mt-2">Loading templates...</p>
+    </div>
+
+    <div if={!state.loading} class="row g-2">
+      <div each={tile in state.projectTiles} key={tile.id}
+        class={"col-6 col-md-3 col-lg-2 " + (tile.disabled ? 'opacity-50' : '')}>
+        <div class="tile-card card h-100 border-0 shadow-sm hover-effect cursor-pointer"
+          data-tile-id={tile.id}
+          onclick={handleTileClick}>
+          <div class="card-body text-center p-2">
+            <div class="tile-icon mb-2">
+              <i class={tile.icon + ' fs-3'}></i>
+            </div>
+            <h6 class="card-title fw-bold mb-1 small">{tile.name}</h6>
+            <p class="card-text text-muted project-tile-description">{tile.description}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import templateApiService from '../services/templateApiService'
+
+    export default {
+      state: {
+        projectTiles: [],
+        loading: true
+      },
+      onBeforeMount() {
+        templateApiService.setApi(this.api)
+      },
+      onMounted() {
+        this.loadTemplates()
+      },
+      notify(type, message) {
+        const toast = window?.$toast
+        if (toast && typeof toast[type] === 'function') {
+          toast[type](message)
+          return
+        }
+        if (type === 'alert' || type === 'error') {
+          console.error(message)
+          return
+        }
+        if (type === 'warn') {
+          console.warn(message)
+          return
+        }
+        console.log(message)
+      },
+      async loadTemplates() {
+        try {
+          this.update({ loading: true })
+          const templates = await templateApiService.getTemplates()
+
+          if (!templates || !Array.isArray(templates)) {
+            throw new Error('Invalid templates data received from server.')
+          }
+
+          const projectTiles = templates
+            .filter((template) => template.IsActive)
+            .map((template) => ({
+              id: template.Id,
+              category: template.Category,
+              name: template.Name,
+              description: template.Description,
+              icon: template.Icon || 'bi bi-file-earmark text-secondary',
+              disabled: false
+            }))
+
+          const additionalTiles = [
+            {
+              id: -1,
+              category: 'music',
+              name: 'Music Composer',
+              description: 'Compose melodies, arrange tracks, and produce music',
+              icon: 'bi bi-music-note text-info',
+              disabled: true
+            },
+            {
+              id: -2,
+              category: 'video',
+              name: 'Video Creator',
+              description: 'Edit videos, create animations, and visual content',
+              icon: 'bi bi-camera-video text-warning',
+              disabled: true
+            },
+            {
+              id: -3,
+              category: 'data',
+              name: 'Data Analysis',
+              description: 'Process, analyze, and visualize data insights',
+              icon: 'bi bi-graph-up text-danger',
+              disabled: true
+            },
+            {
+              id: -4,
+              category: 'ai',
+              name: 'AI Assistant',
+              description: 'Build intelligent bots and AI-powered applications',
+              icon: 'bi bi-robot text-purple',
+              disabled: true
+            },
+            {
+              id: -5,
+              category: 'design',
+              name: 'Design Studio',
+              description: 'Create graphics, UI/UX designs, and visual assets',
+              icon: 'bi bi-palette text-pink',
+              disabled: true
+            },
+            {
+              id: -6,
+              category: 'automation',
+              name: 'Automation',
+              description: 'Automate tasks, workflows, and business processes',
+              icon: 'bi bi-gear text-secondary',
+              disabled: true
+            },
+            {
+              id: -7,
+              category: 'research',
+              name: 'Research',
+              description: 'Gather information, analyze trends, and generate reports',
+              icon: 'bi bi-search text-dark',
+              disabled: true
+            }
+          ]
+
+          this.update({ projectTiles: [...projectTiles, ...additionalTiles], loading: false })
+        } catch (error) {
+          console.error('Error loading templates:', error)
+          const errorMessage = error && (error.message || String(error))
+          this.notify('alert', `Failed to load templates: ${errorMessage || 'Please try again.'}`)
+          this.update({ loading: false })
+        }
+      },
+      handleTileClick(event) {
+        const tileId = event?.currentTarget?.dataset?.tileId
+        const tile = this.state.projectTiles.find((item) => String(item.id) === String(tileId))
+        if (!tile) return
+        this.createProject(tile)
+      },
+      createProject(tile) {
+        if (tile.disabled) {
+          this.notify('info', 'This project type is coming soon!')
+          return
+        }
+
+        if (this.props.selectionMode) {
+          this.emit('tile-selected', tile)
+          return
+        }
+
+        this.bus.trigger(this.EVENT_TYPES.OPEN_NEW_PROJECT_MODAL, tile)
+      }
+    }
+  </script>
+</project-tiles>

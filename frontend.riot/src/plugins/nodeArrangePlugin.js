@@ -39,7 +39,7 @@ const sortByTitle = (a, b) => {
   return titleA.localeCompare(titleB)
 }
 
-const arrangeInspectorChildren = (inspectorInfo, parentX, parentY, parentWidth, parentHeight, spacing) => {
+const arrangeInspectorChildren = (inspectorInfo, parentX, parentY, parentWidth, parentHeight, spacing, marginBottom) => {
   let agentY = parentY
   let agentX = parentX + parentWidth + spacing
   let childrenTotalHeight = 0
@@ -52,14 +52,14 @@ const arrangeInspectorChildren = (inspectorInfo, parentX, parentY, parentWidth, 
     childrenTotalWidth += agentWidth / 2
 
     setNodePosition(agentInfo.node, agentX, agentY)
-    agentY += agentHeight / 2
+    agentY += agentHeight / 2 + marginBottom
     agentX += agentWidth / 2
   })
 
   return [childrenTotalWidth, childrenTotalHeight]
 }
 
-const arrangeManagerChildren = (managerInfo, parentX, parentY, parentWidth, parentHeight, spacing) => {
+const arrangeManagerChildren = (managerInfo, parentX, parentY, parentWidth, parentHeight, spacing, marginBottom) => {
   let inspectorX = parentX + parentWidth + spacing
   let inspectorY = parentY
   let childrenTotalHeight = 0
@@ -73,18 +73,18 @@ const arrangeManagerChildren = (managerInfo, parentX, parentY, parentWidth, pare
 
     let childDimension = [0, 0]
     if (inspectorInfo.children && inspectorInfo.children.length > 0) {
-      childDimension = arrangeInspectorChildren(inspectorInfo, inspectorX, inspectorY, inspectorWidth, inspectorHeight, spacing)
+      childDimension = arrangeInspectorChildren(inspectorInfo, inspectorX, inspectorY, inspectorWidth, inspectorHeight, spacing, marginBottom)
     }
 
-    inspectorY += Math.max(inspectorHeight, childDimension[1]) + 10
+    inspectorY += Math.max(inspectorHeight, childDimension[1]) + marginBottom
     childrenTotalWidth = Math.max(childDimension[0] + inspectorWidth + parentWidth + spacing, childrenTotalWidth)
-    childrenTotalHeight += Math.max(inspectorHeight, childDimension[1]) + 10
+    childrenTotalHeight += Math.max(inspectorHeight, childDimension[1]) + marginBottom
   })
 
   return [childrenTotalWidth, childrenTotalHeight]
 }
 
-const arrangeDirectorChildren = (directorInfo, parentX, parentY, parentWidth, parentHeight, spacing) => {
+const arrangeDirectorChildren = (directorInfo, parentX, parentY, parentWidth, parentHeight, spacing, marginBottom) => {
   const col1 = []
   const col2 = []
   const managerSpacing = Math.max(80, spacing)
@@ -122,7 +122,7 @@ const arrangeDirectorChildren = (directorInfo, parentX, parentY, parentWidth, pa
 
     let childDimension = [0, 0]
     if (managerInfo.children && managerInfo.children.length > 0) {
-      childDimension = arrangeManagerChildren(managerInfo, managerX, managerY, managerWidth, managerHeight, spacing)
+      childDimension = arrangeManagerChildren(managerInfo, managerX, managerY, managerWidth, managerHeight, spacing, marginBottom)
     }
 
     if ((i + 1) % 2 === 1) {
@@ -133,7 +133,7 @@ const arrangeDirectorChildren = (directorInfo, parentX, parentY, parentWidth, pa
   }
 }
 
-export const arrangeNodes = (state, nodeTypes, margin = 50) => {
+export const arrangeNodes = (state, nodeTypes, margin = 50, marginBottom = 30) => {
   if (!state || !state.graph) {
     return false
   }
@@ -155,7 +155,7 @@ export const arrangeNodes = (state, nodeTypes, margin = 50) => {
   setNodePosition(directorInfo.node, startX, startY)
 
   if (directorInfo.children && directorInfo.children.length > 0) {
-    arrangeDirectorChildren(directorInfo, startX, startY, directorWidth, directorHeight, margin)
+    arrangeDirectorChildren(directorInfo, startX, startY, directorWidth, directorHeight, margin, marginBottom)
   }
 
   graph.setDirtyCanvas?.(true, true)

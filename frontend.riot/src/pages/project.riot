@@ -1,0 +1,97 @@
+<project-page>
+    <div class="project-page" data-theme={state.isDarkTheme ? 'dark' : 'light' }>
+        <header-bar isDarkTheme={state.isDarkTheme} showMenu={true} />
+
+        <div class="main-content container-fluid py-5">
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="recent-projects-container h-100 card">
+                        <div class="card-body">
+                            <recent-projects />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <div class="project-tiles-container h-100">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <project-tiles />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        import HeaderBar from '../components/header.riot'
+        import RecentProjects from '../components/recent-projects.riot'
+        import ProjectTiles from '../components/project-tiles.riot'
+        import '../styles/project-page.css'
+
+        export default {
+            components: {
+                HeaderBar,
+                RecentProjects,
+                ProjectTiles
+            },
+            state: {
+                isDarkTheme: true
+            },
+            onMounted() {
+                this.loadTheme()
+                this.projectActionHandler = this.handleProjectAction.bind(this)
+                this.bus.on(this.EVENT_TYPES.PROJECT_ACTION, this.projectActionHandler)
+            },
+            onBeforeUnmount() {
+                if (this.projectActionHandler) {
+                    this.bus.off(this.EVENT_TYPES.PROJECT_ACTION, this.projectActionHandler)
+                }
+            },
+            applyBodyTheme(isDark) {
+                if (typeof document !== 'undefined' && document.body) {
+                    document.body.setAttribute('data-theme', isDark ? 'dark' : 'light')
+                }
+            },
+            loadTheme() {
+                const savedTheme = localStorage.getItem('appTheme')
+                const isDark = savedTheme ? savedTheme === 'dark' : true
+                this.update({ isDarkTheme: isDark })
+                this.applyBodyTheme(isDark)
+            },
+            handleProjectAction(action) {
+                switch (action) {
+                    case 'new':
+                        this.scrollToTiles()
+                        break
+                    case 'open':
+                        this.scrollToRecentProjects()
+                        break
+                    case 'save':
+                    case 'export':
+                    case 'build':
+                    case 'run':
+                    case 'publish':
+                        console.log(`Project action not applicable here: ${action}`)
+                        break
+                    default:
+                        console.log('Unknown project action:', action)
+                }
+            },
+            scrollToRecentProjects() {
+                const element = this.root.querySelector('.recent-projects-container')
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' })
+                }
+            },
+            scrollToTiles() {
+                const element = this.root.querySelector('.project-tiles-container')
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' })
+                }
+            }
+        }
+    </script>
+</project-page>
