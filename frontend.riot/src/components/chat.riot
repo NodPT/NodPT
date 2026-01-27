@@ -69,8 +69,8 @@
       },
       textAreaAdjust(el){
         el.target.style.height = "1px";
-        const h = 25+el.target.scrollHeight;
-        if(h > 150) return;
+        const h = el.target.scrollHeight;
+        if(h > 150 || h<60) return;
         el.target.style.height = (h)+"px";
         this.$$('.chat-input-container')[0].style.height = (36+h)+"px";
       },

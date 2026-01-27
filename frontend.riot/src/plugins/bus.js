@@ -14,7 +14,6 @@ const EVENT_TYPES = {
   DELETE_NODE: 'node:delete',
   SHOW_DELETE_NODE_MODAL: 'node:show-delete-modal',
   NODE_CREATED_FROM_API: 'node:created-from-api',
-  SELECTED_NODE_CHANGED: 'node:selected-changed',
   GROUP_NODES: 'node:group',
   UNGROUP_NODES: 'node:ungroup',
   NODE_REGENERATE: 'node:regenerate',

@@ -109,12 +109,12 @@
         }
 
         this.bus.on(this.EVENT_TYPES.PROJECT_NAME_UPDATE, this.projectNameHandler)
-        this.bus.on(this.EVENT_TYPES.SELECTED_NODE_CHANGED, this.selectedNodeHandler)
+        this.bus.on(this.EVENT_TYPES.NODE_SELECTED, this.selectedNodeHandler)
       },
       onBeforeUnmount() {
         document.removeEventListener('click', this.handleClickOutside, true)
         if (this.projectNameHandler) this.bus.off(this.EVENT_TYPES.PROJECT_NAME_UPDATE, this.projectNameHandler)
-        if (this.selectedNodeHandler) this.bus.off(this.EVENT_TYPES.SELECTED_NODE_CHANGED, this.selectedNodeHandler)
+        if (this.selectedNodeHandler) this.bus.off(this.EVENT_TYPES.NODE_SELECTED, this.selectedNodeHandler)
       },
       toggleMenu(menu) {
         this.update({ openMenu: this.state.openMenu === menu ? null : menu })

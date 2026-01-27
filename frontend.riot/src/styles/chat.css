@@ -2,7 +2,7 @@
 
 /* Define custom properties */
 :root {
-  --chat-input-min-height: 60px;
+  /* --chat-input-min-height: 60px; */
   --chat-input-max-height: 150px;
 }
 
@@ -24,7 +24,6 @@
   border-radius: 10px;
   /* border: 1px solid rgb(11, 88, 197); */
   /* background-color: var(--bs-light, #9a9a9b); */
-  min-height: 0; /* Important for flex scrolling */
 }
 
 /* Always visible scrollbar */
@@ -50,7 +49,7 @@
 .chat-input-container {
   position: relative;
   background-color: transparent;
-  min-height: var(--chat-input-min-height);
+  /* min-height: var(--chat-input-min-height); */
   max-height: var(--chat-input-max-height);
 }
 
@@ -77,8 +76,7 @@
   border: 0;
   font-family: inherit;
   font-size: 0.875rem;
-  line-height: 1.4;
-  min-height: 32px;
+  /* min-height: 20px; */
   max-height: var(--chat-input-max-height);
 }
 
