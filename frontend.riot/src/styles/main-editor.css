@@ -115,7 +115,7 @@
 }
 
 .studio-footer {
-  background-color: var(--rete-panel, #fff);
+  background-color:  #fff;
 }
 
 .studio-navbar,
@@ -192,62 +192,58 @@
   overflow: auto;
 }
 
-.left-panel,
-.left-panel .rete-container,
-.left-panel .rete-canvas {
+.left-panel {
   width: 100%;
   height: 100%;
 }
 
-.left-panel .rete-container {
+.left-panel  {
   position: relative;
 }
 
-.left-panel .rete-canvas {
+.left-panel  {
   position: absolute;
   top: 0;
   left: 0;
 }
 
 /* Custom scrollbar styles */
-.left-panel .rete-container,
-.left-panel .rete-canvas,
+.left-panel ,
 .main-editor-right-panel .tab-content {
   overflow: auto;
 }
 
 /* Webkit browsers (Chrome, Safari, Edge) */
-.left-panel .rete-container::-webkit-scrollbar,
-.left-panel .rete-canvas::-webkit-scrollbar,
+.left-panel ::-webkit-scrollbar,
 .main-editor-right-panel .tab-content::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-.left-panel .rete-container::-webkit-scrollbar-track,
-.left-panel .rete-canvas::-webkit-scrollbar-track,
+.left-panel ::-webkit-scrollbar-track,
+.left-panel ::-webkit-scrollbar-track,
 .main-editor-right-panel .tab-content::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.05);
   border-radius: 4px;
 }
 
-.left-panel .rete-container::-webkit-scrollbar-thumb,
-.left-panel .rete-canvas::-webkit-scrollbar-thumb,
+.left-panel ::-webkit-scrollbar-thumb,
+.left-panel ::-webkit-scrollbar-thumb,
 .main-editor-right-panel .tab-content::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.3);
   border-radius: 4px;
   transition: background 0.2s ease;
 }
 
-.left-panel .rete-container::-webkit-scrollbar-thumb:hover,
-.left-panel .rete-canvas::-webkit-scrollbar-thumb:hover,
+.left-panel ::-webkit-scrollbar-thumb:hover,
+.left-panel ::-webkit-scrollbar-thumb:hover,
 .main-editor-right-panel .tab-content::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.5);
 }
 
 /* Firefox */
-.left-panel .rete-container,
-.left-panel .rete-canvas,
+.left-panel ,
+.left-panel ,
 .main-editor-right-panel .tab-content {
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.05);
