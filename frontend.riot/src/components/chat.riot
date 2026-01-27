@@ -37,12 +37,14 @@
     </div>
 
     <div class="chat-input-container">
-      <div class="chat-input-box">
-        <textarea class="chat-textarea form-control" placeholder="Ask anything..." rows="1"
+      <div class="chat-input-box h-100">
+        <textarea class="chat-textarea form-control"
+        onkeyup={textAreaAdjust}
+         placeholder="Ask anything..." 
           value={state.newMessage} oninput={handleInput} onkeydown={handleEnter} ref={messageTextareaRef}
           disabled={state.isLoading}></textarea>
         <div class="chat-input-actions">
-          <button class="btn btn-primary send-btn" onclick={sendMessage} disabled={isSendDisabled}>
+          <button class="btn send-btn" onclick={sendMessage} disabled={isSendDisabled}>
             <span if={state.isLoading} class="spinner-border spinner-border-sm"></span>
             <i if={!state.isLoading} class={"bi fw-bold " + (state.thinking ? 'bi-square-fill' : 'bi-send')}></i>
           </button>
@@ -65,6 +67,13 @@
         thinking: false,
         currentNodeId: null
       },
+      textAreaAdjust(el){
+        el.target.style.height = "1px";
+        const h = 25+el.target.scrollHeight;
+        if(h > 150) return;
+        el.target.style.height = (h)+"px";
+        this.$$('.chat-input-container')[0].style.height = (36+h)+"px";
+      },
       onBeforeMount() {
         marked.setOptions({
           breaks: true,
@@ -77,6 +86,8 @@
         chatApiService.setApi(this.api)
         nodeApiService.setApi(this.api)
         this.resetChatMessages()
+
+        this.autoResizeTextarea()
 
         this.handleNodeSelected = (nodeData) => {
           const nodeId = nodeData?.id || null
@@ -101,6 +112,9 @@
         if (this.handleAIResponseReceived) this.bus.off(this.EVENT_TYPES.SIGNALR_AI_RESPONSE_RECEIVED, this.handleAIResponseReceived)
         if (this.handleSolutionOutputReceived) this.bus.off(this.EVENT_TYPES.SOLUTION_OUTPUT_RECEIVED, this.handleSolutionOutputReceived)
       },
+      onUpdated() {
+        // this.autoResizeTextarea()
+      },
       get isSendDisabled() {
         return this.state.isLoading || !this.state.newMessage.trim()
       },
@@ -121,13 +135,17 @@
         }
       },
       autoResizeTextarea() {
+
+        return;
         if (!this.messageTextarea) {
           return
         }
+        const computed = window.getComputedStyle(this.messageTextarea)
+        const maxHeight = parseInt(computed.maxHeight, 10) || 240
         this.messageTextarea.style.height = 'auto'
-        const maxHeight = 150
         const newHeight = Math.min(this.messageTextarea.scrollHeight, maxHeight)
         this.messageTextarea.style.height = `${newHeight}px`
+        this.messageTextarea.style.overflowY = this.messageTextarea.scrollHeight > maxHeight ? 'auto' : 'hidden'
       },
       renderMarkdown(content) {
         if (!content) return ''
@@ -223,7 +241,8 @@
         }
 
         const userMessageContent = this.state.newMessage
-+        this.update({ newMessage: '', isLoading: true })
+        this.update({ newMessage: '', isLoading: true })
+        this.autoResizeTextarea()
 
         try {
           const userMessage = {
