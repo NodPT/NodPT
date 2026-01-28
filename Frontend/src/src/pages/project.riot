@@ -23,19 +23,27 @@
                 </div>
             </div>
         </div>
+
+        <!-- Modals -->
+        <new-project-modal />
+        <open-project-modal />
     </div>
 
     <script>
         import HeaderBar from '../components/header.riot'
         import RecentProjects from '../components/recent-projects.riot'
         import ProjectTiles from '../components/project-tiles.riot'
+        import NewProjectModal from '../components/new-project-modal.riot'
+        import OpenProjectModal from '../components/open-project-modal.riot'
         import '../styles/project-page.css'
 
         export default {
             components: {
                 HeaderBar,
                 RecentProjects,
-                ProjectTiles
+                ProjectTiles,
+                NewProjectModal,
+                OpenProjectModal
             },
             state: {
                 isDarkTheme: true
