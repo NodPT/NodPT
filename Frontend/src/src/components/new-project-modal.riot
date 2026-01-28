@@ -74,10 +74,8 @@
       },
       onMounted() {
         this.openModalWithTileHandler = this.openModalWithTile.bind(this)
-        this.tileSelectedHandler = this.selectTemplate.bind(this)
         
         this.bus.on(this.EVENT_TYPES.OPEN_NEW_PROJECT_MODAL, this.openModalWithTileHandler)
-        this.bus.on('tile-selected', this.tileSelectedHandler)
 
         // Listen for modal events
         const modalElement = document.getElementById('newProjectModal')
@@ -92,9 +90,6 @@
       onBeforeUnmount() {
         if (this.openModalWithTileHandler) {
           this.bus.off(this.EVENT_TYPES.OPEN_NEW_PROJECT_MODAL, this.openModalWithTileHandler)
-        }
-        if (this.tileSelectedHandler) {
-          this.bus.off('tile-selected', this.tileSelectedHandler)
         }
       },
       projectNameInputRef(el) {

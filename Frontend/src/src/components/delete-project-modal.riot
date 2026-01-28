@@ -113,32 +113,31 @@
 
         try {
           this.update({ isDeleting: true })
-          let deletedProject = null
 
           if (this.state.currentProjectId) {
-            deletedProject = await projectApiService.deleteProject(this.state.currentProjectId)
+            const deletedProject = await projectApiService.deleteProject(this.state.currentProjectId)
+            
             if (!deletedProject) {
               console.error('Project deletion failed')
               this.notify('alert', 'Failed to delete project. Please try again.')
+              this.update({ isDeleting: false })
+              return
             }
-          }
 
-          const modalElement = document.getElementById('deleteProjectModal')
-          const modal = Modal.getInstance(modalElement)
-          if (modal) {
-            modal.hide()
-          }
+            const modalElement = document.getElementById('deleteProjectModal')
+            const modal = Modal.getInstance(modalElement)
+            if (modal) {
+              modal.hide()
+            }
 
-          if (deletedProject) {
             this.notify('success', `Project "${this.state.currentProjectName}" has been deleted`)
 
             route('/project')
+
+            setTimeout(() => {
+              this.resetModal()
+            }, 500)
           }
-
-          setTimeout(() => {
-            this.resetModal()
-          }, 500)
-
         } catch (error) {
           console.error('Error deleting project:', error)
           this.notify('alert', 'Failed to delete project. Please try again.')

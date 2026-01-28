@@ -21,9 +21,15 @@
           </div>
         </div>
         <div class="modal-footer border-secondary">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick={resetModal}>Cancel</button>
-          <button type="button" class="btn btn-primary" onclick={copyProject} disabled={!state.newProjectName.trim()}>
-            <i class="bi bi-files me-1"></i>Copy Project
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick={resetModal} disabled={state.isCopying}>Cancel</button>
+          <button type="button" class="btn btn-primary" onclick={copyProject} disabled={!state.newProjectName.trim() || state.isCopying}>
+            <span if={state.isCopying}>
+              <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              Copying...
+            </span>
+            <span if={!state.isCopying}>
+              <i class="bi bi-files me-1"></i>Copy Project
+            </span>
           </button>
         </div>
       </div>
@@ -33,11 +39,17 @@
   <script>
     import { route } from '@riotjs/route'
     import { Modal } from 'bootstrap'
+    import projectApiService from '../services/projectApiService'
 
     export default {
       state: {
         newProjectName: '',
-        currentProjectName: 'Untitled Project'
+        currentProjectName: 'Untitled Project',
+        currentProjectId: null,
+        isCopying: false
+      },
+      onBeforeMount() {
+        projectApiService.setApi(this.api)
       },
       onMounted() {
         const modalElement = document.getElementById('copyProjectModal')
@@ -45,9 +57,11 @@
           modalElement.addEventListener('show.bs.modal', () => {
             const urlParams = new URLSearchParams(window.location.search)
             const projectName = urlParams.get('projectName') || 'Untitled Project'
+            const projectId = urlParams.get('projectId')
             
             this.update({
               currentProjectName: projectName,
+              currentProjectId: projectId ? parseInt(projectId) : null,
               newProjectName: `${projectName} Copy`
             })
 
@@ -75,32 +89,44 @@
         this.update({ newProjectName: event.target.value })
       },
       handleKeyUp(event) {
-        if (event.key === 'Enter' && this.state.newProjectName.trim()) {
+        if (event.key === 'Enter' && this.state.newProjectName.trim() && !this.state.isCopying) {
           this.copyProject()
         }
       },
       resetModal() {
-        this.update({ newProjectName: '' })
+        this.update({ newProjectName: '', isCopying: false })
       },
-      copyProject() {
-        if (!this.state.newProjectName.trim()) {
+      async copyProject() {
+        if (!this.state.newProjectName.trim() || this.state.isCopying) {
           return
         }
 
-        const modalElement = document.getElementById('copyProjectModal')
-        const modal = Modal.getInstance(modalElement)
-        if (modal) {
-          modal.hide()
+        // Note: API endpoint for copying projects is not yet implemented in backend
+        // This is a placeholder that shows the intended behavior
+        try {
+          this.update({ isCopying: true })
+
+          // TODO: Implement copyProject API endpoint in projectApiService
+          // const copiedProject = await projectApiService.copyProject(this.state.currentProjectId, this.state.newProjectName.trim())
+          
+          console.log('Copying project:', this.state.currentProjectName, 'to:', this.state.newProjectName.trim())
+          
+          const modalElement = document.getElementById('copyProjectModal')
+          const modal = Modal.getInstance(modalElement)
+          if (modal) {
+            modal.hide()
+          }
+
+          this.notify('info', `Project copy functionality will be implemented soon`)
+
+          setTimeout(() => {
+            this.resetModal()
+          }, 500)
+        } catch (error) {
+          console.error('Error copying project:', error)
+          this.notify('alert', 'Failed to copy project. Please try again.')
+          this.update({ isCopying: false })
         }
-
-        // TODO: Call API to copy project
-        console.log('Copying project:', this.state.currentProjectName, 'to:', this.state.newProjectName.trim())
-
-        this.notify('info', `Project "${this.state.currentProjectName}" will be copied to "${this.state.newProjectName.trim()}"`)
-
-        setTimeout(() => {
-          this.resetModal()
-        }, 500)
       }
     }
   </script>
