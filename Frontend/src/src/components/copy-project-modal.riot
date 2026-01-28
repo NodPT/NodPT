@@ -1,0 +1,107 @@
+<copy-project-modal>
+  <div class="modal fade" id="copyProjectModal" tabindex="-1" aria-labelledby="copyProjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="copyProjectModalLabel">
+            <i class="bi bi-files me-2"></i>Copy Project
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick={resetModal}></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted mb-3">Create a copy of <strong>{state.currentProjectName}</strong></p>
+          <div class="mb-3">
+            <label for="copyProjectNameInput" class="form-label">New Project Name</label>
+            <input type="text" class="form-control border-secondary" id="copyProjectNameInput"
+              value={state.newProjectName} oninput={handleNameInput} onkeyup={handleKeyUp}
+              placeholder="Enter new project name..." ref={projectNameInputRef} autofocus>
+            <div class="form-text text-muted">
+              Enter a name for the copied project
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick={resetModal}>Cancel</button>
+          <button type="button" class="btn btn-primary" onclick={copyProject} disabled={!state.newProjectName.trim()}>
+            <i class="bi bi-files me-1"></i>Copy Project
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { route } from '@riotjs/route'
+    import { Modal } from 'bootstrap'
+
+    export default {
+      state: {
+        newProjectName: '',
+        currentProjectName: 'Untitled Project'
+      },
+      onMounted() {
+        const modalElement = document.getElementById('copyProjectModal')
+        if (modalElement) {
+          modalElement.addEventListener('show.bs.modal', () => {
+            const urlParams = new URLSearchParams(window.location.search)
+            const projectName = urlParams.get('projectName') || 'Untitled Project'
+            
+            this.update({
+              currentProjectName: projectName,
+              newProjectName: `${projectName} Copy`
+            })
+
+            setTimeout(() => {
+              if (this.projectNameInputEl) {
+                this.projectNameInputEl.focus()
+                this.projectNameInputEl.select()
+              }
+            }, 100)
+          })
+        }
+      },
+      projectNameInputRef(el) {
+        this.projectNameInputEl = el
+      },
+      notify(type, message) {
+        const toast = window?.$toast
+        if (toast && typeof toast[type] === 'function') {
+          toast[type](message)
+          return
+        }
+        console.log(message)
+      },
+      handleNameInput(event) {
+        this.update({ newProjectName: event.target.value })
+      },
+      handleKeyUp(event) {
+        if (event.key === 'Enter' && this.state.newProjectName.trim()) {
+          this.copyProject()
+        }
+      },
+      resetModal() {
+        this.update({ newProjectName: '' })
+      },
+      copyProject() {
+        if (!this.state.newProjectName.trim()) {
+          return
+        }
+
+        const modalElement = document.getElementById('copyProjectModal')
+        const modal = Modal.getInstance(modalElement)
+        if (modal) {
+          modal.hide()
+        }
+
+        // TODO: Call API to copy project
+        console.log('Copying project:', this.state.currentProjectName, 'to:', this.state.newProjectName.trim())
+
+        this.notify('info', `Project "${this.state.currentProjectName}" will be copied to "${this.state.newProjectName.trim()}"`)
+
+        setTimeout(() => {
+          this.resetModal()
+        }, 500)
+      }
+    }
+  </script>
+</copy-project-modal>

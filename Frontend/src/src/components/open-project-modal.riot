@@ -1,0 +1,46 @@
+<open-project-modal>
+  <div class="modal fade" id="openProjectModal" tabindex="-1" aria-labelledby="openProjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="openProjectModalLabel">
+            <i class="bi bi-folder2-open me-2"></i>Open Recent Project
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <recent-projects />
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import RecentProjects from './recent-projects.riot'
+
+    export default {
+      components: {
+        RecentProjects
+      },
+      onMounted() {
+        const modalElement = document.getElementById('openProjectModal')
+        if (modalElement) {
+          this.handleModalShown = () => {
+            // Trigger reload of projects when modal is shown
+            this.bus.trigger(this.EVENT_TYPES.RELOAD_RECENT_PROJECTS)
+          }
+          modalElement.addEventListener('shown.bs.modal', this.handleModalShown)
+        }
+      },
+      onBeforeUnmount() {
+        const modalElement = document.getElementById('openProjectModal')
+        if (modalElement && this.handleModalShown) {
+          modalElement.removeEventListener('shown.bs.modal', this.handleModalShown)
+        }
+      }
+    }
+  </script>
+</open-project-modal>

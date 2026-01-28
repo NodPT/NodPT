@@ -1,0 +1,132 @@
+<rename-project-modal>
+  <div class="modal fade" id="renameProjectModal" tabindex="-1" aria-labelledby="renameProjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="renameProjectModalLabel">
+            <i class="bi bi-pencil-square me-2"></i>Rename Project
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick={resetModal}></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted mb-3">Rename <strong>{state.currentProjectName}</strong></p>
+          <div class="mb-3">
+            <label for="renameProjectNameInput" class="form-label">New Project Name</label>
+            <input type="text" class="form-control border-secondary" id="renameProjectNameInput"
+              value={state.newProjectName} oninput={handleNameInput} onkeyup={handleKeyUp}
+              placeholder="Enter new project name..." ref={projectNameInputRef} autofocus>
+            <div class="form-text text-muted">
+              Enter a new name for this project
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick={resetModal} disabled={state.isRenaming}>Cancel</button>
+          <button type="button" class="btn btn-primary" onclick={renameProject} disabled={!state.newProjectName.trim() || state.isRenaming}>
+            <span if={state.isRenaming}>
+              <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              Renaming...
+            </span>
+            <span if={!state.isRenaming}>
+              <i class="bi bi-pencil-square me-1"></i>Rename Project
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { route } from '@riotjs/route'
+    import { Modal } from 'bootstrap'
+    import projectApiService from '../services/projectApiService'
+
+    export default {
+      state: {
+        newProjectName: '',
+        currentProjectName: 'Untitled Project',
+        currentProjectId: null,
+        isRenaming: false
+      },
+      onBeforeMount() {
+        projectApiService.setApi(this.api)
+      },
+      onMounted() {
+        const modalElement = document.getElementById('renameProjectModal')
+        if (modalElement) {
+          modalElement.addEventListener('show.bs.modal', () => {
+            const urlParams = new URLSearchParams(window.location.search)
+            const projectName = urlParams.get('projectName') || 'Untitled Project'
+            const projectId = urlParams.get('projectId')
+            
+            this.update({
+              currentProjectName: projectName,
+              currentProjectId: projectId ? parseInt(projectId) : null,
+              newProjectName: projectName
+            })
+
+            setTimeout(() => {
+              if (this.projectNameInputEl) {
+                this.projectNameInputEl.focus()
+                this.projectNameInputEl.select()
+              }
+            }, 100)
+          })
+        }
+      },
+      projectNameInputRef(el) {
+        this.projectNameInputEl = el
+      },
+      notify(type, message) {
+        const toast = window?.$toast
+        if (toast && typeof toast[type] === 'function') {
+          toast[type](message)
+          return
+        }
+        console.log(message)
+      },
+      handleNameInput(event) {
+        this.update({ newProjectName: event.target.value })
+      },
+      handleKeyUp(event) {
+        if (event.key === 'Enter' && this.state.newProjectName.trim() && !this.state.isRenaming) {
+          this.renameProject()
+        }
+      },
+      resetModal() {
+        this.update({ newProjectName: '', isRenaming: false })
+      },
+      async renameProject() {
+        if (!this.state.newProjectName.trim() || this.state.isRenaming) {
+          return
+        }
+
+        try {
+          this.update({ isRenaming: true })
+
+          if (this.state.currentProjectId) {
+            const updatedProject = await projectApiService.updateProjectName(this.state.currentProjectId, this.state.newProjectName.trim())
+
+            const modalElement = document.getElementById('renameProjectModal')
+            const modal = Modal.getInstance(modalElement)
+            if (modal) {
+              modal.hide()
+            }
+
+            this.bus.trigger(this.EVENT_TYPES.PROJECT_NAME_UPDATE, this.state.newProjectName.trim())
+
+            this.notify('success', `Project renamed to "${this.state.newProjectName.trim()}"`)
+          }
+        } catch (error) {
+          console.error('Error renaming project:', error)
+          this.notify('alert', 'Failed to rename project. Please try again.')
+          this.update({ isRenaming: false })
+        } finally {
+          setTimeout(() => {
+            this.resetModal()
+          }, 500)
+        }
+      }
+    }
+  </script>
+</rename-project-modal>

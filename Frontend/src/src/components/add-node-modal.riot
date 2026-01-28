@@ -1,0 +1,196 @@
+<add-node-modal>
+  <div class="modal fade" id="addNodeModal" tabindex="-1" aria-labelledby="addNodeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="addNodeModalLabel">
+            <i class="bi bi-plus-circle me-2"></i>Add New Node
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick={resetModal}></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="nodeNameInput" class="form-label">Node Name</label>
+            <input type="text" class="form-control form-control-lg border-secondary" id="nodeNameInput"
+              value={state.nodeName} oninput={handleNameInput} onkeyup={handleKeyUp}
+              placeholder="Enter node name..." ref={nodeNameInputRef} autofocus>
+            <div class="form-text text-muted">
+              Node will be created as a child of the currently selected node
+            </div>
+          </div>
+          <div if={state.hierarchyInfo} class="alert alert-info mb-0">
+            <i class="bi bi-info-circle me-2"></i>{state.hierarchyInfo}
+          </div>
+          <div if={state.errorMessage} class="alert alert-danger mb-0 mt-2">
+            <i class="bi bi-exclamation-triangle me-2"></i>{state.errorMessage}
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick={resetModal} disabled={state.isCreating}>Cancel</button>
+          <button type="button" class="btn btn-primary" onclick={createNode}
+            disabled={!state.nodeName.trim() || state.isCreating || !state.canAddChild}>
+            <span if={state.isCreating}>
+              <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              Creating...
+            </span>
+            <span if={!state.isCreating}>
+              <i class="bi bi-check-lg me-1"></i>Create Node
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { Modal } from 'bootstrap'
+    import nodeApiService from '../services/nodeApiService'
+
+    export default {
+      state: {
+        nodeName: '',
+        isCreating: false,
+        errorMessage: '',
+        selectedNode: null,
+        canAddChild: false,
+        hierarchyInfo: 'Please select a node first'
+      },
+      onBeforeMount() {
+        nodeApiService.setApi(this.api)
+      },
+      onMounted() {
+        this.selectedNodeHandler = this.updateSelectedNode.bind(this)
+        this.bus.on(this.EVENT_TYPES.SELECTED_NODE_CHANGED, this.selectedNodeHandler)
+        this.bus.on(this.EVENT_TYPES.NODE_SELECTED, this.selectedNodeHandler)
+
+        const modalElement = document.getElementById('addNodeModal')
+        if (modalElement) {
+          modalElement.addEventListener('shown.bs.modal', () => {
+            setTimeout(() => {
+              if (this.nodeNameInputEl) {
+                this.nodeNameInputEl.focus()
+              }
+            }, 100)
+          })
+        }
+      },
+      onBeforeUnmount() {
+        if (this.selectedNodeHandler) {
+          this.bus.off(this.EVENT_TYPES.SELECTED_NODE_CHANGED, this.selectedNodeHandler)
+          this.bus.off(this.EVENT_TYPES.NODE_SELECTED, this.selectedNodeHandler)
+        }
+      },
+      nodeNameInputRef(el) {
+        this.nodeNameInputEl = el
+      },
+      notify(type, message) {
+        const toast = window?.$toast
+        if (toast && typeof toast[type] === 'function') {
+          toast[type](message)
+          return
+        }
+        console.log(message)
+      },
+      handleNameInput(event) {
+        this.update({ nodeName: event.target.value })
+      },
+      handleKeyUp(event) {
+        if (event.key === 'Enter' && this.state.nodeName.trim() && !this.state.isCreating && this.state.canAddChild) {
+          this.createNode()
+        }
+      },
+      updateSelectedNode(nodeData) {
+        const hierarchyMap = {
+          'director': { child: 'Manager', childType: 'manager' },
+          'manager': { child: 'Inspector', childType: 'inspector' },
+          'inspector': { child: 'Worker', childType: 'worker' },
+          'worker': null
+        }
+
+        const nodeType = nodeData?.type?.toLowerCase()
+        const hierarchy = hierarchyMap[nodeType]
+        const canAddChild = nodeData && hierarchy !== null
+        
+        let hierarchyInfo = 'Please select a node first'
+        if (nodeData) {
+          if (hierarchy) {
+            hierarchyInfo = `Creating a ${hierarchy.child} node as child of ${nodeData.name || 'selected node'}`
+          } else {
+            hierarchyInfo = `${nodeData.name || 'This node'} (${nodeData.type}) cannot have child nodes`
+          }
+        }
+
+        this.update({
+          selectedNode: nodeData,
+          canAddChild: canAddChild,
+          hierarchyInfo: hierarchyInfo
+        })
+      },
+      resetModal() {
+        this.update({
+          nodeName: '',
+          errorMessage: '',
+          isCreating: false
+        })
+      },
+      async createNode() {
+        if (!this.state.nodeName.trim()) {
+          this.update({ errorMessage: 'Node name is required' })
+          return
+        }
+
+        if (!this.state.selectedNode) {
+          this.update({ errorMessage: 'No node selected' })
+          return
+        }
+
+        if (!this.state.canAddChild) {
+          this.update({ errorMessage: 'Selected node cannot have children' })
+          return
+        }
+
+        this.update({ isCreating: true, errorMessage: '' })
+
+        try {
+          const projectId = this.state.selectedNode.ProjectId ?? this.state.selectedNode.projectId
+
+          if (!projectId) {
+            throw new Error('Project ID not found on selected node')
+          }
+
+          const nodeData = {
+            Name: this.state.nodeName.trim(),
+            MessageType: 'Discussion',
+            ParentId: this.state.selectedNode.id,
+            ProjectId: parseInt(projectId),
+            Status: 'Active',
+            Properties: {}
+          }
+
+          const createdNode = await nodeApiService.createNode(nodeData)
+
+          this.notify('success', `Node "${this.state.nodeName}" created successfully`)
+
+          this.bus.trigger(this.EVENT_TYPES.NODE_CREATED_FROM_API, {
+            nodeData: createdNode,
+            parentId: this.state.selectedNode.id
+          })
+
+          const modal = Modal.getInstance(document.getElementById('addNodeModal'))
+          if (modal) {
+            modal.hide()
+          }
+
+          this.resetModal()
+        } catch (error) {
+          console.error('Error creating node:', error)
+          const errorMsg = error.response?.data?.error || error.message || 'Failed to create node'
+          this.update({ errorMessage: errorMsg })
+          this.notify('error', `Failed to create node: ${errorMsg}`)
+        } finally {
+          this.update({ isCreating: false })
+        }
+      }
+    }
+  </script>
+</add-node-modal>
