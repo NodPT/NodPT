@@ -11,7 +11,7 @@
         <div class="modal-body">
           <!-- Step 1: Select Template -->
           <div if={state.currentStep === 1}>
-            <project-tiles selectionMode={true} />
+            <project-tiles selectionMode={true} ontile-selected={selectTemplate} />
           </div>
 
           <!-- Step 2: Enter Project Name -->
@@ -159,14 +159,11 @@
             TemplateId: this.state.selectedTemplate.id
           }
 
-          console.log('Creating project with DTO:', projectDto)
           const createdProject = await projectApiService.createProject(projectDto)
-          console.log('Project created:', createdProject)
 
           if (!createdProject || !createdProject.Id) {
             this.update({ isCreating: false })
             this.notify('alert', 'Failed to create project. Please try again.')
-            console.error('Created project is invalid:', createdProject)
             return
           }
 
@@ -191,16 +188,12 @@
             this.resetModal()
           }, 500)
         } catch (error) {
-          console.error('Error creating project:', error)
           this.notify('alert', 'Failed to create project. Please try again.')
           this.update({ isCreating: false })
         }
       },
       openModalWithTile(tile) {
-        console.log('Opening modal with tile:', tile)
-
         if (!tile || !tile.id) {
-          console.error('Invalid tile data:', tile)
           this.notify('alert', 'Invalid template selected. Please try again.')
           return
         }

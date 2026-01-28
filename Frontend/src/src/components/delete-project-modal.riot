@@ -118,7 +118,6 @@
             const deletedProject = await projectApiService.deleteProject(this.state.currentProjectId)
             
             if (!deletedProject) {
-              console.error('Project deletion failed')
               this.notify('alert', 'Failed to delete project. Please try again.')
               this.update({ isDeleting: false })
               return
@@ -139,7 +138,6 @@
             }, 500)
           }
         } catch (error) {
-          console.error('Error deleting project:', error)
           this.notify('alert', 'Failed to delete project. Please try again.')
           this.update({ isDeleting: false })
         }

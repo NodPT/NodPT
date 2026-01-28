@@ -96,37 +96,20 @@
       resetModal() {
         this.update({ newProjectName: '', isCopying: false })
       },
-      async copyProject() {
-        if (!this.state.newProjectName.trim() || this.state.isCopying) {
-          return
-        }
-
+      copyProject() {
         // Note: API endpoint for copying projects is not yet implemented in backend
-        // This is a placeholder that shows the intended behavior
-        try {
-          this.update({ isCopying: true })
-
-          // TODO: Implement copyProject API endpoint in projectApiService
-          // const copiedProject = await projectApiService.copyProject(this.state.currentProjectId, this.state.newProjectName.trim())
-          
-          console.log('Copying project:', this.state.currentProjectName, 'to:', this.state.newProjectName.trim())
-          
-          const modalElement = document.getElementById('copyProjectModal')
-          const modal = Modal.getInstance(modalElement)
-          if (modal) {
-            modal.hide()
-          }
-
-          this.notify('info', `Project copy functionality will be implemented soon`)
-
-          setTimeout(() => {
-            this.resetModal()
-          }, 500)
-        } catch (error) {
-          console.error('Error copying project:', error)
-          this.notify('alert', 'Failed to copy project. Please try again.')
-          this.update({ isCopying: false })
+        // Until implemented, simply notify the user that this feature is coming soon
+        this.notify('info', 'Project copy functionality will be implemented soon')
+        
+        const modalElement = document.getElementById('copyProjectModal')
+        const modal = Modal.getInstance(modalElement)
+        if (modal) {
+          modal.hide()
         }
+
+        setTimeout(() => {
+          this.resetModal()
+        }, 500)
       }
     }
   </script>

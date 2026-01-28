@@ -105,7 +105,7 @@
           'worker': null
         }
 
-        const nodeType = nodeData?.type?.toLowerCase()
+        const nodeType = nodeData?.type ? nodeData.type.toLowerCase() : null
         const hierarchy = hierarchyMap[nodeType]
         const canAddChild = nodeData && hierarchy !== null
         
@@ -149,7 +149,7 @@
         this.update({ isCreating: true, errorMessage: '' })
 
         try {
-          const projectId = this.state.selectedNode.ProjectId ?? this.state.selectedNode.projectId
+          const projectId = this.state.selectedNode.ProjectId
 
           if (!projectId) {
             throw new Error('Project ID not found on selected node')
@@ -180,7 +180,6 @@
 
           this.resetModal()
         } catch (error) {
-          console.error('Error creating node:', error)
           const errorMsg = error.response?.data?.error || error.message || 'Failed to create node'
           this.update({ errorMessage: errorMsg })
           this.notify('error', `Failed to create node: ${errorMsg}`)
