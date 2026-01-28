@@ -1,7 +1,6 @@
-import { getToken } from './tokenStorage';
+import { getToken } from '../plugins/tokenStorage';
 
 class ProjectApiService {
-
 	constructor() {
 		this.baseURL = '/projects';
 		this.api = null;
@@ -22,8 +21,8 @@ class ProjectApiService {
 	getAuthHeaders() {
 		const token = getToken('AccessToken');
 		return {
-			'Authorization': `Bearer ${token}`,
-			'Content-Type': 'application/json'
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json',
 		};
 	}
 
@@ -61,7 +60,7 @@ class ProjectApiService {
 	 * Get a project by ID
 	 * @param {number} id - Project ID
 	 * @returns {Promise<Object>} Project data (ProjectDto)
-	 * 
+	 *
 	 * Response format (ProjectDto from backend):
 	 * {
 	 *   Id: number,
@@ -91,7 +90,7 @@ class ProjectApiService {
 	 *     }
 	 *   ]
 	 * }
-	 * 
+	 *
 	 * Note: Backend uses PascalCase (C# convention). Properties are case-sensitive.
 	 */
 	async getProject(id) {
@@ -111,11 +110,11 @@ class ProjectApiService {
 	 */
 	async getUserProjects() {
 		try {
-			const data = await this.api.get(this.baseURL)
-			return data
+			const data = await this.api.get(this.baseURL);
+			return data;
 		} catch (err) {
-			console.error('Failed to get user projects:', err)
-			throw err
+			console.error('Failed to get user projects:', err);
+			throw err;
 		}
 	}
 

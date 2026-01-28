@@ -60,3 +60,5 @@ generated
 .nycrc
 !.gitmodules
 !.travis.yml
+
+frontend.env
