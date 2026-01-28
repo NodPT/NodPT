@@ -60,7 +60,6 @@
       },
       onMounted() {
         this.selectedNodeHandler = this.updateSelectedNode.bind(this)
-        this.bus.on(this.EVENT_TYPES.SELECTED_NODE_CHANGED, this.selectedNodeHandler)
         this.bus.on(this.EVENT_TYPES.NODE_SELECTED, this.selectedNodeHandler)
 
         const modalElement = document.getElementById('addNodeModal')
@@ -76,7 +75,6 @@
       },
       onBeforeUnmount() {
         if (this.selectedNodeHandler) {
-          this.bus.off(this.EVENT_TYPES.SELECTED_NODE_CHANGED, this.selectedNodeHandler)
           this.bus.off(this.EVENT_TYPES.NODE_SELECTED, this.selectedNodeHandler)
         }
       },
