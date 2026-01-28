@@ -242,14 +242,20 @@
         }
         if (action === 'logout') {
           try {
-            await this.logoutApi()
-            await authApiService.logout()
-          } catch (error) {
-            console.error('Logout error:', error)
-            try { await authApiService.logout() } catch (secondError) {
-              console.error('Logout fallback error:', secondError)
-            }
+            // Try to call logout API but don't block if it fails
+            await this.logoutApi().catch(err => {
+              console.error('Logout API error (continuing with cleanup):', err)
+            })
           } finally {
+            // Always clean up local state and redirect
+            try {
+              await authApiService.logout()
+            } catch (error) {
+              console.error('Auth service logout error:', error)
+            }
+            // Ensure cleanup even if authApiService fails
+            localStorage.removeItem('userData')
+            sessionStorage.removeItem('userData')
             route('/login')
           }
           return
@@ -259,11 +265,9 @@
       async logoutApi() {
         try {
           const response = await this.api.get('/auth/logout')
-          localStorage.removeItem('userData')
-          sessionStorage.removeItem('userData')
           return response
         } catch (error) {
-          console.error('Failed to logout:', error)
+          console.error('Failed to call logout API:', error)
           throw error
         }
       }
