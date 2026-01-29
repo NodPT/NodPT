@@ -26,23 +26,39 @@ class AuthApiService {
 		this.api = api;
 	}
 
+	/**
+	 * Check if Firebase auth is initialized
+	 * @private
+	 * @throws {Error} If Firebase auth is not initialized
+	 */
+	_checkAuthInitialized() {
+		if (!auth) {
+			throw new Error('Firebase authentication is not initialized. Please check your Firebase configuration.');
+		}
+	}
+
 	registerWithEmail(email, pw) {
+		this._checkAuthInitialized();
 		return createUserWithEmailAndPassword(auth, email, pw);
 	}
 
 	loginWithEmail(email, pw) {
+		this._checkAuthInitialized();
 		return signInWithEmailAndPassword(auth, email, pw);
 	}
 
 	loginWithGoogle() {
+		this._checkAuthInitialized();
 		return signInWithPopup(auth, googleProvider);
 	}
 
 	loginWithFacebook() {
+		this._checkAuthInitialized();
 		return signInWithPopup(auth, facebookProvider);
 	}
 
 	loginWithMicrosoft() {
+		this._checkAuthInitialized();
 		return signInWithPopup(auth, microsoftProvider);
 	}
 

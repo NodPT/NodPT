@@ -4,23 +4,37 @@ import { getAuth, GoogleAuthProvider, FacebookAuthProvider, OAuthProvider, signO
 import { bus, EVENT_TYPES } from './bus';
 
 // console.log('Firebase config string:', import.meta.env.VITE_FIREBASE_SHIT);
-const firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_SHIT);
+let firebaseConfig = null;
+
+try {
+	const configString = import.meta.env.VITE_FIREBASE_SHIT;
+	// Check if environment variable is not set or is still the placeholder value from .env.example
+	if (!configString || configString === 'your_firebase_config') {
+		console.warn('⚠️ Firebase configuration is not set. Please configure VITE_FIREBASE_SHIT environment variable with your Firebase project settings.');
+	} else {
+		firebaseConfig = JSON.parse(configString);
+	}
+} catch (err) {
+	console.error('❌ Failed to parse Firebase configuration:', err);
+	firebaseConfig = null;
+}
 
 // --- Safe Firebase initialization ---
 let app = null;
 let auth = null;
 
 try {
-	const valid = firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId && firebaseConfig.appId;
+	const valid = firebaseConfig && firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId && firebaseConfig.appId;
 
 	if (!valid) {
 		console.warn('⚠️ Firebase configuration is incomplete. Auth will be disabled.');
 	} else {
 		app = initializeApp(firebaseConfig);
 		auth = getAuth(app);
+		console.log('✅ Firebase initialized successfully');
 	}
 } catch (err) {
-	console.error('Firebase initialization failed:', err);
+	console.error('❌ Firebase initialization failed:', err);
 	// fallback to a null auth object so other parts won’t crash
 	app = null;
 	auth = null;

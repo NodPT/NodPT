@@ -99,6 +99,7 @@
     import { route } from '@riotjs/route'
     import authApiService from '../services/authApiService'
     import { Modal } from 'bootstrap'
+    import { clearAllTokens } from '../plugins/tokenStorage'
     import NewProjectModal from './new-project-modal.riot'
     import OpenProjectModal from './open-project-modal.riot'
 
@@ -268,17 +269,25 @@
           return
         }
         if (action === 'logout') {
+          // Try to call logout API but don't block if it fails
           try {
             await this.logoutApi()
+          } catch (err) {
+            // Error already logged in logoutApi; continue with local cleanup
+          }
+          
+          // Always clean up local state and redirect
+          try {
             await authApiService.logout()
           } catch (error) {
-            console.error('Logout error:', error)
-            try { await authApiService.logout() } catch (secondError) {
-              console.error('Logout fallback error:', secondError)
-            }
-          } finally {
-            route('/login')
+            console.error('Auth service logout error:', error)
           }
+          
+          // Ensure cleanup even if authApiService fails
+          clearAllTokens()
+          localStorage.removeItem('userData')
+          sessionStorage.removeItem('userData')
+          route('/login')
           return
         }
         this.bus.trigger(this.EVENT_TYPES.USER_ACTION, action)
@@ -286,11 +295,9 @@
       async logoutApi() {
         try {
           const response = await this.api.get('/auth/logout')
-          localStorage.removeItem('userData')
-          sessionStorage.removeItem('userData')
           return response
         } catch (error) {
-          console.error('Failed to logout:', error)
+          console.error('Failed to call logout API:', error)
           throw error
         }
       }
