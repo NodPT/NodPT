@@ -6,7 +6,7 @@
           html={renderMarkdown(message.content)}></raw>
         <div if={message.type !== 'ai' && message.type !== 'thinking'} 
           class="message-controls d-flex justify-content-start align-items-center mt-1">
-          <button class="action-btn" onclick={copyMessage(message)} disabled={state.isLoading}
+          <button class="action-btn" onclick={() => copyMessage(message)} disabled={state.isLoading}
             title={message._copied
             ? 'Copied' : 'Copy to clipboard'}>
             <i class={"bi " + (message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold')}></i>
@@ -16,16 +16,16 @@
         <div if={message.type === 'ai' || message.type === 'thinking'} class="message-actions">
               <div class="chat-response-buttons" if={!message.thinking}>
                 <button class="action-btn" 
-                  onclick={likeMessage(message)} 
+                  onclick={() => likeMessage(message)} 
                   disabled={state.isLoading} 
                   title="Like this response">
                   <i class={"bi bi-hand-thumbs-up fw-bold " + (message.Liked ? 'text-success' : '')}></i>
                 </button>
-                <button class="action-btn" onclick={dislikeMessage(message)} disabled={state.isLoading}
+                <button class="action-btn" onclick={() => dislikeMessage(message)} disabled={state.isLoading}
                     title="Dislike this response">
                     <i class={"bi bi-hand-thumbs-down fw-bold " + (message.Disliked ? 'text-danger' : '')}></i>
                 </button>
-                <button class="action-btn" onclick={copyMessage(message)} disabled={state.isLoading}
+                <button class="action-btn" onclick={() => copyMessage(message)} disabled={state.isLoading}
                       title={message._copied ? 'Copied' : 'Copy to clipboard'}>
                       <i class={"bi " + (message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold')}></i>
                 </button>
