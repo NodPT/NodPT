@@ -78,6 +78,7 @@
     import { route } from '@riotjs/route'
     import authApiService from '../services/authApiService'
     import { Modal } from 'bootstrap'
+    import { clearAllTokens } from '../plugins/tokenStorage'
 
     export default {
       state: {
@@ -256,6 +257,7 @@
           }
           
           // Ensure cleanup even if authApiService fails
+          clearAllTokens()
           localStorage.removeItem('userData')
           sessionStorage.removeItem('userData')
           route('/login')
