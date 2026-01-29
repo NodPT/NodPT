@@ -1,225 +1,4 @@
 <new-project-modal>
-<<<<<<< HEAD
-    <div class="modal fade" id="newProjectModal" tabindex="-1" aria-labelledby="newProjectModalLabel" aria-hidden="true"
-        ref={modalElementRef}>
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header border-secondary">
-                    <h5 class="modal-title" id="newProjectModalLabel">
-                        <i class="bi bi-file-earmark-plus me-2"></i>{modalTitle}
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"
-                        onclick={resetModal}></button>
-                </div>
-                <div class="modal-body">
-                    <div if={state.currentStep===1}>
-                        <project-tiles selectionMode={true} ontile-selected={selectTemplate} />
-                    </div>
-
-                    <div if={state.currentStep===2}>
-                        <div class="mb-4 text-center">
-                            <div class="mb-3">
-                                <i class={state.selectedTemplate ? state.selectedTemplate.icon + ' fs-1'
-                                    : 'bi bi-file-earmark fs-1' }></i>
-                            </div>
-                            <h6 class="text-muted">{state.selectedTemplate ? state.selectedTemplate.name : ''} Project
-                            </h6>
-                        </div>
-                        <div class="mb-3">
-                            <label for="projectNameInput" class="form-label">Project Name</label>
-                            <input type="text" class="form-control form-control-lg border-secondary"
-                                id="projectNameInput" value={state.projectName} oninput={handleProjectNameInput}
-                                onkeyup={handleProjectNameKey} placeholder="Enter project name..."
-                                ref={projectNameInputRef} autofocus />
-                            <div class="form-text text-muted">Give your project a descriptive name</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer border-secondary">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick={resetModal}
-                        disabled={state.isCreating}>Cancel</button>
-                    <button if={state.currentStep===2} type="button" class="btn btn-primary" onclick={createProject}
-                        disabled={isCreateDisabled}>
-                        <span if={state.isCreating}>
-                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                            Creating...
-                        </span>
-                        <span if={!state.isCreating}>
-                            <i class="bi bi-check-lg me-1"></i>Create Project
-                        </span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        import { route } from '@riotjs/route'
-        import { Modal } from 'bootstrap'
-        import projectApiService from '../services/projectApiService'
-        import ProjectTiles from './project-tiles.riot'
-
-        export default {
-            components: {
-                ProjectTiles
-            },
-            state: {
-                currentStep: 1,
-                selectedTemplate: null,
-                projectName: '',
-                isCreating: false
-            },
-            onBeforeMount() {
-                projectApiService.setApi(this.api)
-            },
-            onMounted() {
-                this.openModalHandler = (tile) => this.openModalWithTile(tile)
-                this.bus.on(this.EVENT_TYPES.OPEN_NEW_PROJECT_MODAL, this.openModalHandler)
-
-                if (this.modalElement) {
-                    this.modalHiddenHandler = () => this.resetModal()
-                    this.modalElement.addEventListener('hidden.bs.modal', this.modalHiddenHandler)
-                }
-            },
-            onBeforeUnmount() {
-                if (this.openModalHandler) {
-                    this.bus.off(this.EVENT_TYPES.OPEN_NEW_PROJECT_MODAL, this.openModalHandler)
-                }
-                if (this.modalElement && this.modalHiddenHandler) {
-                    this.modalElement.removeEventListener('hidden.bs.modal', this.modalHiddenHandler)
-                }
-            },
-            get modalTitle() {
-                return this.state.currentStep === 1 ? 'Create New Project' : 'Name Your Project'
-            },
-            get isCreateDisabled() {
-                return this.state.isCreating || !this.state.projectName.trim()
-            },
-            notify(type, message) {
-                const toast = window?.$toast
-                if (toast && typeof toast[type] === 'function') {
-                    toast[type](message)
-                    return
-                }
-                if (type === 'alert' || type === 'error') {
-                    console.error(message)
-                    return
-                }
-                if (type === 'warn') {
-                    console.warn(message)
-                    return
-                }
-                console.log(message)
-            },
-            modalElementRef(el) {
-                this.modalElement = el
-            },
-            projectNameInputRef(el) {
-                this.projectNameInputEl = el
-            },
-            handleProjectNameInput(event) {
-                this.update({ projectName: event.target.value })
-            },
-            handleProjectNameKey(event) {
-                if (event.key === 'Enter') {
-                    this.createProject()
-                }
-            },
-            selectTemplate(tile) {
-                if (!tile || !tile.id) {
-                    this.notify('alert', 'Invalid template selected. Please try again.')
-                    return
-                }
-                this.update({ selectedTemplate: tile, currentStep: 2 })
-                setTimeout(() => {
-                    if (this.projectNameInputEl) {
-                        this.projectNameInputEl.focus()
-                    }
-                }, 0)
-            },
-            resetModal() {
-                this.update({
-                    currentStep: 1,
-                    selectedTemplate: null,
-                    projectName: '',
-                    isCreating: false
-                })
-            },
-            async createProject() {
-                if (!this.state.projectName.trim() || this.state.isCreating) {
-                    return
-                }
-
-                if (!this.state.selectedTemplate || !this.state.selectedTemplate.id) {
-                    this.notify('alert', 'Please select a template first.')
-                    return
-                }
-
-                try {
-                    this.update({ isCreating: true })
-
-                    const projectDto = {
-                        Name: this.state.projectName.trim(),
-                        Description: `${this.state.selectedTemplate.name} project`,
-                        IsActive: true,
-                        CreatedAt: new Date().toISOString(),
-                        UpdatedAt: new Date().toISOString(),
-                        TemplateId: this.state.selectedTemplate.id
-                    }
-
-                    const createdProject = await projectApiService.createProject(projectDto)
-
-                    if (!createdProject || !createdProject.Id) {
-                        this.notify('alert', 'Failed to create project. Please try again.')
-                        this.update({ isCreating: false })
-                        return
-                    }
-
-                    const modalElement = document.getElementById('newProjectModal')
-                    if (modalElement) {
-                        const modal = Modal.getInstance(modalElement)
-                        if (modal) {
-                            modal.hide()
-                        }
-                    }
-
-                    this.notify('success', `Project "${createdProject.Name}" created successfully`)
-
-                    const query = new URLSearchParams({
-                        projectId: createdProject.Id,
-                        projectName: createdProject.Name,
-                        isNewProject: 'true'
-                    }).toString()
-
-                    route(`/editor?${query}`)
-
-                    setTimeout(() => {
-                        this.resetModal()
-                        this.update({ isCreating: false })
-                    }, 500)
-                } catch (error) {
-                    console.error('Error creating project:', error)
-                    this.notify('alert', 'Failed to create project. Please try again.')
-                    this.update({ isCreating: false })
-                }
-            },
-            openModalWithTile(tile) {
-                if (!tile || !tile.id) {
-                    this.notify('alert', 'Invalid template selected. Please try again.')
-                    return
-                }
-
-                const modalElement = document.getElementById('newProjectModal')
-                if (modalElement) {
-                    const modal = new Modal(modalElement)
-                    modal.show()
-                    this.selectTemplate(tile)
-                }
-            }
-        }
-    </script>
-</new-project-modal>
-=======
   <div class="modal fade" id="newProjectModal" tabindex="-1" aria-labelledby="newProjectModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
@@ -227,26 +6,26 @@
           <h5 class="modal-title" id="newProjectModalLabel">
             <i class="bi bi-file-earmark-plus me-2"></i>{state.modalTitle}
           </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick={resetModal}></button>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"
+            onclick={resetModal}></button>
         </div>
         <div class="modal-body">
-          <!-- Step 1: Select Template -->
-          <div if={state.currentStep === 1}>
+          <div if={state.currentStep===1}>
             <project-tiles selectionMode={true} ontile-selected={selectTemplate} />
           </div>
 
-          <!-- Step 2: Enter Project Name -->
-          <div if={state.currentStep === 2} class="project-name-form">
+          <div if={state.currentStep===2} class="project-name-form">
             <div class="mb-4 text-center">
               <div class="selected-template-icon mb-3">
-                <i class={state.selectedTemplate ? state.selectedTemplate.icon + ' fs-1' : 'bi bi-file-earmark fs-1'}></i>
+                <i class={state.selectedTemplate ? state.selectedTemplate.icon + ' fs-1' : 'bi bi-file-earmark fs-1'
+                  }></i>
               </div>
               <h6 class="text-muted">{state.selectedTemplate ? state.selectedTemplate.name : ''} Project</h6>
             </div>
             <div class="mb-3">
               <label for="projectNameInput" class="form-label">Project Name</label>
               <input type="text" class="form-control form-control-lg border-secondary" id="projectNameInput"
-                value={state.projectName} oninput={handleNameInput} onkeyup={handleKeyUp} 
+                value={state.projectName} oninput={handleNameInput} onkeyup={handleKeyUp}
                 placeholder="Enter project name..." ref={projectNameInputRef} autofocus>
               <div class="form-text text-muted">
                 Give your project a descriptive name
@@ -255,8 +34,9 @@
           </div>
         </div>
         <div class="modal-footer border-secondary">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick={resetModal} disabled={state.isCreating}>Cancel</button>
-          <button if={state.currentStep === 2} type="button" class="btn btn-primary" onclick={createProject}
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick={resetModal}
+            disabled={state.isCreating}>Cancel</button>
+          <button if={state.currentStep===2} type="button" class="btn btn-primary" onclick={createProject}
             disabled={!state.projectName.trim() || state.isCreating}>
             <span if={state.isCreating}>
               <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
@@ -295,7 +75,7 @@
       },
       onMounted() {
         this.openModalWithTileHandler = this.openModalWithTile.bind(this)
-        
+
         this.bus.on(this.EVENT_TYPES.OPEN_NEW_PROJECT_MODAL, this.openModalWithTileHandler)
 
         // Listen for modal events
@@ -430,4 +210,3 @@
     }
   </script>
 </new-project-modal>
->>>>>>> 2386e5d95d006ac4b2aa0d131ed5d6898e778384
