@@ -1,9 +1,5 @@
 import { auth, googleProvider, facebookProvider, microsoftProvider, signOutAll as firebaseSignOutAll } from '../plugins/firebase';
-import {
-	createUserWithEmailAndPassword,
-	signInWithEmailAndPassword,
-	signInWithPopup,
-} from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { bus, EVENT_TYPES } from '../plugins/bus';
 import { storeToken } from '../plugins/tokenStorage';
 
@@ -67,10 +63,23 @@ class AuthApiService {
 	 */
 	async logout() {
 		try {
-			await firebaseSignOutAll();
+			await this.logoutApi();
+			// await firebaseSignOuAll();
 			// Event is emitted by signOutAll function
 		} catch (error) {
 			console.error('Logout error:', error);
+			throw error;
+		}
+	}
+
+	async logoutApi() {
+		try {
+			const response = await this.api.get('/auth/logout');
+			localStorage.removeItem('userData');
+			sessionStorage.removeItem('userData');
+			return response;
+		} catch (error) {
+			console.error('Failed to logout:', error);
 			throw error;
 		}
 	}
@@ -93,7 +102,7 @@ class AuthApiService {
 		try {
 			// Check if we're in Development mode
 			const isDevelopment = import.meta.env.VITE_ENV === 'Development';
-			
+
 			let tokenToSend = FirebaseToken;
 			if (isDevelopment) {
 				// In Development mode, bypass Firebase and send mock token
@@ -133,6 +142,7 @@ class AuthApiService {
 		const providerName = this.loginProviders[provider] ? provider : 'Google';
 
 		if (!isDevelopment) {
+			// perform actual Firebase login such as Google, Facebook, etc.
 			const loginFn = this.loginProviders[providerName];
 			if (!loginFn) {
 				throw new Error('Login provider is not configured');
@@ -143,8 +153,9 @@ class AuthApiService {
 			firebaseToken = await user.getIdToken();
 		}
 
+		// Now perform backend login with the obtained Firebase token
 		const response = await this.login(firebaseToken, rememberMe, providerName);
-		this.notifySignIn();
+		this.notifySignIn(); // Notify other parts of the app about sign-in
 		return response;
 	}
 
@@ -164,8 +175,6 @@ class AuthApiService {
 			throw error;
 		}
 	}
-
-
 
 	/**
 	 * Get stored user data

@@ -1,19 +1,22 @@
 <add-node-modal>
-  <div class="modal fade" id="addNodeModal" tabindex="-1" aria-labelledby="addNodeModalLabel" aria-hidden="true">
+  <div class="modal fade" id="addNodeModal" tabindex="-1" 
+  aria-labelledby="addNodeModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header border-secondary">
           <h5 class="modal-title" id="addNodeModalLabel">
             <i class="bi bi-plus-circle me-2"></i>Add New Node
           </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick={resetModal}></button>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"
+            onclick={resetModal}></button>
         </div>
         <div class="modal-body">
           <div class="mb-3">
             <label for="nodeNameInput" class="form-label">Node Name</label>
             <input type="text" class="form-control form-control-lg border-secondary" id="nodeNameInput"
               value={state.nodeName} oninput={handleNameInput} onkeyup={handleKeyUp}
-              placeholder="Enter node name..." ref={nodeNameInputRef} autofocus>
+               placeholder="Enter node name..."
+              ref={nodeNameInputRef} autofocus>
             <div class="form-text text-muted">
               Node will be created as a child of the currently selected node
             </div>
@@ -26,9 +29,10 @@
           </div>
         </div>
         <div class="modal-footer border-secondary">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick={resetModal} disabled={state.isCreating}>Cancel</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick={resetModal}
+            disabled={state.isCreating}>Cancel</button>
           <button type="button" class="btn btn-primary" onclick={createNode}
-            disabled={!state.nodeName.trim() || state.isCreating || !state.canAddChild}>
+           disabled={!state.nodeName.trim() || state.isCreating || !state.canAddChild}>
             <span if={state.isCreating}>
               <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
               Creating...
@@ -55,10 +59,8 @@
         canAddChild: false,
         hierarchyInfo: 'Please select a node first'
       },
-      onBeforeMount() {
-        nodeApiService.setApi(this.api)
-      },
       onMounted() {
+        nodeApiService.setApi(this.api)
         this.selectedNodeHandler = this.updateSelectedNode.bind(this)
         this.bus.on(this.EVENT_TYPES.NODE_SELECTED, this.selectedNodeHandler)
 
@@ -108,7 +110,7 @@
         const nodeType = nodeData?.type ? nodeData.type.toLowerCase() : null
         const hierarchy = hierarchyMap[nodeType]
         const canAddChild = nodeData && hierarchy !== null
-        
+
         let hierarchyInfo = 'Please select a node first'
         if (nodeData) {
           if (hierarchy) {

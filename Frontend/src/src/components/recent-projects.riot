@@ -4,10 +4,10 @@
     <div class="project-list">
       <div each={project in state.recentProjects} key={project.Id}
         class="project-item d-flex align-items-center mb-2 py-2 px-1 hover-shadow cursor-pointer"
-        data-project-id={project.Id}
-        onclick={openProject}>
+        data-project-id={project.Id} onclick={openProject}>
         <div class="project-icon me-3">
-          <i class={project.TemplateIcon ? project.TemplateIcon + ' fs-4' : 'bi bi-file-earmark text-secondary fs-4'}></i>
+          <i class={project.TemplateIcon ? project.TemplateIcon + ' fs-4' : 'bi bi-file-earmark text-secondary fs-4'
+            }></i>
         </div>
         <div class="project-details flex-grow-1">
           <h6 class="mb-0 fw-bold">{project.Name}</h6>
@@ -15,7 +15,7 @@
         </div>
       </div>
 
-      <div if={state.recentProjects.length === 0 && !state.error} class="text-center text-muted py-4">
+      <div if={state.recentProjects.length===0 && !state.error} class="text-center text-muted py-4">
         <i class="bi bi-folder2-open fs-1 mb-2"></i>
         <p>No recent projects found</p>
       </div>
@@ -78,7 +78,7 @@
           isNewProject: 'false'
         }).toString()
 
-        route(`/editor?${query}`)
+        router.push(`/editor?${query}`)
       },
       async loadProjects() {
         try {

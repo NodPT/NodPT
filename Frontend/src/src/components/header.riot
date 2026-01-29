@@ -5,59 +5,53 @@
         <a class="navbar-brand" href="/">
           <img class="rounded-2" src="/images/logo-small.png" alt="NodPT" />
         </a>
-        <button class="btn btn-sm dropdown-toggle" type="button" aria-expanded={state.openMenu==='user' } onclick={()=>
-          toggleMenu('user')}>
-          <img if={state.userPhotoUrl} src={state.userPhotoUrl} alt="Profile" class="rounded-circle me-1 user-photo"
+        <button class="btn btn-sm dropdown-toggle" type="button" 
+          aria-expanded={state.openMenu==='user' } 
+          onclick={() => toggleMenu('user')}>
+          <img if={state.userPhotoUrl} src={state.userPhotoUrl} alt="Profile"
+           class="rounded-circle me-1 user-photo"
             onerror={clearPhoto} />
           <i if={!state.userPhotoUrl} class="bi bi-person-circle me-1"></i>
         </button>
         <ul class={"dropdown-menu dropdown-menu-end " + (state.openMenu === 'user' ? 'show' : '')}>
-          <li><a class=" dropdown-item" href="#" onclick={(event)=> userAction(event, 'profile')}>Profile</a></li>
-          <li><a class="dropdown-item" href="#" onclick={(event)=> userAction(event, 'settings')}>Settings</a></li>
-          <li><a class="dropdown-item" href="#" onclick={(event)=> userAction(event, 'help')}>Help</a></li>
           <li>
-            <hr class="dropdown-divider" />
-          </li>
-          <li><a class="dropdown-item text-danger" href="#" onclick={(event)=> userAction(event, 'logout')}>Logout</a>
+            <a class="dropdown-item text-danger" href="#" onclick={logout}>Logout</a>
           </li>
         </ul>
       </div>
 
       <div class="d-flex align-items-center gap-3" if={props.showMenu}>
         <div class="dropdown">
-          <button class="btn btn-sm dropdown-toggle" type="button" aria-expanded={state.openMenu==='project' }
-            onclick={()=> toggleMenu('project')}>
+          <button class="btn btn-sm dropdown-toggle" type="button"
+           aria-expanded={state.openMenu==='project' }
+            onclick={() => toggleMenu('project')}>
             <i class="bi bi-folder2"></i> File
           </button>
           <ul class={"dropdown-menu " + (state.openMenu === 'project' ? 'show' : '')}>
-            <li><a class=" dropdown-item" href="#" onclick={(event)=> projectAction(event, 'new')}>New Project</a></li>
-            <li><a class="dropdown-item" href="#" onclick={(event)=> projectAction(event, 'open')}>Open Project</a></li>
-            <li><a class="dropdown-item" href="#" onclick={(event)=> projectAction(event, 'save')}>Save Project</a></li>
+            <li><a class=" dropdown-item" href="#" onclick={openNewProject}>New Project</a></li>
+            <li><a class="dropdown-item" href="#" onclick={openProject}>Open Project</a></li>
             <li>
               <hr class="dropdown-divider" />
             </li>
-            <li><a class="dropdown-item" href="#" onclick={(event)=> projectAction(event, 'copy')}>Copy Project</a></li>
-            <li><a class="dropdown-item" href="#" onclick={(event)=> projectAction(event, 'rename')}>Rename Project</a>
+            <li><a class="dropdown-item" href="#" onclick={renameProject}>Rename Project</a>
             </li>
-            <li><a class="dropdown-item text-danger" href="#" onclick={(event)=> projectAction(event, 'delete')}>Delete
-                Project</a></li>
+            <li>
+              <a class="dropdown-item text-danger" href="#" onclick={deleteProject}>Delete Project</a>
+            </li>
           </ul>
         </div>
 
         <div class="dropdown">
           <button class="btn btn-sm dropdown-toggle" type="button" aria-expanded={state.openMenu==='nodes' }
-            onclick={()=> toggleMenu('nodes')}>
+            onclick={() => toggleMenu('nodes')}>
             <i class="bi bi-diagram-3"></i> Nodes
           </button>
           <ul class={"dropdown-menu " + (state.openMenu === 'nodes' ? 'show' : '')}>
-            <li><a class=" dropdown-item" href="#" onclick={(event)=> nodeAction(event, 'add')}>Add Node</a></li>
-            <li><a class={"dropdown-item " + (state.isDirectorSelected ? 'disabled' : '')} href=" #" onclick={(event)=>
-                nodeAction(event, 'delete')}>Delete</a></li>
+            <li><a class=" dropdown-item" href="#" 
+              onclick={addNode}>Add Node</a></li>
             <li>
               <hr class="dropdown-divider" />
             </li>
-            <li><a class="dropdown-item" href="#" onclick={(event)=> nodeAction(event, 'lock')}>Lock</a></li>
-            <li><a class="dropdown-item" href="#" onclick={(event)=> nodeAction(event, 'unlock')}>Unlock</a></li>
           </ul>
         </div>
 
@@ -96,10 +90,9 @@
   <open-project-modal />
 
   <script>
-    import { route } from '@riotjs/route'
+    import { router } from '@riotjs/route'
     import authApiService from '../services/authApiService'
     import { Modal } from 'bootstrap'
-    import { clearAllTokens } from '../plugins/tokenStorage'
     import NewProjectModal from './new-project-modal.riot'
     import OpenProjectModal from './open-project-modal.riot'
 
@@ -119,10 +112,8 @@
         userPhotoUrl: '',
         isDirectorSelected: false
       },
-      onBeforeMount() {
-        authApiService.setApi(this.api)
-      },
       onMounted() {
+        authApiService.setApi(this.api)
         this.handleClickOutside = this.handleClickOutside.bind(this)
         document.addEventListener('click', this.handleClickOutside, true)
 
@@ -219,88 +210,54 @@
         this.update({ searchPopupVisible: false })
         this.clearSearch()
       },
-      projectAction(event, action) {
+      openNewProject(event) {
         event.preventDefault()
-        const modalMap = {
-          new: 'newProjectModal',
-          open: 'openProjectModal',
-          copy: 'copyProjectModal',
-          rename: 'renameProjectModal',
-          delete: 'deleteProjectModal'
+        this.showProjectModal('newProjectModal', 'new')
+      },
+      openProject(event) {
+        event.preventDefault()
+        this.showProjectModal('openProjectModal', 'open')
+      },
+      renameProject(event) {
+        event.preventDefault()
+        this.showProjectModal('renameProjectModal', 'rename')
+      },
+      deleteProject(event) {
+        event.preventDefault()
+        this.showProjectModal('deleteProjectModal', 'delete')
+      },
+      showProjectModal(modalId, action) {
+        const modalElement = document.getElementById(modalId)
+        if (typeof Modal !== 'undefined' && modalElement) {
+          const modal = new Modal(modalElement)
+          modal.show()
+          return
         }
-        const modalId = modalMap[action]
-        if (modalId) {
-          const modalElement = document.getElementById(modalId)
-          if (typeof Modal !== 'undefined' && modalElement) {
-            const modal = new Modal(modalElement)
-            modal.show()
-            return
-          } else {
-            console.warn(`Modal element "${modalId}" not found or Modal is unavailable; falling back to PROJECT_ACTION "${action}".`)
-          }
-        }
+        console.warn(`Modal element "${modalId}" not found or Modal is unavailable; falling back to PROJECT_ACTION "${action}".`)
         this.bus.trigger(this.EVENT_TYPES.PROJECT_ACTION, action)
       },
-      nodeAction(event, action) {
+      // add a new node to the current project
+      addNode(event) {
         event.preventDefault()
-        if (action === 'add') {
-          const modalElement = document.getElementById('addNodeModal')
-          if (typeof Modal !== 'undefined' && modalElement) {
-            const modal = new Modal(modalElement)
-            modal.show()
-            return
-          } else {
-            console.warn('Modal element "addNodeModal" not found or Modal is unavailable; falling back to NODE_ACTION "add".')
-            this.bus.trigger(this.EVENT_TYPES.NODE_ACTION, action)
-            return
-          }
-        }
-        if (action === 'delete') {
-          if (this.state.isDirectorSelected) return
-          this.bus.trigger(this.EVENT_TYPES.DELETE_NODE)
+        const modalElement = document.getElementById('addNodeModal')
+        if (typeof Modal !== 'undefined' && modalElement) {
+          const modal = new Modal(modalElement)
+          modal.show()
           return
         }
-        this.bus.trigger(this.EVENT_TYPES.NODE_ACTION, action)
+        console.warn('Modal element "addNodeModal" not found or Modal is unavailable; falling back to NODE_ACTION "add".')
+        this.bus.trigger(this.EVENT_TYPES.NODE_ACTION, 'add')
       },
-      async userAction(event, action) {
-        event.preventDefault()
-        if (action === 'profile') {
-          route('/profile')
-          return
-        }
-        if (action === 'logout') {
-          // Try to call logout API but don't block if it fails
-          try {
-            await this.logoutApi()
-          } catch (err) {
-            // Error already logged in logoutApi; continue with local cleanup
-          }
-          
-          // Always clean up local state and redirect
-          try {
-            await authApiService.logout()
-          } catch (error) {
-            console.error('Auth service logout error:', error)
-          }
-          
-          // Ensure cleanup even if authApiService fails
-          clearAllTokens()
-          localStorage.removeItem('userData')
-          sessionStorage.removeItem('userData')
-          route('/login')
-          return
-        }
-        this.bus.trigger(this.EVENT_TYPES.USER_ACTION, action)
-      },
-      async logoutApi() {
+      async logout(e) {
         try {
-          const response = await this.api.get('/auth/logout')
-          return response
+          await authApiService.logout()
         } catch (error) {
-          console.error('Failed to call logout API:', error)
-          throw error
+          console.error('Logout error:', error)
+        } finally {
+          router.push('/login')
         }
-      }
+      },
+      
     }
   </script>
 </header-bar>

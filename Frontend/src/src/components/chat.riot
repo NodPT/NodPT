@@ -1,35 +1,47 @@
 <chat>
   <div class="chat-container">
     <div class="chat-messages" ref={chatMessagesRef}>
-      <div each={message in state.messages} class={"message " + (message.type === 'ai' || message.type === 'thinking' ? 'ai-message' : 'user-message')}>
-        <div class={"message-content " + (message.thinking ? 'thinking' : '')} innerHTML={renderMarkdown(message.content)}></div>
-
-        <div if={message.type !== 'ai' && message.type !== 'thinking'} class="message-controls d-flex justify-content-start align-items-center mt-1">
-          <button class="action-btn" onclick={() => copyMessage(message)} disabled={state.isLoading} title={message._copied ? 'Copied' : 'Copy to clipboard'}>
+      <div each={message in state.messages} class={getMessageClass(message)}>
+        <raw class={" message-content " + (message.thinking ? 'thinking' : '')} 
+          html={renderMarkdown(message.content)}></raw>
+        <div if={message.type !== 'ai' && message.type !== 'thinking'} 
+          class="message-controls d-flex justify-content-start align-items-center mt-1">
+          <button class="action-btn" onclick={copyMessage(message)} disabled={state.isLoading}
+            title={message._copied
+            ? 'Copied' : 'Copy to clipboard'}>
             <i class={"bi " + (message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold')}></i>
           </button>
         </div>
 
         <div if={message.type === 'ai' || message.type === 'thinking'} class="message-actions">
-          <div class="chat-response-buttons" if={!message.thinking}>
-            <button class="action-btn" onclick={() => likeMessage(message)} disabled={state.isLoading} title="Like this response">
-              <i class={"bi bi-hand-thumbs-up fw-bold " + (message.Liked ? 'text-success' : '')}></i>
-            </button>
-            <button class="action-btn" onclick={() => dislikeMessage(message)} disabled={state.isLoading} title="Dislike this response">
-              <i class={"bi bi-hand-thumbs-down fw-bold " + (message.Disliked ? 'text-danger' : '')}></i>
-            </button>
-            <button class="action-btn" onclick={() => copyMessage(message)} disabled={state.isLoading} title={message._copied ? 'Copied' : 'Copy to clipboard'}>
-              <i class={"bi " + (message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold')}></i>
-            </button>
-            <button if={message.type === 'ai' && !message.markedAsSolution} class="action-btn" onclick={() => buildSolution(message)} disabled={state.isLoading} title="Mark as solution">
-              <i class="bi bi-check2-circle fw-bold"></i>
-            </button>
-            <span if={message.solutionPending} class="badge bg-warning text-dark ms-2">Processing</span>
-            <span if={message.markedAsSolution} class="badge bg-success ms-2">
-              <i class="bi bi-check2-square me-1 fw-bold"></i>
-              <span>Solution</span>
-            </span>
-          </div>
+              <div class="chat-response-buttons" if={!message.thinking}>
+                <button class="action-btn" 
+                  onclick={likeMessage(message)} 
+                  disabled={state.isLoading} 
+                  title="Like this response">
+                  <i class={"bi bi-hand-thumbs-up fw-bold " + (message.Liked ? 'text-success' : '')}></i>
+                </button>
+                <button class="action-btn" onclick={dislikeMessage(message)} disabled={state.isLoading}
+                    title="Dislike this response">
+                    <i class={"bi bi-hand-thumbs-down fw-bold " + (message.Disliked ? 'text-danger' : '')}></i>
+                </button>
+                <button class="action-btn" onclick={copyMessage(message)} disabled={state.isLoading}
+                      title={message._copied ? 'Copied' : 'Copy to clipboard'}>
+                      <i class={"bi " + (message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold')}></i>
+                </button>
+                <button if={message.type === 'ai' && !message.markedAsSolution} 
+                        class="action-btn" onclick={buildSolution(message)} 
+                        disabled={state.isLoading} title="Mark as solution">
+                        <i class="bi bi-check2-circle fw-bold"></i>
+                 </button>
+                <span if={message.solutionPending} 
+                  class="badge bg-warning text-dark ms-2">Processing</span>
+                <span if={message.markedAsSolution} 
+                  class="badge bg-success ms-2">
+                  <i class="bi bi-check2-square me-1 fw-bold"></i>
+                  <span>Solution</span>
+                </span>
+              </div>
         </div>
 
         <div class="message-time">{formatTime(message.timestamp)}</div>
@@ -38,10 +50,10 @@
 
     <div class="chat-input-container">
       <div class="chat-input-box h-100">
-        <textarea class="chat-textarea form-control"
-        onkeyup={textAreaAdjust}
-         placeholder="Ask anything..." 
-          value={state.newMessage} oninput={handleInput} onkeydown={handleEnter} ref={messageTextareaRef}
+        <textarea class="chat-textarea form-control" 
+          onkeyup={textAreaAdjust} placeholder="Ask anything..."
+          value={state.newMessage} oninput={handleInput}
+          onkeydown={handleEnter} ref={messageTextareaRef}
           disabled={state.isLoading}></textarea>
         <div class="chat-input-actions">
           <button class="btn send-btn" onclick={sendMessage} disabled={isSendDisabled}>
@@ -58,6 +70,7 @@
     import DOMPurify from 'dompurify'
     import chatApiService from '../services/chatApiService.js'
     import nodeApiService from '../services/nodeApiService.js'
+    import raw from '../components/raw.riot'
 
     export default {
       state: {
@@ -67,28 +80,25 @@
         thinking: false,
         currentNodeId: null
       },
-      textAreaAdjust(el){
-        el.target.style.height = "1px";
-        const h = el.target.scrollHeight;
-        if(h > 150 || h<60) return;
-        el.target.style.height = (h)+"px";
-        this.$$('.chat-input-container')[0].style.height = (36+h)+"px";
+      // determine message CSS class based on type
+      getMessageClass(message) {
+        return " message " + (message.type === 'ai' || message.type === 'thinking' ? 'ai-message' : 'user-message')
       },
-      onBeforeMount() {
-        marked.setOptions({
-          breaks: true,
-          gfm: true,
-          headerIds: false,
-          mangle: false
-        })
-      },
+      // adjust textarea height based on content
+      textAreaAdjust(el) {
+        el.target.style.height = " 1px"; 
+        const h = el.target.scrollHeight; 
+        if (h > 150 || h < 60) return;
+        el.target.style.height = (h) + "px";
+        this.$$('.chat-input-container')[0].style.height = (36 + h) + "px";
+      }, 
       onMounted() {
-        chatApiService.setApi(this.api)
-        nodeApiService.setApi(this.api)
-        this.resetChatMessages()
-
-        this.autoResizeTextarea()
-
+        // configure marked for markdown rendering
+        marked.setOptions({ breaks: true, gfm: true, headerIds: false, mangle: false })
+        // set some API services
+        chatApiService.setApi(this.api); 
+        nodeApiService.setApi(this.api); 
+        this.resetChatMessages();
         this.handleNodeSelected = (nodeData) => {
           const nodeId = nodeData?.id || null
           if (this.state.currentNodeId === nodeId) {
@@ -107,13 +117,10 @@
         this.bus.on(this.EVENT_TYPES.SOLUTION_OUTPUT_RECEIVED, this.handleSolutionOutputReceived)
       },
       onBeforeUnmount() {
-        if (this.handleNodeSelected) this.bus.off(this.EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
-        if (this.handleProjectContextChange) this.bus.off(this.EVENT_TYPES.PROJECT_CONTEXT_CHANGED, this.handleProjectContextChange)
-        if (this.handleAIResponseReceived) this.bus.off(this.EVENT_TYPES.SIGNALR_AI_RESPONSE_RECEIVED, this.handleAIResponseReceived)
-        if (this.handleSolutionOutputReceived) this.bus.off(this.EVENT_TYPES.SOLUTION_OUTPUT_RECEIVED, this.handleSolutionOutputReceived)
-      },
-      onUpdated() {
-        // this.autoResizeTextarea()
+          this.bus.off(this.EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
+          this.bus.off(this.EVENT_TYPES.PROJECT_CONTEXT_CHANGED, this.handleProjectContextChange)
+          this.bus.off(this.EVENT_TYPES.SIGNALR_AI_RESPONSE_RECEIVED, this.handleAIResponseReceived)
+          this.bus.off(this.EVENT_TYPES.SOLUTION_OUTPUT_RECEIVED, this.handleSolutionOutputReceived)
       },
       get isSendDisabled() {
         return this.state.isLoading || !this.state.newMessage.trim()
@@ -126,27 +133,15 @@
       },
       handleInput(event) {
         this.update({ newMessage: event.target.value })
-        this.autoResizeTextarea()
       },
+      // send message on Enter key press
       handleEnter(event) {
         if (event.key === 'Enter' && !event.shiftKey) {
           event.preventDefault()
           this.sendMessage()
         }
       },
-      autoResizeTextarea() {
-
-        return;
-        if (!this.messageTextarea) {
-          return
-        }
-        const computed = window.getComputedStyle(this.messageTextarea)
-        const maxHeight = parseInt(computed.maxHeight, 10) || 240
-        this.messageTextarea.style.height = 'auto'
-        const newHeight = Math.min(this.messageTextarea.scrollHeight, maxHeight)
-        this.messageTextarea.style.height = `${newHeight}px`
-        this.messageTextarea.style.overflowY = this.messageTextarea.scrollHeight > maxHeight ? 'auto' : 'hidden'
-      },
+      // render markdown content safely
       renderMarkdown(content) {
         if (!content) return ''
         const rawHtml = marked(content)
@@ -168,36 +163,28 @@
           }
         })
       },
+      // format timestamp to readable string and local time
       formatTime(timestamp) {
         if (!timestamp) return ''
         return new Date(timestamp).toLocaleString()
       },
+      // scroll chat to bottom
       scrollToBottom() {
         if (this.chatMessages) {
           this.chatMessages.scrollTop = this.chatMessages.scrollHeight
         }
       },
-      createDefaultAiMessage() {
-        return {
-          id: Date.now(),
-          type: 'ai',
-          content: 'How can I help you today?',
-          timestamp: new Date().toISOString(),
-          markedAsSolution: false,
-          solutionPending: false,
-          Liked: false,
-          Disliked: false
-        }
-      },
+     // reset chat messages state
       resetChatMessages() {
         this.update({
-          messages: [this.createDefaultAiMessage()],
+          messages: [],
           newMessage: '',
           isLoading: false,
           thinking: false
         })
         this.scrollToBottom()
       },
+      // load chat messages for the selected node
       async loadChatData(nodeId) {
         if (!nodeId) {
           this.resetChatMessages()
@@ -215,17 +202,19 @@
             Liked: msg.Liked || false,
             Disliked: msg.Disliked || false
           }))
-          this.update({ messages: messages.length ? messages : [this.createDefaultAiMessage()] })
+          this.update({ messages: messages.length ? messages : [] })
           this.scrollToBottom()
         } catch (error) {
           console.error('Error loading chat data:', error)
           this.resetChatMessages()
         }
       },
+      // remove any existing thinking message
       removeThinkingMessage() {
         const messages = this.state.messages.filter((msg) => !msg.thinking)
         this.update({ messages })
       },
+      // Sends the user's message to the API and handles the response
       async sendMessage() {
         if (this.state.thinking) {
           this.update({ thinking: false })
@@ -242,7 +231,6 @@
 
         const userMessageContent = this.state.newMessage
         this.update({ newMessage: '', isLoading: true })
-        this.autoResizeTextarea()
 
         try {
           const userMessage = {
@@ -298,6 +286,7 @@
           this.update({ isLoading: false })
         }
       },
+      // build solution from AI message
       async buildSolution(message) {
         if (this.state.isLoading || !message) return
         this.update({ isLoading: true })
@@ -313,6 +302,7 @@
           this.update({ isLoading: false })
         }
       },
+      // like and dislike message
       async likeMessage(message) {
         if (this.state.isLoading || !message) return
         try {
@@ -335,6 +325,7 @@
           console.error('Error disliking message:', error)
         }
       },
+      // copy message content to clipboard
       async copyMessage(message) {
         if (!message?.content) return
         try {
@@ -357,47 +348,7 @@
           console.error('Copy failed', err)
         }
       },
-      async createManagerNodes(parentNodeId, managers) {
-        if (!parentNodeId || !Array.isArray(managers) || managers.length === 0) {
-          return
-        }
-        let projectId
-        try {
-          const parentNode = await nodeApiService.getNode(parentNodeId)
-          projectId = parentNode?.ProjectId ?? parentNode?.projectId
-        } catch (error) {
-          console.error('Failed to load parent node for solution output:', error)
-          return
-        }
-        if (!projectId) {
-          return
-        }
-
-        for (const manager of managers) {
-          if (!manager) continue
-          const managerName = (manager.Name || manager.name || 'Manager').trim()
-          const managerJob = manager.Job || manager.job
-          try {
-            const createdNode = await nodeApiService.createNode({
-              Name: managerName,
-              MessageType: 'Discussion',
-              ParentId: parentNodeId,
-              ProjectId: parseInt(projectId, 10),
-              Status: 'Active',
-              Properties: managerJob ? { Job: managerJob } : {}
-            })
-
-            this.bus.trigger(this.EVENT_TYPES.NODE_CREATED_FROM_API, {
-              nodeData: createdNode,
-              parentId: parentNodeId
-            })
-          } catch (error) {
-            console.error('Failed to create manager node from solution output:', error)
-          }
-        }
-
-        this.bus.trigger(this.EVENT_TYPES.ARRANGE_NODES)
-      },
+      // Handle AI response received from the API
       onAIResponseReceived(data) {
         if (!data) return
 
@@ -440,6 +391,7 @@
         this.update({ messages: [...this.state.messages, aiMessage] })
         this.scrollToBottom()
       },
+      // Handle solution output received from the API
       async onSolutionOutputReceived(data) {
         if (!data?.nodeId || !data.content) {
           return
@@ -466,7 +418,8 @@
 
         const solutionMessage = solutionPayload?.Message ?? solutionPayload?.message
         if (solutionMessage && data.messageId && data.nodeId === this.state.currentNodeId) {
-          const targetMessage = this.state.messages.find(msg => msg.id === data.messageId)
+          const targetMessage = this.state.messages
+            .find(msg => msg.id === data.messageId);
           if (targetMessage) {
             targetMessage.content = solutionMessage
             targetMessage.markedAsSolution = true
@@ -485,7 +438,11 @@
           return
         }
 
-        await this.createManagerNodes(data.nodeId, managers)
+        this.bus.trigger(this.EVENT_TYPES.SOLUTION_MANAGERS_RECEIVED, {
+          data: data,
+          managers
+        })
+
       }
     }
   </script>

@@ -1,0 +1,45 @@
+<raw>
+    <p></p>
+    <script>
+        export default {
+            state: {
+                default: null
+            },
+            onMounted() {
+                this.root.innerHTML = this.sanitizeHtml(this.props.html || '');
+            },
+            onUpdated() {
+                this.root.innerHTML = this.sanitizeHtml(this.props.html || '');
+            },
+            sanitizeHtml(html) {
+                // Basic sanitization to prevent XSS attacks
+                // allow safe tags only like <b>, <i>, <strong>, <em>, <p>, <br>, <ul>, <ol>, <li>, <a>
+                // the return the sanitized html
+                const allowedTags = new Set(['B', 'I', 'STRONG', 'EM', 'P', 'BR', 'UL', 'OL', 'LI', 'A']);
+                const allowedAttrs = new Set(['href', 'title', 'target', 'rel', 'class', 'style']);
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const sanitizeNode = (node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        if (!allowedTags.has(node.tagName)) {
+                            const textNode = document.createTextNode(node.textContent);
+                            node.parentNode.replaceChild(textNode, node);
+                            return;
+                        }
+                        // Remove disallowed attributes
+                        for (let i = node.attributes.length - 1; i >= 0; i--) {
+                            const attr = node.attributes[i];
+                            if (!allowedAttrs.has(attr.name)) {
+                                node.removeAttribute(attr.name);
+                            }
+                        }
+                    }
+                    // Recursively sanitize child nodes
+                    node.childNodes.forEach(sanitizeNode);
+                };
+                doc.body.childNodes.forEach(sanitizeNode);
+                return doc.body.innerHTML;
+            }
+        }
+    </script>
+</raw>

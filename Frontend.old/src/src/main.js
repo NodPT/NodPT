@@ -40,13 +40,13 @@ import '@fortawesome/fontawesome-free/css/all.min.css';
 
 // Setup global auth lifecycle listeners
 listenEvent(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, () => {
-  // Redirect to login page when relogin is required
-  router.push({ name: 'Login' });
+	// Redirect to login page when relogin is required
+	router.push('/login');
 });
 
 listenEvent(EVENT_TYPES.AUTH_SIGNED_OUT, () => {
-  // Redirect to login page when user signs out
-  router.push({ name: 'Login' });
+	// Redirect to login page when user signs out
+	router.push('/login');
 });
 
 const app = createApp(App);

@@ -6,7 +6,7 @@
           <div class="d-flex align-items-center gap-2">
             <h1 class="h3 fw-bold mb-0">
               <span class="gradient-text">
-                <img class="rounded-3" src="/public/images/logo-small.png" alt="NodPT" />
+                <img class="rounded-3" src="/images/logo-small.png" alt="NodPT" />
               </span>
             </h1>
             <span class="text-white-50 small">Intelligence, Multiplied.</span>
@@ -94,7 +94,7 @@
             <div id="video-demo" class="mx-auto w-100 pt-3">
               <div class="ratio ratio-16x9">
                 <video autoplay muted loop>
-                  <source src="/public/videos/coming_soon.mp4" type="video/mp4" />
+                  <source src="/videos/coming_soon.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
               </div>
@@ -398,7 +398,8 @@
                 <h5 class="fw-semibold text-white mb-1">{useCase.title}</h5>
                 <p class="text-white-50 mb-0">{useCase.description}</p>
                 <div class="mt-auto">
-                  <button class="btn btn-light btn-sm px-3" onclick={()=> tryScenario(useCase)}>
+                  <button class="btn btn-light btn-sm px-3"
+                     onclick={tryScenario}>
                     Try Scenario
                   </button>
                 </div>
@@ -459,7 +460,7 @@
   </div>
 
   <script>
-    import { route } from '@riotjs/route'
+    import { router } from '@riotjs/route'
 
     export default {
       state: {
@@ -538,7 +539,7 @@
         this.applyBodyTheme(nextThemeIsDark)
       },
       navigateToProject() {
-        route('/project')
+        router.push('/project')
       },
       scrollToUseCases() {
         const element = this.root.querySelector('#use-cases')
@@ -560,7 +561,7 @@
       },
       tryScenario(useCase) {
         console.log('Trying scenario:', useCase.title)
-        route('/project')
+        router.push('/project')
       },
       createParticles() {
         const particlesContainer = this.root.querySelector('.ai-particles')

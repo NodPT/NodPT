@@ -11,31 +11,32 @@
       </div>
 
       <div class="progress flex-grow-1 mx-2 footer-progress">
-        <div class="progress-bar bg-info footer-progress-bar" ref={progressBarRef} role="progressbar" aria-valuenow={progressValue} aria-valuemin="0" aria-valuemax="100"></div>
+        <div class="progress-bar bg-info footer-progress-bar" ref={progressBarRef} role="progressbar"
+          aria-valuenow={progressValue} aria-valuemin="0" aria-valuemax="100"></div>
       </div>
 
       <div class="d-flex align-items-center ms-2">
         <span class={"badge " + connectionStatusClass + (state.isQAMode ? ' qa-toggle' : '')} title={connectionStatusTitle} onclick={handleSignalRClick}>
-          <i class={"bi " + connectionStatusIcon}></i>
+          <i class={" bi " + connectionStatusIcon}></i>
         </span>
       </div>
 
-      <button class="btn btn-sm ms-2 shadow-none" onclick={handleZoomFit} title="Zoom to Fit All Nodes">
-        <i class="bi bi-arrows-fullscreen"></i>
+      <button class=" btn btn-sm ms-2 shadow-none" onclick={handleZoomFit} title="Zoom to Fit All Nodes">
+          <i class="bi bi-arrows-fullscreen"></i>
+          </button>
+
+          <button class="btn btn-sm ms-2 shadow-none" onclick={handleArrangeNodes} title="Auto Arrange Nodes">
+            <i class="bi bi-grid-3x3"></i>
+          </button>
+
+          <button class="btn btn-sm ms-2 shadow-none" onclick={handleToggleMinimap} title="Toggle Minimap">
+            <i class={"bi " + (props.minimapVisible ? 'bi-eye-slash' : 'bi-eye')}></i>
       </button>
 
-      <button class="btn btn-sm ms-2 shadow-none" onclick={handleArrangeNodes} title="Auto Arrange Nodes">
-        <i class="bi bi-grid-3x3"></i>
-      </button>
-
-      <button class="btn btn-sm ms-2 shadow-none" onclick={handleToggleMinimap} title="Toggle Minimap">
-        <i class={"bi " + (props.minimapVisible ? 'bi-eye-slash' : 'bi-eye')}></i>
-      </button>
-
-      <button class="btn btn-sm ms-2 shadow-none" onclick={handleToggleRightPanel} title="Toggle Right Panel">
-        <i class="bi bi-layout-sidebar-reverse"></i>
-      </button>
-    </div>
+      <button class=" btn btn-sm ms-2 shadow-none" onclick={handleToggleRightPanel} title="Toggle Right Panel">
+              <i class="bi bi-layout-sidebar-reverse"></i>
+          </button>
+      </div>
   </footer>
 
   <script>
@@ -50,7 +51,7 @@
         this.lastProgressValue = 0
         this.applyProgressWidth()
       },
-      onUpdated() {
+      onBeforeUpdate() {
         this.applyProgressWidth()
       },
       progressBarRef(element) {

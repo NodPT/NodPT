@@ -129,5 +129,5 @@ this.bus.on('EventName', (data, data2, data3) => {
 
 - do not use public cdn, links, fonts. all must be local.
 - do not use inline styles in .riot components. all styles must be in src/styles folder
-- don't write inline execution like `onclick={() => copyMessage(message)}`, write `onclick={copyMessage}` , then in the script part write the function `copyMessage(e){...}`
+- don't write inline execution like `onclick={() => copyMessage(message)}`, write `onclick={copyMessage(message)}` or `onclick={copyMessage}` , then in the script part write the function `copyMessage(e){...}`
 - don't keep space between the function name in the html and the curly braces, write `{functionName}` not `{ functionName }`
