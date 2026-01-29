@@ -35,14 +35,23 @@ class AuthApiService {
 	}
 
 	loginWithGoogle() {
+		if (!auth) {
+			throw new Error('Firebase authentication is not initialized. Please check your Firebase configuration.');
+		}
 		return signInWithPopup(auth, googleProvider);
 	}
 
 	loginWithFacebook() {
+		if (!auth) {
+			throw new Error('Firebase authentication is not initialized. Please check your Firebase configuration.');
+		}
 		return signInWithPopup(auth, facebookProvider);
 	}
 
 	loginWithMicrosoft() {
+		if (!auth) {
+			throw new Error('Firebase authentication is not initialized. Please check your Firebase configuration.');
+		}
 		return signInWithPopup(auth, microsoftProvider);
 	}
 
