@@ -8,8 +8,9 @@ let firebaseConfig = null;
 
 try {
 	const configString = import.meta.env.VITE_FIREBASE_SHIT;
+	// Check if environment variable is not set or is still the placeholder value from .env.example
 	if (!configString || configString === 'your_firebase_config') {
-		console.warn('⚠️ Firebase configuration is not set. Please configure VITE_FIREBASE_SHIT environment variable.');
+		console.warn('⚠️ Firebase configuration is not set. Please configure VITE_FIREBASE_SHIT environment variable with your Firebase project settings.');
 	} else {
 		firebaseConfig = JSON.parse(configString);
 	}
