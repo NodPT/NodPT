@@ -1,4 +1,5 @@
 <open-project-modal>
+<<<<<<< HEAD
     <div class="modal fade" id="openProjectModal" tabindex="-1" aria-labelledby="openProjectModalLabel"
         aria-hidden="true" ref={modalElementRef}>
         <div class="modal-dialog modal-lg">
@@ -52,3 +53,34 @@
         }
     </script>
 </open-project-modal>
+=======
+  <div class="modal fade" id="openProjectModal" tabindex="-1" aria-labelledby="openProjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="openProjectModalLabel">
+            <i class="bi bi-folder2-open me-2"></i>Open Recent Project
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <recent-projects />
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import RecentProjects from './recent-projects.riot'
+
+    export default {
+      components: {
+        RecentProjects
+      }
+    }
+  </script>
+</open-project-modal>
+>>>>>>> 2386e5d95d006ac4b2aa0d131ed5d6898e778384

@@ -23,6 +23,12 @@
       minimapVisible={state.minimapVisible}
       connectionStatus={state.connectionStatus}
     />
+
+    <!-- Modals -->
+    <copy-project-modal />
+    <rename-project-modal />
+    <delete-project-modal />
+    <add-node-modal />
   </div>
 
   <script>
@@ -30,6 +36,10 @@
     import FooterBar from '../components/footer.riot'
     import Graph from '../components/graph.riot'
     import RightPanel from '../components/right-panel.riot'
+    import CopyProjectModal from '../components/copy-project-modal.riot'
+    import RenameProjectModal from '../components/rename-project-modal.riot'
+    import DeleteProjectModal from '../components/delete-project-modal.riot'
+    import AddNodeModal from '../components/add-node-modal.riot'
     import { arrangeNodes, zoomFit } from '../services/editorService'
     import signalRService from '../services/signalRService'
     import '../styles/components-dark.css'
@@ -40,7 +50,11 @@
         HeaderBar,
         FooterBar,
         Graph,
-        RightPanel
+        RightPanel,
+        CopyProjectModal,
+        RenameProjectModal,
+        DeleteProjectModal,
+        AddNodeModal
       },
       state: {
         minimapVisible: false,
