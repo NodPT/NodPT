@@ -1,26 +1,28 @@
 <home>
-  <div class="landing-page" data-theme={state.isDarkTheme ? 'dark' : 'light'}>
-    <header class={state.isScrolled ? 'landing-header sticky-top py-2 scrolled' : 'landing-header sticky-top py-2'}>
+  <div class="landing-page" data-theme={state.isDarkTheme ? 'dark' : 'light' }>
+    <header class={state.isScrolled ? 'landing-header sticky-top py-2 scrolled' : 'landing-header sticky-top py-2' }>
       <div class="container">
         <div class="d-flex flex-column flex-lg-row align-items-center justify-content-between gap-3">
           <div class="d-flex align-items-center gap-2">
             <h1 class="h3 fw-bold mb-0">
               <span class="gradient-text">
-                <img class="rounded-3" src="/images/logo-small.png" alt="NodPT" />
+                <img class="rounded-3" src="/public/images/logo-small.png" alt="NodPT" />
               </span>
             </h1>
             <span class="text-white-50 small">Intelligence, Multiplied.</span>
           </div>
           <nav class="d-flex flex-wrap align-items-center gap-3">
-            <a href="https://github.com/NodPT" target="_blank" rel="noopener noreferrer" class="btn btn-info btn-sm px-3">
+            <a href="https://github.com/NodPT" target="_blank" rel="noopener noreferrer"
+              class="btn btn-info btn-sm px-3">
               <i class="bi bi-github"></i>
             </a>
             <a href="#support" class="btn btn-warning btn-sm px-3">
               <i class="bi bi-heart-fill me-2"></i>Support
             </a>
             <a href="/login" class="btn btn-success btn-sm px-3">Login</a>
-            <button onclick={toggleTheme} class="btn btn-sm text-white" title={state.isDarkTheme ? 'Switch to Light Theme' : 'Switch to Dark Theme'}>
-              <i class={state.isDarkTheme ? 'bi bi-sun-fill' : 'bi bi-moon-fill'}></i>
+            <button onclick={toggleTheme} class="btn btn-sm text-white" title={state.isDarkTheme
+              ? 'Switch to Light Theme' : 'Switch to Dark Theme' }>
+              <i class={state.isDarkTheme ? 'bi bi-sun-fill' : 'bi bi-moon-fill' }></i>
             </button>
           </nav>
         </div>
@@ -92,7 +94,7 @@
             <div id="video-demo" class="mx-auto w-100 pt-3">
               <div class="ratio ratio-16x9">
                 <video autoplay muted loop>
-                  <source src="/videos/coming_soon.mp4" type="video/mp4" />
+                  <source src="/public/videos/coming_soon.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
               </div>
@@ -262,7 +264,8 @@
                   </div>
                 </div>
                 <div class="text-center mt-4">
-                  <a href="https://github.com/NodPT" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-lg px-5">
+                  <a href="https://github.com/NodPT" target="_blank" rel="noopener noreferrer"
+                    class="btn btn-primary btn-lg px-5">
                     <i class="bi bi-github me-2"></i>Start Contributing on GitHub
                   </a>
                 </div>
@@ -395,7 +398,7 @@
                 <h5 class="fw-semibold text-white mb-1">{useCase.title}</h5>
                 <p class="text-white-50 mb-0">{useCase.description}</p>
                 <div class="mt-auto">
-                  <button class="btn btn-light btn-sm px-3" onclick={() => tryScenario(useCase)}>
+                  <button class="btn btn-light btn-sm px-3" onclick={()=> tryScenario(useCase)}>
                     Try Scenario
                   </button>
                 </div>
