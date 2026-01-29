@@ -242,9 +242,11 @@
         }
         if (action === 'logout') {
           // Try to call logout API but don't block if it fails
-          await this.logoutApi().catch(err => {
-            console.error('Logout API error (continuing with cleanup):', err)
-          })
+          try {
+            await this.logoutApi()
+          } catch (err) {
+            // Error already logged in logoutApi; continue with local cleanup
+          }
           
           // Always clean up local state and redirect
           try {
