@@ -28,7 +28,7 @@
   </div>
 
   <script>
-    import { route } from '@riotjs/route'
+    import { router } from '@riotjs/route'
     import { Modal } from 'bootstrap'
     import authApiService from '../services/authApiService'
     import projectApiService from '../services/projectApiService'
@@ -71,14 +71,7 @@
           }
         }
 
-        const query = new URLSearchParams({
-          projectId: project.Id,
-          projectName: project.Name,
-          templateName: project.TemplateName,
-          isNewProject: 'false'
-        }).toString()
-
-        router.push(`/editor?${query}`)
+        router.push(`/editor?pid=${project.Id}`)
       },
       async loadProjects() {
         try {
