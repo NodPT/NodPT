@@ -74,7 +74,7 @@
           modalElement.addEventListener('show.bs.modal', () => {
             const urlParams = new URLSearchParams(window.location.search)
             const projectName = urlParams.get('projectName') || 'Untitled Project'
-            const projectId = urlParams.get('projectId')
+            const projectId = urlParams.get('pid') || urlParams.get('projectId')
 
             this.update({
               currentProjectName: projectName,
