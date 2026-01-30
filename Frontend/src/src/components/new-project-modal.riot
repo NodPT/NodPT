@@ -52,7 +52,7 @@
   </div>
 
   <script>
-    import { route } from '@riotjs/route'
+    import { router } from '@riotjs/route'
     import { Modal } from 'bootstrap'
     import projectApiService from '../services/projectApiService'
     import authApiService from '../services/authApiService'
@@ -176,18 +176,11 @@
 
           this.notify('success', `Project "${createdProject.Name}" created successfully`)
 
-          const query = new URLSearchParams({
-            projectId: createdProject.Id,
-            projectName: createdProject.Name,
-            templateName: createdProject.TemplateName || this.state.selectedTemplate.name,
-            isNewProject: 'true'
-          }).toString()
+          // Reset modal state before navigation
+          this.resetModal()
 
-          router.push(`/project?${query}`)
-
-          setTimeout(() => {
-            this.resetModal()
-          }, 500)
+          // Navigate to editor with the new project
+          router.push(`/editor?pid=${createdProject.Id}`)
         } catch (error) {
           this.notify('alert', 'Failed to create project. Please try again.')
           this.update({ isCreating: false })
