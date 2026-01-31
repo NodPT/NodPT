@@ -55,23 +55,39 @@
       onMounted() {
         const modalElement = document.getElementById('renameProjectModal')
         if (modalElement) {
-          modalElement.addEventListener('show.bs.modal', () => {
+          modalElement.addEventListener('show.bs.modal', async () => {
             const urlParams = new URLSearchParams(window.location.search)
-            const projectName = urlParams.get('projectName') || 'Untitled Project'
-            const projectId = urlParams.get('projectId')
+            const projectId = urlParams.get('pid') || urlParams.get('projectId')
             
-            this.update({
-              currentProjectName: projectName,
-              currentProjectId: projectId ? parseInt(projectId) : null,
-              newProjectName: projectName
-            })
+            if (!projectId) {
+              console.warn('No project ID found in URL')
+              return
+            }
 
-            setTimeout(() => {
-              if (this.projectNameInputEl) {
-                this.projectNameInputEl.focus()
-                this.projectNameInputEl.select()
-              }
-            }, 100)
+            try {
+              const project = await projectApiService.getProject(projectId)
+              const projectName = project?.Name || 'Untitled Project'
+              
+              this.update({
+                currentProjectName: projectName,
+                currentProjectId: parseInt(projectId, 10) || null,
+                newProjectName: projectName
+              })
+
+              setTimeout(() => {
+                if (this.projectNameInputEl) {
+                  this.projectNameInputEl.focus()
+                  this.projectNameInputEl.select()
+                }
+              }, 100)
+            } catch (error) {
+              console.error('Failed to load project:', error)
+              this.update({
+                currentProjectName: 'Untitled Project',
+                currentProjectId: parseInt(projectId, 10) || null,
+                newProjectName: 'Untitled Project'
+              })
+            }
           })
         }
       },

@@ -42,6 +42,7 @@
     import AddNodeModal from '../components/add-node-modal.riot'
     import { arrangeNodes, zoomFit } from '../services/editorService'
     import signalRService from '../services/signalRService'
+    import projectApiService from '../services/projectApiService'
     import '../styles/components-dark.css'
     import '../styles/main-editor.css'
     import '../styles/main-editor-dark.css'
@@ -65,6 +66,9 @@
         rightPanelVisible: true,
         rightPanelWidth: 416
       },
+      onBeforeMount() {
+        projectApiService.setApi(this.api)
+      },
       onMounted() {
         this.handleSignalRStatus = (status) => this.update({ connectionStatus: status })
         this.handleNodeSelected = (nodeData) => this.update({ selectedNode: nodeData })
@@ -77,6 +81,9 @@
         this.bus.on(this.EVENT_TYPES.TOGGLE_RIGHT_PANEL, this.handleToggleRightPanel)
         this.bus.on(this.EVENT_TYPES.ARRANGE_NODES, this.handleArrangeNodes)
         this.bus.on(this.EVENT_TYPES.ZOOM_FIT, this.handleZoomFit)
+
+        // Load project from URL parameter
+        this.loadProject()
 
         signalRService
           .initialize(this.bus, this.EVENT_TYPES, this.api)
@@ -130,6 +137,30 @@
         document.removeEventListener('mouseup', this.onResizeUp)
         document.body.style.cursor = ''
         document.body.style.userSelect = ''
+      },
+      async loadProject() {
+        try {
+          const urlParams = new URLSearchParams(window.location.search)
+          const projectId = urlParams.get('pid') || urlParams.get('projectId')
+          
+          if (!projectId) {
+            console.warn('No project ID found in URL')
+            return
+          }
+
+          const project = await projectApiService.getProject(projectId)
+          
+          if (project && project.Name) {
+            this.bus.trigger(this.EVENT_TYPES.PROJECT_NAME_UPDATE, project.Name)
+          }
+
+          // TODO: Load project nodes into the graph
+          // This would require updating the editorService to support loading nodes
+          // For now, the project name is loaded and displayed in the header
+          
+        } catch (error) {
+          console.error('Failed to load project:', error)
+        }
       }
    
     }
