@@ -419,7 +419,7 @@ export const initGraph = (canvas, container, options = {}) => {
 
   // Set up the graph state
   activeGraphState = { graph, graphCanvas, resize }
-  
+
   // Only create demo nodes if explicitly requested
   if (options.createDemo) {
     allowConnections = true
@@ -431,7 +431,7 @@ export const initGraph = (canvas, container, options = {}) => {
       }
     })
   }
-  
+
   graph.start()
 
   return activeGraphState
@@ -463,11 +463,13 @@ export const destroyGraph = (state) => {
  */
 export const loadProjectNodes = (nodes) => {
   if (!nodes || !Array.isArray(nodes) || nodes.length === 0) {
+    console.debug('loadProjectNodes: No nodes to load or invalid nodes parameter')
     return
   }
 
   const state = getGraphState()
   if (!state || !state.graph) {
+    console.warn('loadProjectNodes: Cannot load nodes - graph not initialized')
     return
   }
 
@@ -522,9 +524,12 @@ export const loadProjectNodes = (nodes) => {
 
     // Enable connections temporarily to create the node with connections
     allowConnections = true
-    
+
     // Map NodeType enum to expected string values
     const nodeType = nodeDto.NodeType || NODE_TYPES.WORKER
+    if (!nodeDto.NodeType) {
+      console.debug('Node missing NodeType, defaulting to WORKER:', nodeDto.Id)
+    }
     
     // Create the node
     const graphNode = AddNode(
