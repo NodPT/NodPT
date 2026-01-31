@@ -159,16 +159,16 @@
 
           // Load nodes from the project
           if (project && project.Nodes && project.Nodes.length > 0) {
-            console.log('Loading nodes from project:', project.Nodes.length)
+            console.debug('Loading', project.Nodes.length, 'nodes from project')
             loadProjectNodes(project.Nodes)
           } else {
-            console.log('No nodes found in project, fetching from nodes API')
+            console.debug('No nodes found in project data, fetching from nodes API')
             // Fallback: try to fetch nodes using the nodeApiService
             const nodes = await nodeApiService.getNodesByProject(projectId)
             if (nodes && nodes.length > 0) {
               loadProjectNodes(nodes)
             } else {
-              console.log('No nodes found for this project')
+              console.warn('No nodes found for project:', projectId)
             }
           }
           

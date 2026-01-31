@@ -490,7 +490,7 @@ export const loadProjectNodes = (nodes) => {
   }
 
   // Helper function to recursively create nodes
-  const createNodeRecursive = (nodeDto) => {
+  const ensureNodeCreated = (nodeDto) => {
     // Skip if already created
     if (createdNodes.has(nodeDto.Id)) {
       return createdNodes.get(nodeDto.Id)
@@ -506,7 +506,7 @@ export const loadProjectNodes = (nodes) => {
         // Create parent first
         const parentDto = nodeMap.get(nodeDto.ParentId)
         if (parentDto) {
-          createNodeRecursive(parentDto)
+          ensureNodeCreated(parentDto)
         }
       }
       
@@ -549,12 +549,12 @@ export const loadProjectNodes = (nodes) => {
   
   // Create root nodes first
   rootNodes.forEach(nodeDto => {
-    createNodeRecursive(nodeDto)
+    ensureNodeCreated(nodeDto)
   })
 
   // Then create all other nodes (which will recursively create their parents if needed)
   nodes.forEach(nodeDto => {
-    createNodeRecursive(nodeDto)
+    ensureNodeCreated(nodeDto)
   })
 
   // Move workers into inspector subgraphs
@@ -569,8 +569,10 @@ export const loadProjectNodes = (nodes) => {
   // Arrange the nodes
   arrangeNodes()
   
-  // Zoom to fit
-  setTimeout(() => {
-    zoomFit()
-  }, 100)
+  // Zoom to fit after layout completes (using requestAnimationFrame for reliability)
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      zoomFit()
+    })
+  })
 }
