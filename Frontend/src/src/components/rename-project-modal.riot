@@ -70,7 +70,7 @@
               
               this.update({
                 currentProjectName: projectName,
-                currentProjectId: parseInt(projectId),
+                currentProjectId: parseInt(projectId, 10) || null,
                 newProjectName: projectName
               })
 
@@ -84,7 +84,7 @@
               console.error('Failed to load project:', error)
               this.update({
                 currentProjectName: 'Untitled Project',
-                currentProjectId: parseInt(projectId),
+                currentProjectId: parseInt(projectId, 10) || null,
                 newProjectName: 'Untitled Project'
               })
             }
