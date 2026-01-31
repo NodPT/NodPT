@@ -40,9 +40,10 @@
     import RenameProjectModal from '../components/rename-project-modal.riot'
     import DeleteProjectModal from '../components/delete-project-modal.riot'
     import AddNodeModal from '../components/add-node-modal.riot'
-    import { arrangeNodes, zoomFit } from '../services/editorService'
+    import { arrangeNodes, zoomFit, loadProjectNodes } from '../services/editorService'
     import signalRService from '../services/signalRService'
     import projectApiService from '../services/projectApiService'
+    import nodeApiService from '../services/nodeApiService'
     import '../styles/components-dark.css'
     import '../styles/main-editor.css'
     import '../styles/main-editor-dark.css'
@@ -68,6 +69,7 @@
       },
       onBeforeMount() {
         projectApiService.setApi(this.api)
+        nodeApiService.setApi(this.api)
       },
       onMounted() {
         this.handleSignalRStatus = (status) => this.update({ connectionStatus: status })
@@ -75,15 +77,14 @@
         this.handleToggleRightPanel = () => this.update({ rightPanelVisible: !this.state.rightPanelVisible })
         this.handleArrangeNodes = () => arrangeNodes()
         this.handleZoomFit = () => zoomFit()
+        this.handleEditorReady = () => this.loadProject()
 
         this.bus.on(this.EVENT_TYPES.SIGNALR_STATUS_CHANGED, this.handleSignalRStatus)
         this.bus.on(this.EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
         this.bus.on(this.EVENT_TYPES.TOGGLE_RIGHT_PANEL, this.handleToggleRightPanel)
         this.bus.on(this.EVENT_TYPES.ARRANGE_NODES, this.handleArrangeNodes)
         this.bus.on(this.EVENT_TYPES.ZOOM_FIT, this.handleZoomFit)
-
-        // Load project from URL parameter
-        this.loadProject()
+        this.bus.on(this.EVENT_TYPES.EDITOR_READY, this.handleEditorReady)
 
         signalRService
           .initialize(this.bus, this.EVENT_TYPES, this.api)
@@ -104,6 +105,8 @@
           this.bus.off(this.EVENT_TYPES.ARRANGE_NODES, this.handleArrangeNodes)
         if (this.handleZoomFit)
           this.bus.off(this.EVENT_TYPES.ZOOM_FIT, this.handleZoomFit)
+        if (this.handleEditorReady)
+          this.bus.off(this.EVENT_TYPES.EDITOR_READY, this.handleEditorReady)
         signalRService.stop().catch((error) => console.error('Error stopping SignalR:', error))
       },
       get rightPanelStyle() {
@@ -154,9 +157,20 @@
             this.bus.trigger(this.EVENT_TYPES.PROJECT_NAME_UPDATE, project.Name)
           }
 
-          // TODO: Load project nodes into the graph
-          // This would require updating the editorService to support loading nodes
-          // For now, the project name is loaded and displayed in the header
+          // Load nodes from the project
+          if (project && project.Nodes && project.Nodes.length > 0) {
+            console.debug('Loading', project.Nodes.length, 'nodes from project')
+            loadProjectNodes(project.Nodes)
+          } else {
+            console.debug('Project data contains no nodes, fetching from nodes API')
+            // Fallback: try to fetch nodes using the nodeApiService
+            const nodes = await nodeApiService.getNodesByProject(projectId)
+            if (nodes && nodes.length > 0) {
+              loadProjectNodes(nodes)
+            } else {
+              console.warn('No nodes found for project:', projectId)
+            }
+          }
           
         } catch (error) {
           console.error('Failed to load project:', error)

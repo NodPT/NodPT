@@ -417,16 +417,21 @@ export const initGraph = (canvas, container, options = {}) => {
     emitEvent(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
   }
 
-  // create some demo nodes
+  // Set up the graph state
   activeGraphState = { graph, graphCanvas, resize }
-  allowConnections = true
-  createDemoNodes(AddNode, NODE_TYPES, arrangeNodes)
-  allowConnections = false
-  ;(graph._nodes || []).forEach((node) => {
-    if (node.properties?.nodeType === NODE_TYPES.INSPECTOR) {
-      moveWorkersIntoInspectorSubgraph(node)
-    }
-  })
+
+  // Only create demo nodes if explicitly requested
+  if (options.createDemo) {
+    allowConnections = true
+    createDemoNodes(AddNode, NODE_TYPES, arrangeNodes)
+    allowConnections = false
+    ;(graph._nodes || []).forEach((node) => {
+      if (node.properties?.nodeType === NODE_TYPES.INSPECTOR) {
+        moveWorkersIntoInspectorSubgraph(node)
+      }
+    })
+  }
+
   graph.start()
 
   return activeGraphState
@@ -450,4 +455,129 @@ export const destroyGraph = (state) => {
   if (activeGraphState === state) {
     activeGraphState = null
   }
+}
+
+/**
+ * Load nodes from project data into the editor
+ * @param {Array} nodes - Array of node DTOs from the API
+ */
+export const loadProjectNodes = (nodes) => {
+  if (!nodes || !Array.isArray(nodes) || nodes.length === 0) {
+    console.debug('loadProjectNodes: No nodes to load or invalid nodes parameter')
+    return
+  }
+
+  const state = getGraphState()
+  if (!state || !state.graph) {
+    console.warn('loadProjectNodes: Cannot load nodes - graph not initialized')
+    return
+  }
+
+  // Clear existing nodes first
+  Clear()
+
+  // Build a map of nodes by ID for quick lookup
+  const nodeMap = new Map()
+  nodes.forEach(node => {
+    nodeMap.set(node.Id, node)
+  })
+
+  // Create a map to store created graph nodes
+  const createdNodes = new Map()
+
+  // Helper function to get output names for a node based on its children
+  const getOutputNames = (nodeId) => {
+    const children = nodes.filter(n => n.ParentId === nodeId)
+    return children.map(child => child.Name || child.NodeType || 'Output')
+  }
+
+  // Helper function to recursively create nodes
+  const ensureNodeCreated = (nodeDto) => {
+    // Skip if already created
+    if (createdNodes.has(nodeDto.Id)) {
+      return createdNodes.get(nodeDto.Id)
+    }
+
+    const outputs = getOutputNames(nodeDto.Id)
+    
+    // Determine connection info if node has a parent
+    let connectFrom = null
+    if (nodeDto.ParentId) {
+      const parentNode = createdNodes.get(nodeDto.ParentId)
+      if (!parentNode) {
+        // Create parent first
+        const parentDto = nodeMap.get(nodeDto.ParentId)
+        if (parentDto) {
+          ensureNodeCreated(parentDto)
+        }
+      }
+      
+      // Now try to get parent node again
+      const parentGraphNode = createdNodes.get(nodeDto.ParentId)
+      if (parentGraphNode) {
+        connectFrom = {
+          nodeId: parentGraphNode.id,
+          outputName: nodeDto.Name || nodeDto.NodeType
+        }
+      }
+    }
+
+    // Enable connections temporarily to create the node with connections
+    allowConnections = true
+
+    // Map NodeType enum to expected string values
+    const nodeType = nodeDto.NodeType || NODE_TYPES.WORKER
+    if (!nodeDto.NodeType) {
+      console.debug('Node missing NodeType, defaulting to WORKER:', nodeDto.Id)
+    }
+    
+    // Create the node
+    const graphNode = AddNode(
+      nodeDto.Id,
+      nodeDto.Name || nodeType,
+      nodeType,
+      outputs,
+      connectFrom
+    )
+    
+    allowConnections = false
+
+    if (graphNode) {
+      createdNodes.set(nodeDto.Id, graphNode)
+    }
+
+    return graphNode
+  }
+
+  // First, find root nodes (nodes without parents)
+  const rootNodes = nodes.filter(n => !n.ParentId)
+  
+  // Create root nodes first
+  rootNodes.forEach(nodeDto => {
+    ensureNodeCreated(nodeDto)
+  })
+
+  // Then create all other nodes (which will recursively create their parents if needed)
+  nodes.forEach(nodeDto => {
+    ensureNodeCreated(nodeDto)
+  })
+
+  // Move workers into inspector subgraphs
+  allowConnections = true
+  ;(state.graph._nodes || []).forEach((node) => {
+    if (node.properties?.nodeType === NODE_TYPES.INSPECTOR) {
+      moveWorkersIntoInspectorSubgraph(node)
+    }
+  })
+  allowConnections = false
+
+  // Arrange the nodes
+  arrangeNodes()
+  
+  // Zoom to fit after layout completes (using requestAnimationFrame for reliability)
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      zoomFit()
+    })
+  })
 }
