@@ -4,7 +4,11 @@ using System.Security.Claims;
 
 namespace NodPT.API.Hubs;
 
+#if DEBUG
+[AllowAnonymous]
+#else
 [Authorize]
+#endif
 public class NodptHub : Hub
 {
     private const string MasterGroup = "Master";

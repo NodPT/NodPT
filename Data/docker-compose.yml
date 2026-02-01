@@ -5,7 +5,7 @@ services:
     build: .
     container_name: nodpt-mariadb
     environment:
-      MYSQL_ROOT_PASSWORD: "saisai1234!"
+      MYSQL_ROOT_PASSWORD: "demo_password1234!"
       MYSQL_DATABASE: "demo_db"
       MYSQL_USER: "demo_user"
       MYSQL_PASSWORD: "demo_password1234!"
