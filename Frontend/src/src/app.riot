@@ -33,7 +33,7 @@
         Terms: lazy(Loader, () => import('./pages/terms.riot')),
         Login: lazy(Loader, () => import('./pages/login.riot')),
         Project: lazy(Loader, () => import('./pages/project.riot')),
-        Editor: lazy(Loader, () => import('./pages/editor.riot')),
+        Editor: lazy(() => import('./pages/editor.riot')),
       },
       state: {
         showNotFound: false,
