@@ -15,5 +15,10 @@
             "username": "demo_user",
             "password": "demo_password1234!"
         }
-    ]
+    ],
+    "files.associations": {
+        ".fantomasignore": "ignore",
+        ".riot": "html",
+        "*.riot": "html",
+    }
 }

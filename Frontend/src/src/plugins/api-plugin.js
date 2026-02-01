@@ -1,5 +1,6 @@
 // src/plugins/api-plugin.js
 import axios from 'axios';
+import { router } from '@riotjs/route';
 import { getToken } from './tokenStorage';
 
 /**
@@ -42,8 +43,24 @@ function createApi(options = {}) {
 
 	// Lightweight fetch wrapper that returns response.data
 	async function fetch(url, config = {}) {
-		const res = await apiAxios.request({ url, ...config });
-		return res.data;
+		try {
+			const res = await apiAxios.request({ url, ...config });
+			return res.data;
+		} catch (error) {
+			const statusCode = error?.response?.status;
+			if (statusCode === 401 || statusCode === 403) {
+				const toast = window?.$toast;
+				if (toast && typeof toast.alert === 'function') {
+					toast.alert('Access denied. Please log in again.');
+				}
+				router.push('/login');
+				return null;
+			}
+			if (statusCode === 400 || statusCode === 404) {
+				return null;
+			}
+			throw error;
+		}
 	}
 
 	const get = (url, params = {}, config = {}) => fetch(url, { method: 'GET', params, ...config });

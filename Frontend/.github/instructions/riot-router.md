@@ -1,3 +1,10 @@
+## link:
+https://github.com/riot/route
+
+## usage
+import { route, router } from '@riotjs/route'
+
+## samples:
 <app>
   <router>
     <!-- These links will trigger automatically HTML5 history events -->
@@ -49,3 +56,11 @@ router.push('/about')
 
 // end the stream
 aboutStream.end()
+
+<route path="/:some/:route/:param"> {JSON.stringify(route.params)} </route>
+
+<route path="/search(.*)">
+  <!-- Assuming the URL is "/search?q=awesome" -->
+
+  {route.searchParams.get('q')}
+</route>

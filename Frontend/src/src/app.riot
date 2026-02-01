@@ -13,7 +13,7 @@
       <Project />
     </route>
     <route path="/editor(.*)">
-      <Editor />
+      <Editor pid="{(route.searchParams.get('pid'))}" />
     </route>
   </router>
 

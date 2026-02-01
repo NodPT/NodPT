@@ -1,5 +1,5 @@
 <editor>
-  <div class="app-container main-editor" data-theme={state.isDarkTheme ? 'dark' : 'light'}>
+  <div class="app-container main-editor" data-theme={state.isDarkTheme ? 'dark' : 'light' }>
     <header-bar isDarkTheme={state.isDarkTheme} showMenu={true} />
 
     <div class="main-content main-editor-content position-relative">
@@ -8,9 +8,10 @@
           <Graph />
         </div>
         <div class={"editor-splitter " + (state.rightPanelVisible ? '' : 'is-hidden')} onmousedown={startResize}></div>
-        <div class={"editor-right " + (state.rightPanelVisible ? '' : 'is-hidden')} style={rightPanelStyle}>
-          <div class="main-editor-right-panel docked">
-            <right-panel selectedNode={state.selectedNode} isDarkTheme={state.isDarkTheme} />
+        <div class={" editor-right " + (state.rightPanelVisible ? '' : 'is-hidden')} style=" {rightPanelStyle}">
+          <div class=" main-editor-right-panel docked">
+            <right-panel selectedNode={state.selectedNode}
+              isDarkTheme={state.isDarkTheme} />
           </div>
         </div>
       </div>
@@ -21,8 +22,7 @@
       totalNodes={state.totalNodes}
       progress={state.buildProgress}
       minimapVisible={state.minimapVisible}
-      connectionStatus={state.connectionStatus}
-    />
+      connectionStatus={state.connectionStatus} />
 
     <!-- Modals -->
     <copy-project-modal />
@@ -34,12 +34,6 @@
   <script>
     import HeaderBar from '../components/header.riot'
     import FooterBar from '../components/footer.riot'
-    import Graph from '../components/graph.riot'
-    import RightPanel from '../components/right-panel.riot'
-    import CopyProjectModal from '../components/copy-project-modal.riot'
-    import RenameProjectModal from '../components/rename-project-modal.riot'
-    import DeleteProjectModal from '../components/delete-project-modal.riot'
-    import AddNodeModal from '../components/add-node-modal.riot'
     import { arrangeNodes, zoomFit, loadProjectNodes } from '../services/editorService'
     import signalRService from '../services/signalRService'
     import projectApiService from '../services/projectApiService'
@@ -47,16 +41,21 @@
     import '../styles/components-dark.css'
     import '../styles/main-editor.css'
     import '../styles/main-editor-dark.css'
+    import lazy from '@riotjs/lazy'
+    import Loader from '../components/loader.riot'
+    import { router } from '@riotjs/route'
+
     export default {
       components: {
         HeaderBar,
         FooterBar,
-        Graph,
-        RightPanel,
-        CopyProjectModal,
-        RenameProjectModal,
-        DeleteProjectModal,
-        AddNodeModal
+        // lazy load Graph component to improve initial load time
+        Graph: lazy(Loader, () => import('../components/graph.riot')),
+        RightPanel: lazy(Loader, () => import('../components/right-panel.riot')),
+        CopyProjectModal: lazy(Loader, () => import('../components/copy-project-modal.riot')),
+        RenameProjectModal: lazy(Loader, () => import('../components/rename-project-modal.riot')),
+        DeleteProjectModal: lazy(Loader, () => import('../components/delete-project-modal.riot')),
+        AddNodeModal: lazy(Loader, () => import('../components/add-node-modal.riot'))
       },
       state: {
         minimapVisible: false,
@@ -67,11 +66,9 @@
         rightPanelVisible: true,
         rightPanelWidth: 416
       },
-      onBeforeMount() {
+      onMounted() {
         projectApiService.setApi(this.api)
         nodeApiService.setApi(this.api)
-      },
-      onMounted() {
         this.handleSignalRStatus = (status) => this.update({ connectionStatus: status })
         this.handleNodeSelected = (nodeData) => this.update({ selectedNode: nodeData })
         this.handleToggleRightPanel = () => this.update({ rightPanelVisible: !this.state.rightPanelVisible })
@@ -85,7 +82,7 @@
         this.bus.on(this.EVENT_TYPES.ARRANGE_NODES, this.handleArrangeNodes)
         this.bus.on(this.EVENT_TYPES.ZOOM_FIT, this.handleZoomFit)
         this.bus.on(this.EVENT_TYPES.EDITOR_READY, this.handleEditorReady)
-
+        // start the SignalR connection
         signalRService
           .initialize(this.bus, this.EVENT_TYPES, this.api)
           .then(() => {
@@ -95,18 +92,12 @@
           })
       },
       onBeforeUnmount() {
-        if (this.handleSignalRStatus) 
-          this.bus.off(this.EVENT_TYPES.SIGNALR_STATUS_CHANGED, this.handleSignalRStatus)
-        if (this.handleNodeSelected) 
-          this.bus.off(this.EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
-        if (this.handleToggleRightPanel)
-          this.bus.off(this.EVENT_TYPES.TOGGLE_RIGHT_PANEL, this.handleToggleRightPanel)
-        if (this.handleArrangeNodes)
-          this.bus.off(this.EVENT_TYPES.ARRANGE_NODES, this.handleArrangeNodes)
-        if (this.handleZoomFit)
-          this.bus.off(this.EVENT_TYPES.ZOOM_FIT, this.handleZoomFit)
-        if (this.handleEditorReady)
-          this.bus.off(this.EVENT_TYPES.EDITOR_READY, this.handleEditorReady)
+        this.bus.off(this.EVENT_TYPES.SIGNALR_STATUS_CHANGED, this.handleSignalRStatus)
+        this.bus.off(this.EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
+        this.bus.off(this.EVENT_TYPES.TOGGLE_RIGHT_PANEL, this.handleToggleRightPanel)
+        this.bus.off(this.EVENT_TYPES.ARRANGE_NODES, this.handleArrangeNodes)
+        this.bus.off(this.EVENT_TYPES.ZOOM_FIT, this.handleZoomFit)
+        this.bus.off(this.EVENT_TYPES.EDITOR_READY, this.handleEditorReady)
         signalRService.stop().catch((error) => console.error('Error stopping SignalR:', error))
       },
       get rightPanelStyle() {
@@ -143,40 +134,48 @@
       },
       async loadProject() {
         try {
-          const urlParams = new URLSearchParams(window.location.search)
-          const projectId = urlParams.get('pid') || urlParams.get('projectId')
-          
+
+          // get projectId from props
+          const projectId = this.props.pid
+
           if (!projectId) {
             console.warn('No project ID found in URL')
             return
           }
 
+          console.debug('Loading project with ID:', projectId)
           const project = await projectApiService.getProject(projectId)
-          
+
+          // if project not found, log and return
+          if (!project) {
+            console.error('Project not found for ID:', projectId)
+            this.toast.alert('Project not found or could not be loaded.')
+            setTimeout(() => {
+              router.push('/projects')
+            }, 1000);
+            return
+          }
+
+          // publish the project name to other components
           if (project && project.Name) {
             this.bus.trigger(this.EVENT_TYPES.PROJECT_NAME_UPDATE, project.Name)
           }
 
           // Load nodes from the project
-          if (project && project.Nodes && project.Nodes.length > 0) {
-            console.debug('Loading', project.Nodes.length, 'nodes from project')
-            loadProjectNodes(project.Nodes)
+          console.debug('Project data contains no nodes, fetching from nodes API')
+          // Fallback: try to fetch nodes using the nodeApiService
+          const nodes = await nodeApiService.getNodesByProject(projectId)
+          if (nodes && nodes.length > 0) {
+            loadProjectNodes(nodes)
           } else {
-            console.debug('Project data contains no nodes, fetching from nodes API')
-            // Fallback: try to fetch nodes using the nodeApiService
-            const nodes = await nodeApiService.getNodesByProject(projectId)
-            if (nodes && nodes.length > 0) {
-              loadProjectNodes(nodes)
-            } else {
-              console.warn('No nodes found for project:', projectId)
-            }
+            console.warn('No nodes found for project:', projectId)
           }
-          
+
         } catch (error) {
           console.error('Failed to load project:', error)
         }
       }
-   
+
     }
   </script>
 </editor>

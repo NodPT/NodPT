@@ -69,38 +69,13 @@ namespace NodPT.Data.Services
                 MessageType = node.MessageType
             };
 
-            // Map MatchingAIModel if available
-            if (node.GetMatchingAIModel() != null)
-            {
-                var aiModel = node.GetMatchingAIModel()!;
-                dto.MatchingAIModel = new AIModelDto
-                {
-                    Id = aiModel.Oid,
-                    Name = aiModel.Name,
-                    ModelIdentifier = aiModel.ModelIdentifier,
-                    MessageType = aiModel.MessageType,
-                    NodeType = aiModel.NodeType,
-                    Description = aiModel.Description,
-                    IsActive = aiModel.IsActive,
-                    CreatedAt = aiModel.CreatedAt,
-                    UpdatedAt = aiModel.UpdatedAt,
-                    TemplateId = aiModel.Template?.Oid,
-                    EndpointAddress = aiModel.EndpointAddress,
-                    Temperature = aiModel.Temperature,
-                    NumPredict = aiModel.NumPredict,
-                    TopK = aiModel.TopK,
-                    TopP = aiModel.TopP,
-                    Seed = aiModel.Seed,
-                    NumCtx = aiModel.NumCtx,
-                    NumGpu = aiModel.NumGpu,
-                    NumThread = aiModel.NumThread,
-                    RepeatPenalty = aiModel.RepeatPenalty,
-                    Stop = aiModel.Stop
-                };
-            }
+            return dto;
+        }
+        public static List<PromptDto> GetAIPromptsByNode(Node node)
+        {
 
             // Map MatchingPrompts
-            dto.MatchingPrompts = node.GetMatchingPrompts().Select(p => new PromptDto
+            return node.GetMatchingPrompts().Select(p => new PromptDto
             {
                 Id = p.Oid,
                 Content = p.Content,
@@ -110,8 +85,6 @@ namespace NodPT.Data.Services
                 UpdatedAt = p.UpdatedAt,
                 TemplateId = p.Template?.Oid
             }).ToList();
-
-            return dto;
         }
 
         public List<NodeDto> GetAllNodes()

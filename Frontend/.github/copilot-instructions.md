@@ -26,7 +26,7 @@ frontend.riot
 ## Stack and entry points
 
 - Riot 10 + Vite; components live in .riot files (no <template> tag).
-- App boot: src/index.js mounts src/app.riot and registers globals via src/register-global-components.js.
+- App boot: src/index.js mounts src/app.riot 
 - UI uses Bootstrap 5 and bootstrap-icons;
 - litegraph.js is a core dependency for visualizing the AI nodes on the main editor. https://github.com/jagenjo/litegraph.js and https://paladium-developpement.github.io/litegraph.js/
 - pure javaScript (ES6+), no TypeScript.
@@ -131,3 +131,4 @@ this.bus.on('EventName', (data, data2, data3) => {
 - do not use inline styles in .riot components. all styles must be in src/styles folder
 - don't write inline execution like `onclick={() => copyMessage(message)}`, write `onclick={copyMessage(message)}` or `onclick={copyMessage}` , then in the script part write the function `copyMessage(e){...}`
 - don't keep space between the function name in the html and the curly braces, write `{functionName}` not `{ functionName }`
+- place setApi functions in onMounted lifecycle method, not in onBeforeMount

@@ -98,6 +98,10 @@ class ToastService {
     });
   }
 
+  show(message, type = 'info') {
+    this.showToast(message, type);
+  }
+
   alert(message) {
     this.showToast(message, 'alert');
   }

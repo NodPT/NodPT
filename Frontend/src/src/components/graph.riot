@@ -19,12 +19,17 @@
         const canvas = document.getElementById('graph-canvas')
         const container = document.getElementById('graph-canvas-container')
         if (canvas && container) {
-          // Don't create demo nodes automatically - let the editor page load project nodes
-          this.graphState = initGraph(canvas, container, 
-          {autoArrange: true, layout: 'vertical', createDemo: false} )
-          
-          // Notify that the editor is ready
-          this.bus.trigger(this.EVENT_TYPES.EDITOR_READY)
+          // wait fot a second to ensure the container has proper size
+          setTimeout(() => {
+            // Don't create demo nodes automatically - let the editor page load project nodes
+            this.graphState = initGraph(canvas, container,
+              { autoArrange: true, layout: 'vertical', createDemo: false })
+
+            // Notify that the editor is ready
+            console.log('Graph initialized, triggering EDITOR_READY event')
+            this.bus.trigger(this.EVENT_TYPES.EDITOR_READY)
+          }, 1000)
+
         }
       },
       onBeforeUnmount() {

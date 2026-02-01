@@ -137,7 +137,7 @@ namespace NodPT.Data.Services
                 UserEmail = project.User?.Email,
                 TemplateName = project.Template?.Name,
                 TemplateIcon = project.Template?.Icon,
-                Nodes = GetProjectNodes(project)
+                //Nodes = GetProjectNodes(project)
             };
         }
 
@@ -168,7 +168,7 @@ namespace NodPT.Data.Services
                     UserEmail = p.User?.Email,
                     TemplateName = p.Template?.Name,
                     TemplateIcon = p.Template?.Icon,
-                    Nodes = GetProjectNodes(p)
+                    //Nodes = GetProjectNodes(p)
                 }).ToList();
         }
 
@@ -242,7 +242,7 @@ namespace NodPT.Data.Services
                 projectDto.UserEmail = project.User?.Email;
                 projectDto.TemplateName = project.Template?.Name;
                 projectDto.TemplateIcon = project.Template?.Icon;
-                projectDto.Nodes = GetProjectNodes(project);
+                //projectDto.Nodes = GetProjectNodes(project);
                 projectDto.IsActive = true;
                 return projectDto;
             }
@@ -297,7 +297,7 @@ namespace NodPT.Data.Services
                 projectDto.UserEmail = project.User?.Email;
                 projectDto.TemplateName = project.Template?.Name;
                 projectDto.TemplateIcon = project.Template?.Icon;
-                projectDto.Nodes = GetProjectNodes(project);
+                //projectDto.Nodes = GetProjectNodes(project);
 
                 return projectDto;
             }
@@ -348,7 +348,7 @@ namespace NodPT.Data.Services
                     UserEmail = project.User?.Email,
                     TemplateName = project.Template?.Name,
                     TemplateIcon = project.Template?.Icon,
-                    Nodes = GetProjectNodes(project)
+                    //Nodes = GetProjectNodes(project)
                 };
             }
             catch
