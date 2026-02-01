@@ -45,36 +45,25 @@
     import Loader from '../components/loader.riot'
     import { router } from '@riotjs/route'
 
+    // Helper function to wrap lazy imports with error handling
+    const lazyWithErrorHandling = (componentPath, componentName) => {
+      return lazy(Loader, () => import(componentPath).catch(err => {
+        console.error(`Failed to load ${componentName} component:`, err)
+        throw err
+      }))
+    }
+
     export default {
       components: {
         HeaderBar,
         FooterBar,
         // lazy load Graph component to improve initial load time
-        // Add error handling to catch import failures, especially on mobile devices
-        Graph: lazy(Loader, () => import('../components/graph.riot').catch(err => {
-          console.error('Failed to load Graph component:', err)
-          throw err
-        })),
-        RightPanel: lazy(Loader, () => import('../components/right-panel.riot').catch(err => {
-          console.error('Failed to load RightPanel component:', err)
-          throw err
-        })),
-        CopyProjectModal: lazy(Loader, () => import('../components/copy-project-modal.riot').catch(err => {
-          console.error('Failed to load CopyProjectModal component:', err)
-          throw err
-        })),
-        RenameProjectModal: lazy(Loader, () => import('../components/rename-project-modal.riot').catch(err => {
-          console.error('Failed to load RenameProjectModal component:', err)
-          throw err
-        })),
-        DeleteProjectModal: lazy(Loader, () => import('../components/delete-project-modal.riot').catch(err => {
-          console.error('Failed to load DeleteProjectModal component:', err)
-          throw err
-        })),
-        AddNodeModal: lazy(Loader, () => import('../components/add-node-modal.riot').catch(err => {
-          console.error('Failed to load AddNodeModal component:', err)
-          throw err
-        }))
+        Graph: lazyWithErrorHandling('../components/graph.riot', 'Graph'),
+        RightPanel: lazyWithErrorHandling('../components/right-panel.riot', 'RightPanel'),
+        CopyProjectModal: lazyWithErrorHandling('../components/copy-project-modal.riot', 'CopyProjectModal'),
+        RenameProjectModal: lazyWithErrorHandling('../components/rename-project-modal.riot', 'RenameProjectModal'),
+        DeleteProjectModal: lazyWithErrorHandling('../components/delete-project-modal.riot', 'DeleteProjectModal'),
+        AddNodeModal: lazyWithErrorHandling('../components/add-node-modal.riot', 'AddNodeModal')
       },
       state: {
         minimapVisible: false,

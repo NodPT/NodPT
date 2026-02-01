@@ -49,10 +49,8 @@
           }
         }
 
-        // Use requestAnimationFrame followed by a small timeout to ensure proper layout
-        requestAnimationFrame(() => {
-          setTimeout(initializeGraph, 100)
-        })
+        // Use requestAnimationFrame to ensure proper layout before initialization
+        requestAnimationFrame(initializeGraph)
       },
       onBeforeUnmount() {
         destroyGraph(this.graphState)
