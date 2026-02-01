@@ -50,9 +50,9 @@
           const containerRect = container.getBoundingClientRect()
           if (containerRect.width === 0 || containerRect.height === 0) {
             // Container not ready yet, retry after a short delay
-            // Note: retryCount tracks attempts after initial requestAnimationFrame call
+            // retryCount tracks number of retry attempts (not including initial requestAnimationFrame)
             this.retryCount++
-            if (this.retryCount <= MAX_RETRIES) {
+            if (this.retryCount < MAX_RETRIES) {
               this.initTimeoutId = setTimeout(initializeGraph, RETRY_INTERVAL_MS)
             } else {
               console.error(`Failed to initialize graph: container dimensions never became valid after ${MAX_RETRIES} retries (${MAX_WAIT_MS}ms total)`)
