@@ -48,17 +48,17 @@ const TWILIGHT_PALETTE = {
   },
   [NODE_TYPES.MANAGER]: {
     color: "#3b3d3f",
-    bgcolor: "#23262A",
+    bgcolor: "#3b4047",
     boxcolor: "#D0D3D8"
   },
   [NODE_TYPES.INSPECTOR]: {
     color: "#3b3d3f",
-    bgcolor: "#1D2024",
+    bgcolor: "#58616d",
     boxcolor: "#C2C6CC"
   },
   [NODE_TYPES.WORKER]: {
     color: "#3b3d3f",
-    bgcolor: "#171A1D",
+    bgcolor: "#6a8198",
     boxcolor: "#B6BBC2"
   }
 }
@@ -151,7 +151,7 @@ const moveWorkersIntoInspectorSubgraph = (inspectorNode, workerNodes = null) => 
     }
     graph.remove(workerNode)
     const workerHeight = workerNode.size?.[1] ?? workerNode.height ?? 80
-      workerNode.pos = [240, 40 + index * (workerHeight + verticalGap)]
+    workerNode.pos = [240, 40 + index * (workerHeight + verticalGap)]
     subgraph.add(workerNode)
   })
   subgraph.arrange(30)
@@ -197,7 +197,7 @@ const ensureAgentNodeRegistered = () => {
   LiteGraph.registerNodeType("nodpt/agent", AgentNode)
 }
 
-export const AddNode = (id, title, nodeType, outputs = [], connectFrom = null) => {
+export const AddNode = (id, title, nodeType, outputs = [], connectFrom = null, autoArrange = false) => {
   const state = getGraphState()
   if (!state || !state.graph) {
     return null
@@ -238,7 +238,9 @@ export const AddNode = (id, title, nodeType, outputs = [], connectFrom = null) =
 
   graph.add(node)
 
+  // connect the new node if connectFrom is provided
   if (connectFrom && connectFrom.nodeId) {
+    // find the source node
     const sourceNode = graph.getNodeById(connectFrom.nodeId)
     if (sourceNode) {
       let outputIndex = 0
@@ -256,16 +258,32 @@ export const AddNode = (id, title, nodeType, outputs = [], connectFrom = null) =
       sourceNode.connect(outputIndex, node, 0)
       allowConnections = prevAllowConnections
 
-      if (node.properties?.nodeType === NODE_TYPES.WORKER && sourceNode.properties?.nodeType === NODE_TYPES.INSPECTOR) {
+      // special case: if connecting a WORKER to an INSPECTOR, 
+      // move the worker into the inspector's subgraph
+      if (node.properties?.nodeType === NODE_TYPES.WORKER
+        && sourceNode.properties?.nodeType === NODE_TYPES.INSPECTOR) {
         moveWorkersIntoInspectorSubgraph(sourceNode, [node])
       }
     }
   }
 
-  emitEvent(EVENT_TYPES.NODE_ADDED, { id: node.id, title: node.title, nodeType: node.properties.nodeType })
+  // if autoArrange is true, arrange all nodes after adding
+  if (autoArrange) {
+    arrangeNodes();
+  }
+
+  // emit event for node added
+  emitEvent(EVENT_TYPES.NODE_ADDED, {
+    id: node.id,
+    title: node.title,
+    nodeType: node.properties.nodeType
+  })
+
+  // return the created node
   return node
 }
 
+// remove a node by ID
 export const RemoveNode = (id) => {
   const state = getGraphState()
   if (!state || !state.graph) {
@@ -283,10 +301,12 @@ export const RemoveNode = (id) => {
   }
 
   graph.remove(node)
+  // emit event for node deleted
   emitEvent(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
   return true
 }
 
+// clear all nodes from the graph except DIRECTOR nodes
 export const Clear = () => {
   const state = getGraphState()
   if (!state || !state.graph) {
@@ -302,6 +322,7 @@ export const Clear = () => {
       return
     }
     graph.remove(node)
+    // emit event for node deleted
     emitEvent(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
     removed += 1
   })
@@ -309,8 +330,10 @@ export const Clear = () => {
   return removed
 }
 
+// export arrangeNodes function
 export const arrangeNodes = (margin = 50) => arrangeNodesPlugin(getGraphState(), NODE_TYPES, margin)
 
+// export zoomFit function
 export const zoomFit = (padding = 80, maxScale = 1) => {
   const state = getGraphState()
   if (!state || !state.graph || !state.graphCanvas) {
@@ -353,24 +376,16 @@ export const zoomFit = (padding = 80, maxScale = 1) => {
   return true
 }
 
- const emitSelection = (node) => {
-    if (!node) {
-      emitEvent(EVENT_TYPES.NODE_SELECTED, null)
-      return
-    }
-    emitEvent(EVENT_TYPES.NODE_SELECTED, node)
-  }
-
-
 // initialize and return the graph instance
 export const initGraph = (canvas, container, options = {}) => {
   if (!canvas || !container) {
     return null
   }
 
-  const graph = new LGraph()
-  const graphCanvas = new LGraphCanvas(canvas, graph)
-  
+  const graph = new LGraph() // create the graph instance
+  const graphCanvas = new LGraphCanvas(canvas, graph) // create the canvas
+
+  // resize handler
   const resize = () => {
     const rect = container.getBoundingClientRect()
     canvas.width = Math.max(1, Math.floor(rect.width))
@@ -378,35 +393,42 @@ export const initGraph = (canvas, container, options = {}) => {
     graphCanvas.resize()
   }
 
+  // attach resize event to the window
   window.addEventListener("resize", resize)
-  resize()
+  resize() // initial resize
 
   // graphCanvas.read_only = true;
   // graphCanvas.allow_interaction = false;
-  graphCanvas.allow_searchbox = false
+  graphCanvas.allow_searchbox = true
   graphCanvas.allow_reconnect_links = false
-  graphCanvas.processContextMenu = () => {}
-  graphCanvas.showLinkMenu = () => false
-  graphCanvas.drawSubgraphPanel = () => {}
-  canvas.addEventListener("contextmenu", (event) => event.preventDefault())
+  graphCanvas.processContextMenu = () => { } // disable default context menu
+  graphCanvas.showLinkMenu = () => false // disable link context menu
+  graphCanvas.drawSubgraphPanel = () => { } // disable subgraph panel
+  canvas.addEventListener("contextmenu", (event) => event.preventDefault()) // disable right-click context menu
 
+  // disable certain link-breaking behaviors
   LiteGraph.shift_click_do_break_link_from = false
   LiteGraph.click_do_break_link_to = false
 
+  // override isValidConnection to respect allowConnections flag
   if (!LiteGraph.__originalIsValidConnection) {
     LiteGraph.__originalIsValidConnection = LiteGraph.isValidConnection
   }
 
+  // new isValidConnection that checks allowConnections flag
   LiteGraph.isValidConnection = (...args) => {
-    if (!allowConnections) {
-      return false
+    if (!allowConnections) { // check if connections are allowed
+      return false // disallow connection
     }
+    // call the original isValidConnection method
     return LiteGraph.__originalIsValidConnection(...args)
   }
 
-  graphCanvas.onNodeSelected = (node) => emitSelection(node)
-  graphCanvas.onNodeDeselected = () => emitSelection(null)
-
+  // set up graph event handlers
+  graphCanvas.onNodeSelected = (node) => emitEvent(EVENT_TYPES.NODE_SELECTED, node)
+  // when node is deselected, emit with null
+  graphCanvas.onNodeDeselected = () => emitEvent(EVENT_TYPES.NODE_SELECTED, null)
+  // handle node removal
   graph.onNodeRemoved = (node) => {
     if (suppressNodeRemoved) {
       return
@@ -414,6 +436,7 @@ export const initGraph = (canvas, container, options = {}) => {
     if (node?.properties?.nodeType === NODE_TYPES.DIRECTOR) {
       return
     }
+    // emit event for node deleted
     emitEvent(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
   }
 
@@ -425,11 +448,11 @@ export const initGraph = (canvas, container, options = {}) => {
     allowConnections = true
     createDemoNodes(AddNode, NODE_TYPES, arrangeNodes)
     allowConnections = false
-    ;(graph._nodes || []).forEach((node) => {
-      if (node.properties?.nodeType === NODE_TYPES.INSPECTOR) {
-        moveWorkersIntoInspectorSubgraph(node)
-      }
-    })
+      ; (graph._nodes || []).forEach((node) => {
+        if (node.properties?.nodeType === NODE_TYPES.INSPECTOR) {
+          moveWorkersIntoInspectorSubgraph(node)
+        }
+      })
   }
 
   graph.start()
@@ -437,6 +460,7 @@ export const initGraph = (canvas, container, options = {}) => {
   return activeGraphState
 }
 
+// destroy the graph instance and clean up
 export const destroyGraph = (state) => {
   if (!state) {
     return
@@ -499,7 +523,7 @@ export const loadProjectNodes = (nodes) => {
     }
 
     const outputs = getOutputNames(nodeDto.Id)
-    
+
     // Determine connection info if node has a parent
     let connectFrom = null
     if (nodeDto.ParentId) {
@@ -511,7 +535,7 @@ export const loadProjectNodes = (nodes) => {
           ensureNodeCreated(parentDto)
         }
       }
-      
+
       // Now try to get parent node again
       const parentGraphNode = createdNodes.get(nodeDto.ParentId)
       if (parentGraphNode) {
@@ -530,7 +554,7 @@ export const loadProjectNodes = (nodes) => {
     if (!nodeDto.NodeType) {
       console.debug('Node missing NodeType, defaulting to WORKER:', nodeDto.Id)
     }
-    
+
     // Create the node
     const graphNode = AddNode(
       nodeDto.Id,
@@ -539,7 +563,7 @@ export const loadProjectNodes = (nodes) => {
       outputs,
       connectFrom
     )
-    
+
     allowConnections = false
 
     if (graphNode) {
@@ -551,7 +575,7 @@ export const loadProjectNodes = (nodes) => {
 
   // First, find root nodes (nodes without parents)
   const rootNodes = nodes.filter(n => !n.ParentId)
-  
+
   // Create root nodes first
   rootNodes.forEach(nodeDto => {
     ensureNodeCreated(nodeDto)
@@ -564,16 +588,16 @@ export const loadProjectNodes = (nodes) => {
 
   // Move workers into inspector subgraphs
   allowConnections = true
-  ;(state.graph._nodes || []).forEach((node) => {
-    if (node.properties?.nodeType === NODE_TYPES.INSPECTOR) {
-      moveWorkersIntoInspectorSubgraph(node)
-    }
-  })
+    ; (state.graph._nodes || []).forEach((node) => {
+      if (node.properties?.nodeType === NODE_TYPES.INSPECTOR) {
+        moveWorkersIntoInspectorSubgraph(node)
+      }
+    })
   allowConnections = false
 
   // Arrange the nodes
   arrangeNodes()
-  
+
   // Zoom to fit after layout completes (using requestAnimationFrame for reliability)
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {

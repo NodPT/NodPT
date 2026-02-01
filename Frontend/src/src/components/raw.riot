@@ -1,15 +1,20 @@
 <raw>
-    <p></p>
     <script>
         export default {
             state: {
                 default: null
             },
-            onMounted() {
+            setInnerHTML() {
                 this.root.innerHTML = this.sanitizeHtml(this.props.html || '');
+                if (this.props.class) {
+                    this.root.className = this.props.class;
+                }
+            },
+            onMounted() {
+                this.setInnerHTML();
             },
             onUpdated() {
-                this.root.innerHTML = this.sanitizeHtml(this.props.html || '');
+                this.setInnerHTML();
             },
             sanitizeHtml(html) {
                 // Basic sanitization to prevent XSS attacks

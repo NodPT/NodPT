@@ -3,62 +3,61 @@
     <div class="chat-messages" ref={chatMessagesRef}>
       <div each={message in state.messages} class={getMessageClass(message)}>
         <raw class={" message-content " + (message.thinking ? 'thinking' : '')} 
-          html={renderMarkdown(message.content)}></raw>
+          html={message.content}></raw>
         <div if={message.type !== 'ai' && message.type !== 'thinking'} 
-          class="message-controls d-flex justify-content-start align-items-center mt-1">
-          <button class="action-btn" onclick={() => copyMessage(message)} disabled={state.isLoading}
-            title={message._copied
-            ? 'Copied' : 'Copy to clipboard'}>
+          class=" message-controls d-flex justify-content-start align-items-center mt-1">
+          <button class="action-btn" onclick={()=> copyMessage(message)} disabled={state.isLoading}
+            title={message._copied ? 'Copied' : 'Copy to clipboard'}>
             <i class={"bi " + (message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold')}></i>
           </button>
         </div>
 
-        <div if={message.type === 'ai' || message.type === 'thinking'} class="message-actions">
+        <div if={message.type === 'ai' || message.type === 'thinking'} class=" message-actions">
               <div class="chat-response-buttons" if={!message.thinking}>
-                <button class="action-btn" 
-                  onclick={() => likeMessage(message)} 
-                  disabled={state.isLoading} 
+                <button class="action-btn"
+                  onclick={()=> likeMessage(message)}
+                  disabled={state.isLoading}
                   title="Like this response">
                   <i class={"bi bi-hand-thumbs-up fw-bold " + (message.Liked ? 'text-success' : '')}></i>
                 </button>
-                <button class="action-btn" onclick={() => dislikeMessage(message)} disabled={state.isLoading}
+                <button class=" action-btn" onclick={()=> dislikeMessage(message)} disabled={state.isLoading}
                     title="Dislike this response">
                     <i class={"bi bi-hand-thumbs-down fw-bold " + (message.Disliked ? 'text-danger' : '')}></i>
                 </button>
-                <button class="action-btn" onclick={() => copyMessage(message)} disabled={state.isLoading}
+                <button class=" action-btn" onclick={()=> copyMessage(message)} disabled={state.isLoading}
                       title={message._copied ? 'Copied' : 'Copy to clipboard'}>
                       <i class={"bi " + (message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold')}></i>
                 </button>
                 <button if={message.type === 'ai' && !message.markedAsSolution} 
-                        class="action-btn" onclick={buildSolution(message)} 
+                        class=" action-btn" onclick={buildSolution(message)}
                         disabled={state.isLoading} title="Mark as solution">
                         <i class="bi bi-check2-circle fw-bold"></i>
-                 </button>
-                <span if={message.solutionPending} 
+                </button>
+                <span if={message.solutionPending}
                   class="badge bg-warning text-dark ms-2">Processing</span>
-                <span if={message.markedAsSolution} 
+                <span if={message.markedAsSolution}
                   class="badge bg-success ms-2">
                   <i class="bi bi-check2-square me-1 fw-bold"></i>
                   <span>Solution</span>
                 </span>
               </div>
-        </div>
-
-        <div class="message-time">{formatTime(message.timestamp)}</div>
       </div>
-    </div>
 
-    <div class="chat-input-container">
-      <div class="chat-input-box h-100">
-        <textarea class="chat-textarea form-control" 
-          onkeyup={textAreaAdjust} placeholder="Ask anything..."
-          value={state.newMessage} oninput={handleInput}
-          onkeydown={handleEnter} ref={messageTextareaRef}
-          disabled={state.isLoading}></textarea>
-        <div class="chat-input-actions">
-          <button class="btn send-btn" onclick={sendMessage} disabled={isSendDisabled}>
-            <span if={state.isLoading} class="spinner-border spinner-border-sm"></span>
-            <i if={!state.isLoading} class={"bi fw-bold " + (state.thinking ? 'bi-square-fill' : 'bi-send')}></i>
+      <div class="message-time">{formatTime(message.timestamp)}</div>
+    </div>
+  </div>
+
+  <div class="chat-input-container">
+    <div class="chat-input-box h-100">
+      <textarea class="chat-textarea form-control"
+        onkeyup={textAreaAdjust} placeholder="Ask anything..."
+        value={state.newMessage} oninput={handleInput}
+        onkeydown={handleEnter} ref={messageTextareaRef}
+        disabled={state.isLoading}></textarea>
+      <div class="chat-input-actions">
+        <button class="btn send-btn" onclick={sendMessage} disabled={isSendDisabled}>
+          <span if={state.isLoading} class="spinner-border spinner-border-sm"></span>
+          <i if={!state.isLoading} class={"bi fw-bold " + (state.thinking ? 'bi-square-fill' : 'bi-send')}></i>
           </button>
         </div>
       </div>
@@ -80,25 +79,30 @@
         thinking: false,
         currentNodeId: null
       },
+      components: {
+        raw
+      },
       // determine message CSS class based on type
       getMessageClass(message) {
         return " message " + (message.type === 'ai' || message.type === 'thinking' ? 'ai-message' : 'user-message')
       },
       // adjust textarea height based on content
       textAreaAdjust(el) {
-        el.target.style.height = " 1px"; 
-        const h = el.target.scrollHeight; 
+        el.target.style.height = " 1px";
+        const h = el.target.scrollHeight;
         if (h > 150 || h < 60) return;
         el.target.style.height = (h) + "px";
         this.$$('.chat-input-container')[0].style.height = (36 + h) + "px";
-      }, 
+      },
       onMounted() {
         // configure marked for markdown rendering
         marked.setOptions({ breaks: true, gfm: true, headerIds: false, mangle: false })
         // set some API services
-        chatApiService.setApi(this.api); 
-        nodeApiService.setApi(this.api); 
+        chatApiService.setApi(this.api);
+        nodeApiService.setApi(this.api);
+        // reset chat state
         this.resetChatMessages();
+        // setup event handlers
         this.handleNodeSelected = (nodeData) => {
           const nodeId = nodeData?.id || null
           if (this.state.currentNodeId === nodeId) {
@@ -117,10 +121,10 @@
         this.bus.on(this.EVENT_TYPES.SOLUTION_OUTPUT_RECEIVED, this.handleSolutionOutputReceived)
       },
       onBeforeUnmount() {
-          this.bus.off(this.EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
-          this.bus.off(this.EVENT_TYPES.PROJECT_CONTEXT_CHANGED, this.handleProjectContextChange)
-          this.bus.off(this.EVENT_TYPES.SIGNALR_AI_RESPONSE_RECEIVED, this.handleAIResponseReceived)
-          this.bus.off(this.EVENT_TYPES.SOLUTION_OUTPUT_RECEIVED, this.handleSolutionOutputReceived)
+        this.bus.off(this.EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
+        this.bus.off(this.EVENT_TYPES.PROJECT_CONTEXT_CHANGED, this.handleProjectContextChange)
+        this.bus.off(this.EVENT_TYPES.SIGNALR_AI_RESPONSE_RECEIVED, this.handleAIResponseReceived)
+        this.bus.off(this.EVENT_TYPES.SOLUTION_OUTPUT_RECEIVED, this.handleSolutionOutputReceived)
       },
       get isSendDisabled() {
         return this.state.isLoading || !this.state.newMessage.trim()
@@ -174,7 +178,7 @@
           this.chatMessages.scrollTop = this.chatMessages.scrollHeight
         }
       },
-     // reset chat messages state
+      // reset chat messages state
       resetChatMessages() {
         this.update({
           messages: [],
@@ -195,7 +199,7 @@
           const messages = apiMessages.map((msg) => ({
             id: msg.Id,
             type: msg.Sender === 'user' ? 'user' : 'ai',
-            content: msg.Message,
+            content: this.renderMarkdown(msg.Message),
             timestamp: msg.Timestamp,
             markedAsSolution: msg.MarkedAsSolution,
             solutionPending: false,
