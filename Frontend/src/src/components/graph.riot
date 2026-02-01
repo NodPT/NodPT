@@ -41,8 +41,8 @@
           const container = document.getElementById('graph-canvas-container')
           
           if (!canvas || !container) {
-            const missing = !canvas ? 'canvas' : 'container'
-            console.error(`Graph initialization failed: ${missing} element not found`)
+            const missingElement = !canvas ? 'canvas' : 'container'
+            console.error(`Graph initialization failed: ${missingElement} element not found`)
             return
           }
 
