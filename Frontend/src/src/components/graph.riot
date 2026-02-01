@@ -19,6 +19,9 @@
         
         // Use requestAnimationFrame to ensure the DOM is fully rendered before initializing
         // This is more reliable than setTimeout, especially on mobile devices
+        let retryCount = 0
+        const MAX_RETRIES = 50 // Maximum 5 seconds of retries (50 * 100ms)
+        
         const initializeGraph = () => {
           const canvas = document.getElementById('graph-canvas')
           const container = document.getElementById('graph-canvas-container')
@@ -32,7 +35,12 @@
           const containerRect = container.getBoundingClientRect()
           if (containerRect.width === 0 || containerRect.height === 0) {
             // Container not ready yet, retry after a short delay
-            setTimeout(initializeGraph, 100)
+            retryCount++
+            if (retryCount < MAX_RETRIES) {
+              setTimeout(initializeGraph, 100)
+            } else {
+              console.error('Failed to initialize graph: container dimensions never became valid after', MAX_RETRIES, 'retries')
+            }
             return
           }
 

@@ -49,6 +49,8 @@
     const lazyWithErrorHandling = (componentPath, componentName) => {
       return lazy(Loader, () => import(componentPath).catch(err => {
         console.error(`Failed to load ${componentName} component:`, err)
+        // Re-throw to let Riot's lazy loader handle the error state
+        // This prevents the loader from hanging indefinitely
         throw err
       }))
     }
