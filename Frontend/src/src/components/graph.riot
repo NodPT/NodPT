@@ -8,6 +8,11 @@
   <script>
     import { initGraph, destroyGraph, setBus } from "../services/editorService"
 
+    // Graph initialization retry configuration
+    const RETRY_INTERVAL_MS = 100
+    const MAX_WAIT_MS = 5000
+    const MAX_RETRIES = MAX_WAIT_MS / RETRY_INTERVAL_MS
+
     export default {
       state: {
       },
@@ -20,9 +25,6 @@
         
         // Use requestAnimationFrame to ensure the DOM is fully rendered before initializing
         // This is more reliable than setTimeout, especially on mobile devices
-        const RETRY_INTERVAL_MS = 100
-        const MAX_WAIT_MS = 5000
-        const MAX_RETRIES = MAX_WAIT_MS / RETRY_INTERVAL_MS
         let retryCount = 0
         
         const initializeGraph = () => {
@@ -48,7 +50,7 @@
             if (retryCount < MAX_RETRIES) {
               this.initTimeoutId = setTimeout(initializeGraph, RETRY_INTERVAL_MS)
             } else {
-              console.error('Failed to initialize graph: container dimensions never became valid after', MAX_RETRIES, 'retries (', MAX_WAIT_MS, 'ms total)')
+              console.error(`Failed to initialize graph: container dimensions never became valid after ${MAX_RETRIES} retries (${MAX_WAIT_MS}ms total)`)
             }
             return
           }
