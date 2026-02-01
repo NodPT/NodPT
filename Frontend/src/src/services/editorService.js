@@ -32,6 +32,7 @@ const emitEvent = (eventType, payload) => {
 let activeGraphState = null
 let allowConnections = true
 let suppressNodeRemoved = false
+let lastSelectedNodeId = null
 
 const NODE_TYPES = {
   DIRECTOR: "Director",
@@ -425,9 +426,22 @@ export const initGraph = (canvas, container, options = {}) => {
   }
 
   // set up graph event handlers
-  graphCanvas.onNodeSelected = (node) => emitEvent(EVENT_TYPES.NODE_SELECTED, node)
+  graphCanvas.onNodeSelected = (node) => {
+    const nextId = node?.id ?? null
+    if (nextId === lastSelectedNodeId) {
+      return
+    }
+    lastSelectedNodeId = nextId
+    emitEvent(EVENT_TYPES.NODE_SELECTED, node)
+  }
   // when node is deselected, emit with null
-  graphCanvas.onNodeDeselected = () => emitEvent(EVENT_TYPES.NODE_SELECTED, null)
+  graphCanvas.onNodeDeselected = () => {
+    if (lastSelectedNodeId === null) {
+      return
+    }
+    lastSelectedNodeId = null
+    emitEvent(EVENT_TYPES.NODE_SELECTED, null)
+  }
   // handle node removal
   graph.onNodeRemoved = (node) => {
     if (suppressNodeRemoved) {
