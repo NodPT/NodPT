@@ -11,7 +11,7 @@
     // Graph initialization retry configuration
     const RETRY_INTERVAL_MS = 100
     const MAX_WAIT_MS = 5000
-    const MAX_RETRIES = MAX_WAIT_MS / RETRY_INTERVAL_MS
+    const MAX_RETRIES = Math.floor(MAX_WAIT_MS / RETRY_INTERVAL_MS)
 
     export default {
       state: {
@@ -52,7 +52,7 @@
             // Container not ready yet, retry after a short delay
             // retryCount tracks number of retry attempts (not including initial requestAnimationFrame)
             this.retryCount++
-            if (this.retryCount < MAX_RETRIES) {
+            if (this.retryCount <= MAX_RETRIES) {
               this.initTimeoutId = setTimeout(initializeGraph, RETRY_INTERVAL_MS)
             } else {
               console.error(`Failed to initialize graph: container dimensions never became valid after ${MAX_RETRIES} retries (${MAX_WAIT_MS}ms total)`)
