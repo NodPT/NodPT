@@ -50,12 +50,31 @@
         HeaderBar,
         FooterBar,
         // lazy load Graph component to improve initial load time
-        Graph: lazy(Loader, () => import('../components/graph.riot')),
-        RightPanel: lazy(Loader, () => import('../components/right-panel.riot')),
-        CopyProjectModal: lazy(Loader, () => import('../components/copy-project-modal.riot')),
-        RenameProjectModal: lazy(Loader, () => import('../components/rename-project-modal.riot')),
-        DeleteProjectModal: lazy(Loader, () => import('../components/delete-project-modal.riot')),
-        AddNodeModal: lazy(Loader, () => import('../components/add-node-modal.riot'))
+        // Add error handling to catch import failures, especially on mobile devices
+        Graph: lazy(Loader, () => import('../components/graph.riot').catch(err => {
+          console.error('Failed to load Graph component:', err)
+          throw err
+        })),
+        RightPanel: lazy(Loader, () => import('../components/right-panel.riot').catch(err => {
+          console.error('Failed to load RightPanel component:', err)
+          throw err
+        })),
+        CopyProjectModal: lazy(Loader, () => import('../components/copy-project-modal.riot').catch(err => {
+          console.error('Failed to load CopyProjectModal component:', err)
+          throw err
+        })),
+        RenameProjectModal: lazy(Loader, () => import('../components/rename-project-modal.riot').catch(err => {
+          console.error('Failed to load RenameProjectModal component:', err)
+          throw err
+        })),
+        DeleteProjectModal: lazy(Loader, () => import('../components/delete-project-modal.riot').catch(err => {
+          console.error('Failed to load DeleteProjectModal component:', err)
+          throw err
+        })),
+        AddNodeModal: lazy(Loader, () => import('../components/add-node-modal.riot').catch(err => {
+          console.error('Failed to load AddNodeModal component:', err)
+          throw err
+        }))
       },
       state: {
         minimapVisible: false,
