@@ -13,21 +13,30 @@
       },
       onBeforeMount() {
         this.graphState = null
+        this.initTimeoutId = null
       },
       onMounted() {
         setBus(this.bus, this.EVENT_TYPES)
         
         // Use requestAnimationFrame to ensure the DOM is fully rendered before initializing
         // This is more reliable than setTimeout, especially on mobile devices
+        const RETRY_INTERVAL_MS = 100
+        const MAX_WAIT_MS = 5000
+        const MAX_RETRIES = MAX_WAIT_MS / RETRY_INTERVAL_MS
         let retryCount = 0
-        const MAX_RETRIES = 50 // Maximum 5 seconds of retries (50 * 100ms)
         
         const initializeGraph = () => {
+          // Check if component is still mounted
+          if (!this.$) {
+            console.log('Graph component unmounted, canceling initialization')
+            return
+          }
+
           const canvas = document.getElementById('graph-canvas')
           const container = document.getElementById('graph-canvas-container')
           
           if (!canvas || !container) {
-            console.error('Canvas or container not found')
+            console.error(`Graph initialization failed: ${!canvas ? 'canvas' : 'container'} element not found`)
             return
           }
 
@@ -37,9 +46,9 @@
             // Container not ready yet, retry after a short delay
             retryCount++
             if (retryCount < MAX_RETRIES) {
-              setTimeout(initializeGraph, 100)
+              this.initTimeoutId = setTimeout(initializeGraph, RETRY_INTERVAL_MS)
             } else {
-              console.error('Failed to initialize graph: container dimensions never became valid after', MAX_RETRIES, 'retries')
+              console.error('Failed to initialize graph: container dimensions never became valid after', MAX_RETRIES, 'retries (', MAX_WAIT_MS, 'ms total)')
             }
             return
           }
@@ -61,6 +70,12 @@
         requestAnimationFrame(initializeGraph)
       },
       onBeforeUnmount() {
+        // Clear any pending initialization timeout
+        if (this.initTimeoutId) {
+          clearTimeout(this.initTimeoutId)
+          this.initTimeoutId = null
+        }
+        
         destroyGraph(this.graphState)
         this.graphState = null
       }
