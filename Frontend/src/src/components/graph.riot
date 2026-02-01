@@ -19,16 +19,17 @@
       onBeforeMount() {
         this.graphState = null
         this.initTimeoutId = null
+        this.animationFrameId = null
+        this.retryCount = 0
       },
       onMounted() {
         setBus(this.bus, this.EVENT_TYPES)
         
         // Use requestAnimationFrame to ensure the DOM is fully rendered before initializing
         // This is more reliable than setTimeout, especially on mobile devices
-        let retryCount = 0
         
         const initializeGraph = () => {
-          // Check if component is still mounted
+          // Check if component is still mounted (this.$ is Riot's internal reference, null/undefined when unmounted)
           if (!this.$) {
             console.log('Graph component unmounted, canceling initialization')
             return
@@ -46,8 +47,8 @@
           const containerRect = container.getBoundingClientRect()
           if (containerRect.width === 0 || containerRect.height === 0) {
             // Container not ready yet, retry after a short delay
-            retryCount++
-            if (retryCount < MAX_RETRIES) {
+            this.retryCount++
+            if (this.retryCount < MAX_RETRIES) {
               this.initTimeoutId = setTimeout(initializeGraph, RETRY_INTERVAL_MS)
             } else {
               console.error(`Failed to initialize graph: container dimensions never became valid after ${MAX_RETRIES} retries (${MAX_WAIT_MS}ms total)`)
@@ -69,9 +70,15 @@
         }
 
         // Use requestAnimationFrame to ensure proper layout before initialization
-        requestAnimationFrame(initializeGraph)
+        this.animationFrameId = requestAnimationFrame(initializeGraph)
       },
       onBeforeUnmount() {
+        // Clear any pending animation frame
+        if (this.animationFrameId) {
+          cancelAnimationFrame(this.animationFrameId)
+          this.animationFrameId = null
+        }
+        
         // Clear any pending initialization timeout
         if (this.initTimeoutId) {
           clearTimeout(this.initTimeoutId)
