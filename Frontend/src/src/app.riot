@@ -12,6 +12,9 @@
     <route path="/project">
       <Project />
     </route>
+<route path="/editor">
+ <Editor />
+</route>
     <route path="/editor(.*)">
       <Editor pid="{(route.searchParams.get('pid'))}" />
     </route>
