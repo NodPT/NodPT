@@ -5,17 +5,17 @@
         <a class="navbar-brand" href="/">
           <img class="rounded-2" src="/images/logo-small.png" alt="NodPT" />
         </a>
-        <button class="btn btn-sm dropdown-toggle" type="button" 
-          aria-expanded={state.openMenu==='user' } 
-          onclick={() => toggleMenu('user')}>
+        <button class="btn btn-sm dropdown-toggle" type="button"
+          aria-expanded={state.openMenu==='user' }
+          onclick={()=> toggleMenu('user')}>
           <img if={state.userPhotoUrl} src={state.userPhotoUrl} alt="Profile"
-           class="rounded-circle me-1 user-photo"
+            class="rounded-circle me-1 user-photo"
             onerror={clearPhoto} />
           <i if={!state.userPhotoUrl} class="bi bi-person-circle me-1"></i>
         </button>
         <ul class={"dropdown-menu dropdown-menu-end " + (state.openMenu === 'user' ? 'show' : '')}>
           <li>
-            <a class="dropdown-item text-danger" href="#" onclick={logout}>Logout</a>
+            <a class=" dropdown-item text-danger" href="#" onclick={logout}>Logout</a>
           </li>
         </ul>
       </div>
@@ -23,8 +23,8 @@
       <div class="d-flex align-items-center gap-3" if={props.showMenu}>
         <div class="dropdown">
           <button class="btn btn-sm dropdown-toggle" type="button"
-           aria-expanded={state.openMenu==='project' }
-            onclick={() => toggleMenu('project')}>
+            aria-expanded={state.openMenu==='project' }
+            onclick={()=> toggleMenu('project')}>
             <i class="bi bi-folder2"></i> File
           </button>
           <ul class={"dropdown-menu " + (state.openMenu === 'project' ? 'show' : '')}>
@@ -43,12 +43,12 @@
 
         <div class="dropdown">
           <button class="btn btn-sm dropdown-toggle" type="button" aria-expanded={state.openMenu==='nodes' }
-            onclick={() => toggleMenu('nodes')}>
+            onclick={()=> toggleMenu('nodes')}>
             <i class="bi bi-diagram-3"></i> Nodes
           </button>
           <ul class={"dropdown-menu " + (state.openMenu === 'nodes' ? 'show' : '')}>
-            <li><a class=" dropdown-item" href="#" 
-              onclick={addNode}>Add Node</a></li>
+            <li><a class=" dropdown-item" href="#"
+            onclick={addNode}>Add Node</a></li>
             <li>
               <hr class="dropdown-divider" />
             </li>
@@ -86,6 +86,8 @@
     </div>
   </div>
 
+  <rename-project-modal />
+  <delete-project-modal />
   <new-project-modal />
   <open-project-modal />
 
@@ -95,11 +97,16 @@
     import { Modal } from 'bootstrap'
     import NewProjectModal from './new-project-modal.riot'
     import OpenProjectModal from './open-project-modal.riot'
+    import RenameProjectModal from '../components/rename-project-modal.riot'
+    import DeleteProjectModal from '../components/delete-project-modal.riot'
+
 
     export default {
       components: {
         NewProjectModal,
-        OpenProjectModal
+        OpenProjectModal,
+        RenameProjectModal,
+        DeleteProjectModal,
       },
       state: {
         searchTerm: '',
@@ -122,7 +129,9 @@
           this.update({ userPhotoUrl: userData.PhotoUrl })
         }
 
+        // handle the project changed event
         this.projectNameHandler = (name) => this.update({ projectName: name })
+        // handle the node selected event
         this.selectedNodeHandler = (nodeData) => {
           this.update({ isDirectorSelected: nodeData && nodeData.type === 'director' })
         }
@@ -257,7 +266,7 @@
           router.push('/login')
         }
       },
-      
+
     }
   </script>
 </header-bar>

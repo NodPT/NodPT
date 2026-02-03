@@ -6,16 +6,16 @@
   </div>
 
   <script>
-    import { initGraph, destroyGraph, setBus } from "../services/editorService"
+    import { initGraph, destroyGraph } from "../services/editorService"
 
     export default {
       state: {
+        name: 'graph'
       },
       onBeforeMount() {
         this.graphState = null
       },
       onMounted() {
-        setBus(this.bus, this.EVENT_TYPES)
         const canvas = document.getElementById('graph-canvas')
         const container = document.getElementById('graph-canvas-container')
         if (canvas && container) {

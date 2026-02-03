@@ -1,20 +1,7 @@
 import "litegraph.js/css/litegraph.css"
 import { LiteGraph, LGraph, LGraphCanvas } from "litegraph.js"
 import { arrangeNodes as arrangeNodesPlugin, createDemoNodes } from "../plugins/nodeArrangePlugin.js"
-let bus
-let EVENT_TYPES
-
-export const setBus = (busInstance, eventTypes) => {
-  if (!busInstance || typeof busInstance.trigger !== 'function' || !eventTypes || typeof eventTypes !== 'object') {
-    return false
-  }
-  if (!eventTypes.NODE_ADDED || !eventTypes.NODE_DELETED) {
-    return false
-  }
-  bus = busInstance
-  EVENT_TYPES = eventTypes
-  return true
-}
+import { bus, EVENT_TYPES } from '../plugins/bus.js'
 
 /**
  * Emit an event if the bus and event types are initialized.
@@ -94,6 +81,7 @@ const getInspectorWorkers = (graph, inspectorNode) => {
   )
 }
 
+// move the Worker nodes to inspector node
 const moveWorkersIntoInspectorSubgraph = (inspectorNode, workerNodes = null) => {
   const state = getGraphState()
   if (!state || !state.graph || !inspectorNode) {
@@ -198,6 +186,7 @@ const ensureAgentNodeRegistered = () => {
   LiteGraph.registerNodeType("nodpt/agent", AgentNode)
 }
 
+// add a new node to the graph
 export const AddNode = (id, title, nodeType, outputs = [], connectFrom = null, autoArrange = false) => {
   const state = getGraphState()
   if (!state || !state.graph) {
@@ -400,7 +389,7 @@ export const initGraph = (canvas, container, options = {}) => {
 
   // graphCanvas.read_only = true;
   // graphCanvas.allow_interaction = false;
-  graphCanvas.allow_searchbox = true
+  graphCanvas.allow_searchbox = false
   graphCanvas.allow_reconnect_links = false
   graphCanvas.processContextMenu = () => { } // disable default context menu
   graphCanvas.showLinkMenu = () => false // disable link context menu
@@ -433,10 +422,11 @@ export const initGraph = (canvas, container, options = {}) => {
     }
     lastSelectedNodeId = nextId
     emitEvent(EVENT_TYPES.NODE_SELECTED, node)
+    console.log(`selected node`, lastSelectedNodeId)
   }
   // when node is deselected, emit with null
-  graphCanvas.onNodeDeselected = () => {
-    if (lastSelectedNodeId === null) {
+  graphCanvas.onNodeDeselected = (node) => {
+    if (lastSelectedNodeId === null || lastSelectedNodeId == node?.id) {
       return
     }
     lastSelectedNodeId = null
@@ -461,12 +451,12 @@ export const initGraph = (canvas, container, options = {}) => {
   if (options.createDemo) {
     allowConnections = true
     createDemoNodes(AddNode, NODE_TYPES, arrangeNodes)
-    allowConnections = false
-      ; (graph._nodes || []).forEach((node) => {
-        if (node.properties?.nodeType === NODE_TYPES.INSPECTOR) {
-          moveWorkersIntoInspectorSubgraph(node)
-        }
-      })
+    allowConnections = false;
+    (graph._nodes || []).forEach((node) => {
+      if (node.properties?.nodeType === NODE_TYPES.INSPECTOR) {
+        moveWorkersIntoInspectorSubgraph(node)
+      }
+    })
   }
 
   graph.start()

@@ -25,37 +25,35 @@
       connectionStatus={state.connectionStatus} />
 
     <!-- Modals -->
-    <copy-project-modal />
-    <rename-project-modal />
-    <delete-project-modal />
+
+
     <add-node-modal />
   </div>
 
   <script>
+    import '../styles/components-dark.css'
+    import '../styles/main-editor.css'
+    import '../styles/main-editor-dark.css'
     import HeaderBar from '../components/header.riot'
     import FooterBar from '../components/footer.riot'
     import { arrangeNodes, zoomFit, loadProjectNodes } from '../services/editorService'
     import signalRService from '../services/signalRService'
     import projectApiService from '../services/projectApiService'
     import nodeApiService from '../services/nodeApiService'
-    import '../styles/components-dark.css'
-    import '../styles/main-editor.css'
-    import '../styles/main-editor-dark.css'
-    import lazy from '@riotjs/lazy'
-    import Loader from '../components/loader.riot'
+    // import lazy from '@riotjs/lazy'
+    // import Loader from '../components/loader.riot'
     import { router } from '@riotjs/route'
+    import Graph from '../components/graph.riot'
+    import RightPanel from '../components/right-panel.riot'
+    import AddNodeModal from '../components/add-node-modal.riot'
 
     export default {
       components: {
         HeaderBar,
         FooterBar,
-        // lazy load Graph component to improve initial load time
-        Graph: lazy(Loader, () => import('../components/graph.riot')),
-        RightPanel: lazy(Loader, () => import('../components/right-panel.riot')),
-        CopyProjectModal: lazy(Loader, () => import('../components/copy-project-modal.riot')),
-        RenameProjectModal: lazy(Loader, () => import('../components/rename-project-modal.riot')),
-        DeleteProjectModal: lazy(Loader, () => import('../components/delete-project-modal.riot')),
-        AddNodeModal: lazy(Loader, () => import('../components/add-node-modal.riot'))
+        Graph,
+        RightPanel,
+        AddNodeModal
       },
       state: {
         minimapVisible: false,
@@ -67,8 +65,10 @@
         rightPanelWidth: 416
       },
       onMounted() {
+        // set api
         projectApiService.setApi(this.api)
         nodeApiService.setApi(this.api)
+        // add events
         this.handleSignalRStatus = (status) => this.update({ connectionStatus: status })
         this.handleNodeSelected = (nodeData) => this.update({ selectedNode: nodeData })
         this.handleToggleRightPanel = () => this.update({ rightPanelVisible: !this.state.rightPanelVisible })
@@ -98,7 +98,10 @@
         this.bus.off(this.EVENT_TYPES.ARRANGE_NODES, this.handleArrangeNodes)
         this.bus.off(this.EVENT_TYPES.ZOOM_FIT, this.handleZoomFit)
         this.bus.off(this.EVENT_TYPES.EDITOR_READY, this.handleEditorReady)
-        signalRService.stop().catch((error) => console.error('Error stopping SignalR:', error))
+        // stop the signalr
+        signalRService
+          .stop()
+          .catch((error) => console.error('Error stopping SignalR:', error))
       },
       get rightPanelStyle() {
         return `width: ${this.state.rightPanelWidth}px;`
