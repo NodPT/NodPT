@@ -82,7 +82,10 @@
             return
           }
 
-          const projects = await projectApiService.getUserProjects()
+          let projects = await projectApiService.getUserProjects()
+
+          if (!projects)
+            projects = []
 
           const recentProjects = projects
             .filter((project) => project.IsActive)
