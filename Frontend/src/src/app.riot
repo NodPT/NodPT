@@ -12,7 +12,11 @@
     <route path="/project">
       <Project />
     </route>
-    <route path="/editor(.*)">
+<route path="/editor">
+<h1>test editor</h1>
+<Editor />
+</route>
+    <route path="/editorit(.*)">
       <Editor pid="{(route.searchParams.get('pid'))}" />
     </route>
   </router>
@@ -33,7 +37,7 @@
         Terms: lazy(Loader, () => import('./pages/terms.riot')),
         Login: lazy(Loader, () => import('./pages/login.riot')),
         Project: lazy(Loader, () => import('./pages/project.riot')),
-        Editor: lazy(Loader, () => import('./pages/editor.riot')),
+        Editor: lazy(() => import('./pages/editor.riot')),
       },
       state: {
         showNotFound: false,
