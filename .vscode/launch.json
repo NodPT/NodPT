@@ -26,25 +26,6 @@
             }
         },
         {
-            "name": ".NET Core Launch (SignalR) - NodPT.SignalR",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build",
-            "program": "${workspaceFolder}/SignalR/src/bin/Debug/net8.0/NodPT.SignalR.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/SignalR/src",
-            "stopAtEntry": false,
-            "console": "integratedTerminal",
-            "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development",
-                "DOTNET_ENVIRONMENT": "Development"
-            },
-            "serverReadyAction": {
-                "action": "openExternally",
-                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
-            }
-        },
-        {
             "name": ".NET Core Launch (Executor) - BackendExecutor",
             "type": "coreclr",
             "request": "launch",

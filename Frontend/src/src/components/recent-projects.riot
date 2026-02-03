@@ -71,7 +71,8 @@
           }
         }
 
-        router.push(`/editor?pid=${project.Id}`)
+        projectApiService.setProjectId(project.Id)
+        router.push(`/editor`)
       },
       async loadProjects() {
         try {

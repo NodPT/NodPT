@@ -67,10 +67,6 @@ public static class DatabaseHelper
         var dataStore = XpoDefault.GetConnectionProvider(connectionString, AutoCreateOption.SchemaAlreadyExists);
         var dl = new SimpleDataLayer(dataStore);
 
-#if DEBUG
-        //        CreateSampleData(dl);
-#endif
-
         return new UnitOfWork(dl);
 
     }
