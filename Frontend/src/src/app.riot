@@ -12,9 +12,11 @@
     <route path="/project">
       <Project />
     </route>
-
+    <route path="/create">
+      <Create></Create>
+    </route>
     <route path="/editor">
-      <Editor />
+      <Editor></Editor>
     </route>
   </router>
 
@@ -23,18 +25,19 @@
     import lazy from '@riotjs/lazy'
     import Loader from './components/loader.riot'
     import NotFound from './pages/not-found.riot'
-
+    import Create from './pages/create.riot'
     export default {
       components: {
         Router,
         Route,
+        Create,
         NotFound,
         Home: lazy(Loader, () => import('./pages/home.riot')),
         About: lazy(Loader, () => import('./pages/about.riot')),
         Terms: lazy(Loader, () => import('./pages/terms.riot')),
         Login: lazy(Loader, () => import('./pages/login.riot')),
         Project: lazy(Loader, () => import('./pages/project.riot')),
-        Editor: lazy(() => import('./pages/editor.riot')),
+        Editor: lazy(Loader, () => import('./pages/editor.riot')),
       },
       state: {
         showNotFound: false,

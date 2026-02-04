@@ -1,9 +1,10 @@
 <right-panel>
-  <div class="right-panel" data-theme={props.isDarkTheme ? 'dark' : 'light'}>
+  <div class="right-panel" data-theme={props.isDarkTheme ? 'dark' : 'light' }>
     <ul class="nav nav-tabs" role="tablist">
       <li class="nav-item" role="presentation">
-        <button class={"nav-link d-flex align-items-center " + (state.activeTab === 'chat' ? 'active' : '')}
-          type="button" onclick={() => selectTab('chat')}>
+        <button
+          class={"nav-link d-flex align-items-center " + (state.activeTab === 'chat' ? 'active' : '')}
+          type=" button" onclick={()=> selectTab('chat')}>
           <i class="bi bi-chat-dots me-1"></i>
         </button>
       </li>

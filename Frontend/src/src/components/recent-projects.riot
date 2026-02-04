@@ -6,8 +6,7 @@
         class="project-item d-flex align-items-center mb-2 py-2 px-1 hover-shadow cursor-pointer"
         data-project-id={project.Id} onclick={openProject}>
         <div class="project-icon me-3">
-          <i class={project.TemplateIcon ? project.TemplateIcon + ' fs-4' : 'bi bi-file-earmark text-secondary fs-4'
-            }></i>
+          <i class={project.TemplateIcon}></i>
         </div>
         <div class="project-details flex-grow-1">
           <h6 class="mb-0 fw-bold">{project.Name}</h6>

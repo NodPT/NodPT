@@ -10,21 +10,24 @@
     </div>
 
     <div if={!state.loading} class="row g-2">
-      <div each={tile in state.projectTiles} key={tile.id}
+      <div
+        each={tile in state.projectTiles}
+        key={tile.id}
         class={"col-6 col-md-3 col-lg-2 " + (tile.disabled ? 'opacity-50' : '')}>
-        <div class="tile-card card h-100 border-0 shadow-sm hover-effect cursor-pointer"
-          data-tile-id={tile.id}
-          onclick={handleTileClick}>
-          <div class="card-body text-center p-2">
-            <div class="tile-icon mb-2">
-              <i class={tile.icon + ' fs-3'}></i>
-            </div>
-            <h6 class="card-title fw-bold mb-1 small">{tile.name}</h6>
-            <p class="card-text text-muted project-tile-description">{tile.description}</p>
+        <div 
+          class=" tile-card card h-100 border-0 shadow-sm hover-effect cursor-pointer"
+        data-tile-id={tile.id}
+        onclick={handleTileClick}>
+        <div class="card-body text-center p-2">
+          <div class="tile-icon mb-2">
+            <i class={tile.icon + ' fs-3' }></i>
           </div>
+          <h6 class="card-title fw-bold mb-1 small">{tile.name}</h6>
+          <p class="card-text text-muted project-tile-description">{tile.description}</p>
         </div>
       </div>
     </div>
+  </div>
   </div>
 
   <script>

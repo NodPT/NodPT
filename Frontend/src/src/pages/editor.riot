@@ -7,8 +7,10 @@
         <div class="editor-left">
           <Graph />
         </div>
-        <div class={"editor-splitter " + (state.rightPanelVisible ? '' : 'is-hidden')} onmousedown={startResize}></div>
-        <div class={" editor-right " + (state.rightPanelVisible ? '' : 'is-hidden')} style=" {rightPanelStyle}">
+        <div class={"editor-splitter " + (state.rightPanelVisible ? '' : 'is-hidden')} 
+          onmousedown={startResize}></div>
+        <div class={" editor-right " + (state.rightPanelVisible ? '' : 'is-hidden')} 
+          style=" {rightPanelStyle}">
           <div class=" main-editor-right-panel docked">
             <right-panel selectedNode={state.selectedNode}
               isDarkTheme={state.isDarkTheme} />
@@ -23,9 +25,6 @@
       progress={state.buildProgress}
       minimapVisible={state.minimapVisible}
       connectionStatus={state.connectionStatus} />
-
-    <!-- Modals -->
-
 
     <add-node-modal />
   </div>
