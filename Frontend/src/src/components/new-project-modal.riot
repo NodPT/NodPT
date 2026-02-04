@@ -180,7 +180,9 @@
           this.resetModal()
 
           // Navigate to editor with the new project
-          router.push(`/editor?pid=${createdProject.Id}`)
+          projectApiService.setProjectId(createdProject.Id)
+          router.push(`/editor`)
+
         } catch (error) {
           this.notify('alert', 'Failed to create project. Please try again.')
           this.update({ isCreating: false })

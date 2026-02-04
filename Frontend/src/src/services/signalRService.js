@@ -55,7 +55,7 @@ class SignalRService {
 	 * @returns {string} Hub URL
 	 */
 	getHubUrl() {
-		const baseUrl = import.meta.env.VITE_SIGNALR_BASE_URL || 'https://api.nodpt.com';
+		const baseUrl = import.meta.env.VITE_SIGNALR_BASE_URL || 'https://api.nodpt.com/signalr';
 		return `${baseUrl}`;
 	}
 

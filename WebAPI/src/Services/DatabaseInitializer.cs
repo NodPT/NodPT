@@ -11,7 +11,7 @@ public static class DatabaseInitializer
 {
     static string connectionString = string.Empty;
 
-    static void UpdateSchem()
+    static void UpdateSchema()
     {
         var session = DatabaseHelper.GetSession();
         session.AutoCreateOption.ToString();
@@ -59,7 +59,7 @@ public static class DatabaseInitializer
         // Create sample data
 #if DEBUG
         //  CreateSampleData();
-        UpdateSchem();
+        UpdateSchema();
 #endif
     }
 

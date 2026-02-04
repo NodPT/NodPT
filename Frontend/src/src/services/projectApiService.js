@@ -1,5 +1,6 @@
 import { getToken } from '../plugins/tokenStorage';
 
+
 class ProjectApiService {
 	constructor() {
 		this.baseURL = '/projects';
@@ -12,6 +13,16 @@ class ProjectApiService {
 	 */
 	setApi(api) {
 		this.api = api;
+	}
+
+	setProjectId(id) {
+		this.projectId = id;
+		localStorage.setItem('CurrentProjectId', id);
+	}
+
+	getProjectId() {
+		this.projectId = localStorage.getItem('CurrentProjectId');
+		return this.projectId;
 	}
 
 	/**

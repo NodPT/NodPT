@@ -42,7 +42,7 @@
     import nodeApiService from '../services/nodeApiService'
     // import lazy from '@riotjs/lazy'
     // import Loader from '../components/loader.riot'
-    import { router } from '@riotjs/route'
+    import { router, route } from '@riotjs/route'
     import Graph from '../components/graph.riot'
     import RightPanel from '../components/right-panel.riot'
     import AddNodeModal from '../components/add-node-modal.riot'
@@ -137,9 +137,9 @@
       },
       async loadProject() {
         try {
-
-          // get projectId from props
-          const projectId = this.props.pid
+          // get projectId from querystring
+          const projectId = projectApiService.getProjectId()
+          console.log('Editor pid querystring:', projectId)
 
           if (!projectId) {
             console.warn('No project ID found in URL')

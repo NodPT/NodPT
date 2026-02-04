@@ -12,12 +12,9 @@
     <route path="/project">
       <Project />
     </route>
-<route path="/editor">
-<h1>test editor</h1>
-<Editor />
-</route>
-    <route path="/editorit(.*)">
-      <Editor pid="{(route.searchParams.get('pid'))}" />
+
+    <route path="/editor">
+      <Editor />
     </route>
   </router>
 
