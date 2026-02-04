@@ -1,13 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.0.11217.181 d18.0
+VisualStudioVersion = 18.0.11217.181
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BackendExecutor", "BackendExecutor.csproj", "{6D8B4781-5E9D-6CE8-0CA7-F5A127D82A6E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodPT.Data", "..\..\Data\src\NodPT.Data.csproj", "{6EC1D2AE-6FE9-E637-CE33-F6F4664EF97A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodPT.Utils", "..\..\Utils\src\NodPT.Utils.csproj", "{6EC1D2AE-6FE9-E637-CE33-F6F4664EF97A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodPT.Utils", "..\..\Utils\src\NodPT.Utils.csproj", "{E17B8520-8616-4CDE-BAFE-C0C28A3CA6FF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,6 +23,10 @@ Global
 		{6EC1D2AE-6FE9-E637-CE33-F6F4664EF97A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6EC1D2AE-6FE9-E637-CE33-F6F4664EF97A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6EC1D2AE-6FE9-E637-CE33-F6F4664EF97A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E17B8520-8616-4CDE-BAFE-C0C28A3CA6FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E17B8520-8616-4CDE-BAFE-C0C28A3CA6FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E17B8520-8616-4CDE-BAFE-C0C28A3CA6FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E17B8520-8616-4CDE-BAFE-C0C28A3CA6FF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

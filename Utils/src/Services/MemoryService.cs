@@ -1,9 +1,11 @@
 using DevExpress.Xpo;
+using DevExpress.Xpo.DB.Exceptions;
 using DevExpress.Data.Filtering;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using NodPT.Data.Models;
 using System.Text.Json;
+using System.Collections.Concurrent;
 using NodPT.Data.DTOs;
 using RedisService.Cache;
 
@@ -11,6 +13,7 @@ namespace NodPT.Data.Services;
 
 public class MemoryService 
 {
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _nodeLocks = new();
     private readonly RedisCacheService _redisService;
     private readonly SummarizationService _summarizationService;
     private readonly MemoryOptions _options;
@@ -37,6 +40,12 @@ public class MemoryService
     /// Get the Redis key for a node's summary.
     /// </summary>
     private string GetSummaryKey(string nodeId) => $"{_options.SummaryKeyPrefix}:{nodeId}";
+
+    /// <summary>
+    /// Get a per-node semaphore for serializing memory updates.
+    /// </summary>
+    private static SemaphoreSlim GetNodeLock(string nodeId) =>
+        _nodeLocks.GetOrAdd(nodeId, _ => new SemaphoreSlim(1, 1));
 
     /// <summary>
     /// Get the Redis key for a node's history.
@@ -130,6 +139,8 @@ public class MemoryService
             return await LoadSummaryAsync(nodeId, unitOfWork);
         }
 
+        var nodeLock = GetNodeLock(nodeId);
+        await nodeLock.WaitAsync();
         try
         {
             // Step 1: Load the existing summary
@@ -181,6 +192,10 @@ public class MemoryService
             _logger.LogError(ex, "Error during rolling summarization for node {NodeId}", nodeId);
             throw;
         }
+        finally
+        {
+            nodeLock.Release();
+        }
     }
 
     /// <summary>
@@ -210,6 +225,11 @@ public class MemoryService
             {
                 // Create a new scope for the database context
                 var unitOfWork = DatabaseHelper.GetSession();
+                if (unitOfWork == null)
+                {
+                    _logger.LogError("Failed to obtain UnitOfWork for background summarization (node {NodeId})", nodeId);
+                    return;
+                }
 
                 await RollingSummarizeAsync(nodeId, newMessageContent, role, unitOfWork);
                 

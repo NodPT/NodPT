@@ -13,6 +13,10 @@ services:
       - "3306:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
+    # 🔹 Docker networks for DB, backend & frontend
+    networks:
+      - backend_network
+
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s

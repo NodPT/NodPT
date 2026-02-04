@@ -31,8 +31,8 @@ RUN apt-get update && apt-get install -y curl jq && rm -rf /var/lib/apt/lists/*
 
 COPY --from=publish /app/publish ./
 
-# Copy the Ollama connectivity test script
-COPY Executor/test-ollama-connectivity.sh /app/test-ollama-connectivity.sh
-RUN chmod +x /app/test-ollama-connectivity.sh
+# # Copy the Ollama connectivity test script
+# COPY Executor/test-ollama-connectivity.sh /app/test-ollama-connectivity.sh
+# RUN chmod +x /app/test-ollama-connectivity.sh
 
 ENTRYPOINT ["dotnet", "BackendExecutor.dll"]
