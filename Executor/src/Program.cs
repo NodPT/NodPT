@@ -33,6 +33,7 @@ builder.Services.Configure<ExecutorOptions>(options =>
     options.MaxTotal = int.TryParse(Environment.GetEnvironmentVariable("MAX_TOTAL"), out var maxTotal) ? maxTotal : 0;
     options.LlmEndpoint = Environment.GetEnvironmentVariable("LLM_ENDPOINT") ?? "http://ollama:11434/api/generate";
     options.DefaultModel = Environment.GetEnvironmentVariable("DEFAULT_MODEL") ?? "deepseek-r1:1.5b";
+    options.LlmTimeoutSeconds = int.TryParse(Environment.GetEnvironmentVariable("LLM_TIMEOUT_SECONDS"), out var llmTimeout) ? llmTimeout : 300;
 });
 
 
@@ -50,6 +51,7 @@ builder.Services.AddSingleton<ExecutorOptions>(provider =>
     options.MaxTotal = int.TryParse(Environment.GetEnvironmentVariable("MAX_TOTAL"), out var maxTotal) ? maxTotal : options.MaxTotal;
     options.LlmEndpoint = Environment.GetEnvironmentVariable("LLM_ENDPOINT") ?? options.LlmEndpoint;
     options.DefaultModel = Environment.GetEnvironmentVariable("DEFAULT_MODEL") ?? options.DefaultModel;
+    options.LlmTimeoutSeconds = int.TryParse(Environment.GetEnvironmentVariable("LLM_TIMEOUT_SECONDS"), out var llmTimeout) ? llmTimeout : options.LlmTimeoutSeconds;
 
     return options;
 });
@@ -87,10 +89,17 @@ builder.Services.AddSingleton<MemoryOptions>(provider =>
 });
 #endregion
 
-// Register HttpClientFactory
+// Register HttpClientFactory with timeout configuration for LLM services
 builder.Services.AddHttpClient();
 
-// Register LLM services
+// Register named HttpClient for LLM services with configured timeout
+builder.Services.AddHttpClient("LlmClient", (provider, client) =>
+{
+    var executorOptions = provider.GetRequiredService<ExecutorOptions>();
+    client.Timeout = TimeSpan.FromSeconds(executorOptions.LlmTimeoutSeconds);
+});
+
+// Register LLM services as singletons
 builder.Services.AddSingleton<OllamaLlmClient>();
 builder.Services.AddSingleton<TensorRtChatClient>();
 builder.Services.AddSingleton<LlmChatService>();

@@ -40,7 +40,7 @@ public class TensorRtChatClient
 
     public async Task<string> SendAsync(OllamaRequest request, string endpoint, CancellationToken cancellationToken = default)
     {
-        var httpClient = _httpClientFactory.CreateClient();
+        var httpClient = _httpClientFactory.CreateClient("LlmClient");
 
         var json = JsonSerializer.Serialize(request);
         using var content = new StringContent(json, Encoding.UTF8, "application/json");

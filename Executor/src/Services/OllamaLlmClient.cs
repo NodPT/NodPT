@@ -32,7 +32,7 @@ public class OllamaLlmClient
             throw new ArgumentException("LLM endpoint is required.", nameof(endpoint));
 
         var model = !string.IsNullOrWhiteSpace(request.model) ? request.model : _options.DefaultModel;
-        var httpClient = _httpClientFactory.CreateClient();
+        var httpClient = _httpClientFactory.CreateClient("LlmClient");
 
         // Determine if we should use /api/chat or /api/generate
         var baseUri = GetBaseUri(endpoint);
