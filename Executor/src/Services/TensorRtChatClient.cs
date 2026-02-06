@@ -6,12 +6,12 @@ namespace BackendExecutor.Services;
 
 public class TensorRtChatClient
 {
-    private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<TensorRtChatClient> _logger;
 
-    public TensorRtChatClient(HttpClient httpClient, ILogger<TensorRtChatClient> logger)
+    public TensorRtChatClient(IHttpClientFactory httpClientFactory, ILogger<TensorRtChatClient> logger)
     {
-        _httpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -40,6 +40,8 @@ public class TensorRtChatClient
 
     public async Task<string> SendAsync(OllamaRequest request, string endpoint, CancellationToken cancellationToken = default)
     {
+        var httpClient = _httpClientFactory.CreateClient("LlmClient");
+
         var json = JsonSerializer.Serialize(request);
         using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
@@ -48,7 +50,7 @@ public class TensorRtChatClient
             request.model,
             request.messages?.Count ?? 0);
 
-        using var response = await _httpClient.PostAsync(endpoint, content, cancellationToken);
+        using var response = await httpClient.PostAsync(endpoint, content, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);

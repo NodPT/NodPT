@@ -92,21 +92,16 @@ builder.Services.AddSingleton<MemoryOptions>(provider =>
 // Register HttpClientFactory with timeout configuration for LLM services
 builder.Services.AddHttpClient();
 
-// Register LLM services with configured HttpClient and LLM timeout
-// Note: AddHttpClient<T> registers the service as transient by default
-builder.Services.AddHttpClient<OllamaLlmClient>((provider, client) =>
+// Register named HttpClient for LLM services with configured timeout
+builder.Services.AddHttpClient("LlmClient", (provider, client) =>
 {
     var executorOptions = provider.GetRequiredService<ExecutorOptions>();
     client.Timeout = TimeSpan.FromSeconds(executorOptions.LlmTimeoutSeconds);
 });
 
-builder.Services.AddHttpClient<TensorRtChatClient>((provider, client) =>
-{
-    var executorOptions = provider.GetRequiredService<ExecutorOptions>();
-    client.Timeout = TimeSpan.FromSeconds(executorOptions.LlmTimeoutSeconds);
-});
-
-// Register LlmChatService
+// Register LLM services as singletons
+builder.Services.AddSingleton<OllamaLlmClient>();
+builder.Services.AddSingleton<TensorRtChatClient>();
 builder.Services.AddSingleton<LlmChatService>();
 
 // Register HttpClient for SummarizationService
