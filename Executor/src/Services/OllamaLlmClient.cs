@@ -9,7 +9,7 @@ namespace BackendExecutor.Services;
 
 public class OllamaLlmClient
 {
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly HttpClient _httpClient;
     private readonly ExecutorOptions _options;
     private readonly ILogger<OllamaLlmClient> _logger;
 
@@ -19,9 +19,9 @@ public class OllamaLlmClient
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public OllamaLlmClient(IHttpClientFactory httpClientFactory, ExecutorOptions options, ILogger<OllamaLlmClient> logger)
+    public OllamaLlmClient(HttpClient httpClient, ExecutorOptions options, ILogger<OllamaLlmClient> logger)
     {
-        _httpClientFactory = httpClientFactory;
+        _httpClient = httpClient;
         _options = options;
         _logger = logger;
     }
@@ -32,7 +32,6 @@ public class OllamaLlmClient
             throw new ArgumentException("LLM endpoint is required.", nameof(endpoint));
 
         var model = !string.IsNullOrWhiteSpace(request.model) ? request.model : _options.DefaultModel;
-        var httpClient = _httpClientFactory.CreateClient();
 
         // Determine if we should use /api/chat or /api/generate
         var baseUri = GetBaseUri(endpoint);
@@ -72,7 +71,7 @@ public class OllamaLlmClient
         var jsonContent = JsonSerializer.Serialize(requestBody, JsonOptions);
         var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-        var response = await httpClient.PostAsync(requestUri, content, cancellationToken);
+        var response = await _httpClient.PostAsync(requestUri, content, cancellationToken);
         // response.EnsureSuccessStatusCode();
 
         var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);

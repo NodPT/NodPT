@@ -42,4 +42,9 @@ public class ExecutorOptions
     /// Default model name to use for LLM chat completions
     /// </summary>
     public string DefaultModel { get; set; } = "deepseek-r1:1.5b";
+
+    /// <summary>
+    /// Timeout in seconds for LLM chat completion requests
+    /// </summary>
+    public int LlmTimeoutSeconds { get; set; } = 300;
 }
