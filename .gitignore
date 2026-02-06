@@ -556,3 +556,5 @@ dist
 .env.local
 .evn.development
 .env.production
+.env.production
+Frontend/src/.env.production

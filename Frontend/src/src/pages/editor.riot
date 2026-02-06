@@ -1,7 +1,6 @@
 <editor>
   <div class="app-container main-editor" data-theme={state.isDarkTheme ? 'dark' : 'light' }>
     <header-bar isDarkTheme={state.isDarkTheme} showMenu={true} />
-
     <div class="main-content main-editor-content position-relative">
       <div class="editor-split">
         <div class="editor-left">
@@ -9,26 +8,22 @@
         </div>
         <div class={"editor-splitter " + (state.rightPanelVisible ? '' : 'is-hidden')} 
           onmousedown={startResize}></div>
-        <div class={" editor-right " + (state.rightPanelVisible ? '' : 'is-hidden')} 
-          style=" {rightPanelStyle}">
+        <div class={" editor-right " + (state.rightPanelVisible ? '' : 'is-hidden')} style=" {rightPanelStyle}">
           <div class=" main-editor-right-panel docked">
             <right-panel selectedNode={state.selectedNode}
-              isDarkTheme={state.isDarkTheme} />
+                         isDarkTheme={state.isDarkTheme} />
           </div>
         </div>
       </div>
     </div>
-
     <footer-bar
-      selectedNode={state.selectedNode}
-      totalNodes={state.totalNodes}
-      progress={state.buildProgress}
-      minimapVisible={state.minimapVisible}
-      connectionStatus={state.connectionStatus} />
-
+                selectedNode={state.selectedNode}
+                totalNodes={state.totalNodes}
+                progress={state.buildProgress}
+                minimapVisible={state.minimapVisible}
+                connectionStatus={state.connectionStatus} />
     <add-node-modal />
   </div>
-
   <script>
     import '../styles/components-dark.css'
     import '../styles/main-editor.css'
