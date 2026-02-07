@@ -167,5 +167,26 @@ namespace NodPT.Data.Services
             message.Save();
             return message;
         }
+
+        /// <summary>
+        /// Get a chat message for retry processing
+        /// Validates user ownership and returns the message if authorized, or null if not found
+        /// </summary>
+        public ChatMessage? GetMessageForRetry(int messageId, User user, UnitOfWork session)
+        {
+            var message = session.GetObjectByKey<ChatMessage>(messageId);
+            if (message == null)
+            {
+                return null;
+            }
+
+            // Verify the message belongs to a node in a project owned by the user
+            if (message.Node?.Project == null || message.Node.Project.User == null || message.Node.Project.User.Oid != user.Oid)
+            {
+                throw new UnauthorizedAccessException("Message does not belong to a project owned by the current user");
+            }
+
+            return message;
+        }
     }
 }

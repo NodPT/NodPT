@@ -134,6 +134,32 @@ class ChatApiService {
 			throw error;
 		}
 	}
+
+	/**
+	 * Retry processing an AI chat message
+	 * @param {string} messageId - Message ID to retry
+	 * @param {string} nodeId - Optional node ID context
+	 * @returns {Promise<Object>} API response
+	 */
+	async retryMessage(messageId, nodeId = null) {
+		try {
+			if (!messageId) {
+				throw new Error('messageId is required for retry');
+			}
+
+			this.connectionId = localStorage.getItem('connectionId'); // Get current SignalR connection ID
+			
+			const response = await this.api.post(`${this.baseURL}/retry`, {
+				MessageId: messageId,
+				NodeId: nodeId,
+				ConnectionId: this.connectionId || null,
+			});
+			return response;
+		} catch (error) {
+			console.error('Failed to retry message:', error);
+			throw error;
+		}
+	}
 }
 
 export default new ChatApiService();
