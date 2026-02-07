@@ -170,14 +170,14 @@ namespace NodPT.Data.Services
 
         /// <summary>
         /// Get a chat message for retry processing
-        /// Validates user ownership and returns the message if authorized
+        /// Validates user ownership and returns the message if authorized, or null if not found
         /// </summary>
         public ChatMessage? GetMessageForRetry(int messageId, User user, UnitOfWork session)
         {
             var message = session.GetObjectByKey<ChatMessage>(messageId);
             if (message == null)
             {
-                throw new ArgumentException($"Message with ID '{messageId}' not found");
+                return null;
             }
 
             // Verify the message belongs to a node in a project owned by the user

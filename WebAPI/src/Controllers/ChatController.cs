@@ -382,11 +382,6 @@ namespace NodPT.API.Controllers
                     ConnectionId = message.ConnectionId
                 });
             }
-            catch (ArgumentException ex)
-            {
-                _logger.LogWarning(ex, "Invalid argument in RetryMessage");
-                return BadRequest(new { error = ex.Message });
-            }
             catch (UnauthorizedAccessException ex)
             {
                 _logger.LogWarning(ex, "Unauthorized access in RetryMessage");
