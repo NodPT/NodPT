@@ -364,7 +364,7 @@
           await chatApiService.retryMessage(message.id, this.state.currentNodeId)
           // Add a thinking message to indicate retry is in progress
           const aiThinkingMessage = {
-            id: Date.now() + 1,
+            id: `retry-thinking-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
             type: 'ai',
             content: 'Retrying...',
             timestamp: new Date().toISOString(),

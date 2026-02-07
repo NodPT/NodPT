@@ -92,7 +92,7 @@ public class ChatStreamWorker : BackgroundService
         {
             var fields = envelope.Fields;
             var isSolutionJob = fields.TryGetValue("jobType", out var jobType) && jobType == "solution";
-            var isRetryJob = fields.TryGetValue("jobType", out var retryJobType) && retryJobType == "retry";
+            var isRetryJob = jobType == "retry";
             
             // Log high-level information about the Redis job entry
             _logger.LogInformation("=== Processing Redis Job Entry ===");

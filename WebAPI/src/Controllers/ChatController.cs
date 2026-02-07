@@ -327,6 +327,7 @@ namespace NodPT.API.Controllers
 
                 if (request.MessageId == null || request.MessageId == 0)
                 {
+                    // MessageId 0 is also invalid since database IDs start from 1
                     return BadRequest(new { error = "MessageId is required" });
                 }
 
