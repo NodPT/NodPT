@@ -24,12 +24,16 @@
                     title="Dislike this response">
                     <i class={"bi bi-hand-thumbs-down fw-bold " + (message.Disliked ? 'text-danger' : '')}></i>
                 </button>
-                <button class=" action-btn" onclick={()=> copyMessage(message)} disabled={state.isLoading}
+                <button class=" action-btn" onclick={() => copyMessage(message)} disabled={state.isLoading}
                       title={message._copied ? 'Copied' : 'Copy to clipboard'}>
                       <i class={"bi " + (message._copied ? 'bi-check-lg fw-bold' : 'bi-clipboard fw-bold')}></i>
                 </button>
+                <button class=" action-btn" onclick={() => retryMessage(message)} disabled={state.isLoading}
+                      title="Retry this message">
+                      <i class="bi bi-arrow-clockwise fw-bold"></i>
+                </button>
                 <button if={message.type === 'ai' && !message.markedAsSolution} 
-                        class=" action-btn" onclick={buildSolution(message)}
+                        class=" action-btn" onclick={() => buildSolution(message)}
                         disabled={state.isLoading} title="Mark as solution">
                         <i class="bi bi-check2-circle fw-bold"></i>
                 </button>
@@ -350,6 +354,35 @@
           setTimeout(() => { message._copied = false; this.update() }, 1600)
         } catch (err) {
           console.error('Copy failed', err)
+        }
+      },
+      // retry AI message processing
+      async retryMessage(message) {
+        if (this.state.isLoading || !message) return
+        this.update({ isLoading: true })
+        try {
+          await chatApiService.retryMessage(message.id, this.state.currentNodeId)
+          // Add a thinking message to indicate retry is in progress
+          const aiThinkingMessage = {
+            id: Date.now() + 1,
+            type: 'ai',
+            content: 'Retrying...',
+            timestamp: new Date().toISOString(),
+            markedAsSolution: false,
+            solutionPending: false,
+            Liked: false,
+            Disliked: false,
+            thinking: true
+          }
+          this.update({
+            messages: [...this.state.messages, aiThinkingMessage],
+            thinking: true
+          })
+          this.scrollToBottom()
+        } catch (error) {
+          console.error('Error retrying message:', error)
+        } finally {
+          this.update({ isLoading: false })
         }
       },
       // Handle AI response received from the API

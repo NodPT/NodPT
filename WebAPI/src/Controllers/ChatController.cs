@@ -311,5 +311,91 @@ namespace NodPT.API.Controllers
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
+
+        [HttpPost("retry")]
+        public async Task<IActionResult> RetryMessage([FromBody] RetryMessageRequestDto request)
+        {
+            if (request == null) return BadRequest("Request cannot be null");
+
+            try
+            {
+                var user = UserService.GetUser(User, _session);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not found or not authorized" });
+                }
+
+                if (request.MessageId == null || request.MessageId == 0)
+                {
+                    return BadRequest(new { error = "MessageId is required" });
+                }
+
+                var message = _chatService.GetMessageForRetry(request.MessageId.Value, user, _session);
+                if (message == null)
+                {
+                    return NotFound(new { error = "Message not found" });
+                }
+
+                // Get connectionId from request or header
+                var connectionId = GetConnectionId(request.ConnectionId);
+
+                if (string.IsNullOrEmpty(connectionId))
+                {
+                    // Fallback to existing connectionId from the message (if any)
+                    connectionId = message.ConnectionId;
+                    
+                    if (string.IsNullOrEmpty(connectionId))
+                    {
+                        _logger.LogWarning("Missing SignalR ConnectionId when retrying message - real-time notifications will not be sent");
+                    }
+                }
+                else
+                {
+                    // Update the message with the current connectionId to ensure proper delivery
+                    message.ConnectionId = connectionId;
+                }
+                
+                // Commit any connectionId update
+                await _session.CommitChangesAsync();
+
+                // Queue the retry job to Redis with retry flag
+                var retryEnvelope = new Dictionary<string, string>
+                {
+                    { "chatId", message.Oid.ToString() },
+                    { "jobType", "retry" }
+                };
+
+                var entryId = await _redisService.Add("jobs:chat", retryEnvelope);
+                _logger.LogInformation("Retry chat queued for processing: ChatId={ChatId}, ConnectionId={ConnectionId}, EntryId={EntryId}", message.Oid, connectionId, entryId);
+
+                return Ok(new ChatMessageDto
+                {
+                    Id = message.Oid,
+                    Sender = message.Sender,
+                    Message = message.Message,
+                    Timestamp = message.Timestamp,
+                    NodeId = message.Node?.Id,
+                    MarkedAsSolution = message.MarkedAsSolution,
+                    Liked = message.Liked,
+                    Disliked = message.Disliked,
+                    ConnectionId = message.ConnectionId
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Invalid argument in RetryMessage");
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access in RetryMessage");
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in RetryMessage");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
     }
 }

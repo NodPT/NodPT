@@ -92,6 +92,7 @@ public class ChatStreamWorker : BackgroundService
         {
             var fields = envelope.Fields;
             var isSolutionJob = fields.TryGetValue("jobType", out var jobType) && jobType == "solution";
+            var isRetryJob = fields.TryGetValue("jobType", out var retryJobType) && retryJobType == "retry";
             
             // Log high-level information about the Redis job entry
             _logger.LogInformation("=== Processing Redis Job Entry ===");
@@ -122,6 +123,11 @@ public class ChatStreamWorker : BackgroundService
             if (isSolutionJob)
             {
                 _logger.LogInformation("Processing solution job for chatId {ChatId}", chatId);
+            }
+
+            if (isRetryJob)
+            {
+                _logger.LogInformation("Processing retry job for chatId {ChatId}", chatId);
             }
 
             // Create database session
@@ -226,6 +232,14 @@ public class ChatStreamWorker : BackgroundService
             foreach (var promptContent in promptContents)
             {
                 messages.Add(new OllamaMessage { role = "system", content = promptContent });
+            }
+
+            // Add retry instruction if this is a retry job
+            if (isRetryJob)
+            {
+                var retryPrompt = "IMPORTANT: This is a retry request. The previous response was not satisfactory. Please provide a better, more comprehensive, and more accurate response. Consider different approaches, add more detail, and ensure higher quality in your answer.";
+                messages.Add(new OllamaMessage { role = "system", content = retryPrompt });
+                _logger.LogInformation("Added retry instruction prompt for chatId {ChatId}", chatId);
             }
 
             // Add memory summary as system context if available
