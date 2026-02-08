@@ -324,10 +324,10 @@ def parse_generated_lines(raw_text, node_type):
     return valid_samples, invalid_count
 
 
-async def generate_batch(session, endpoint, model, node_type, batch_size, existing_inputs):
+async def generate_batch(session, endpoint, model, node_type, batch_size, existing_inputs, temperature=0.8):
     """Generate one batch of samples via the TensorRT-LLM endpoint."""
     prompt = build_generation_prompt(node_type, batch_size, existing_inputs)
-    raw, err = await call_tensorrt(session, endpoint, model, prompt)
+    raw, err = await call_tensorrt(session, endpoint, model, prompt, temperature)
     if err:
         return [], 0, err
     valid, invalid = parse_generated_lines(raw, node_type)
@@ -383,17 +383,22 @@ async def generate_all(args):
                     (remaining + args.batch_size - 1) // args.batch_size,
                 )
 
-                async def bounded_batch(batch_idx):
+                async def bounded_batch(batch_size_for_task):
                     async with semaphore:
-                        size = min(args.batch_size, remaining)
                         return await generate_batch(
                             session, args.endpoint, args.model,
-                            node_type, size,
+                            node_type, batch_size_for_task,
                             list(existing_inputs),
+                            args.temperature,
                         )
 
                 # Fire concurrent requests
-                tasks = [bounded_batch(i) for i in range(num_batches)]
+                batch_sizes = [
+                    min(args.batch_size, remaining - i * args.batch_size)
+                    for i in range(num_batches)
+                ]
+                batch_sizes = [s for s in batch_sizes if s > 0]
+                tasks = [bounded_batch(s) for s in batch_sizes]
                 results = await asyncio.gather(*tasks)
 
                 batch_new = 0
