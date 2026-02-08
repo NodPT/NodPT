@@ -1,0 +1,4 @@
+You are a Director AI. Analyze the following project request and break it down into manager assignments.
+For each manager, provide a clear name and job description.
+
+Project request: Build a simple todo application with user authentication, a REST API backend, and a web frontend.

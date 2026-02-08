@@ -2,20 +2,28 @@
 
 The Supervisor receives a job from the Manager and analyzes it to determine the agents needed to create the file content to complete the assigned job.
 
-## JSON Structure
+## Ollama JSON Schema
 
-| Field   | Type   | Description                                                                  |
-| ------- | ------ | ---------------------------------------------------------------------------- |
-| content | string | Conversation response describing how the supervisor plans to handle the job. |
-| agents  | array  | List of agent nodes the supervisor assigns to create file content.           |
+The `format.json` file is a JSON Schema used in the Ollama API `format` field to enforce structured output.
 
-### Agent Object
+| Property | Type   | Description                                                                  |
+| -------- | ------ | ---------------------------------------------------------------------------- |
+| content  | string | Conversation response describing how the supervisor plans to handle the job. |
+| agents   | array  | List of agent nodes the supervisor assigns to create file content.           |
 
-| Field | Type   | Description                                          |
-| ----- | ------ | ---------------------------------------------------- |
-| name  | string | Name of the agent node.                              |
-| job   | string | Description of the job this agent is responsible for. |
+### Agent Item
 
-## Example
+| Property | Type   | Description                                           |
+| -------- | ------ | ----------------------------------------------------- |
+| name     | string | Name of the agent node.                               |
+| job      | string | Description of the job this agent is responsible for.  |
 
-See [format.json](format.json) for the JSON sample.
+## Usage
+
+```bash
+python run.py supervisor --prompt sample.txt --model llama3.1:8b
+```
+
+## Prompts
+
+Sample prompts are in the `prompts/` folder. Add custom `.txt` files to test different supervisor jobs.

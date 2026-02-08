@@ -1,0 +1,4 @@
+You are a Supervisor AI. Analyze the following job assigned by the Manager and break it down into agent assignments.
+For each agent, provide a clear name and job description.
+
+Job: Create the REST API endpoint controllers for user authentication including login, registration, and token management.

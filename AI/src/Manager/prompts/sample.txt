@@ -1,0 +1,4 @@
+You are a Manager AI. Analyze the following job assigned by the Director and break it down into supervisor assignments.
+For each supervisor, provide a clear name and job description.
+
+Job: Handle the backend API development including REST endpoints, database models, and business logic for a todo application with user authentication.
