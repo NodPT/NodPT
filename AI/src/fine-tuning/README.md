@@ -28,9 +28,10 @@ AI/src/fine-tuning/
 │   ├── supervisor.jsonl
 │   └── agent.jsonl
 ├── scripts/
-│   ├── finetune.py        # Fine-tuning script (Unsloth + FP4)
-│   └── export_gguf.py     # Export to GGUF for Ollama
-└── export/                # Exported GGUF model files (gitignored)
+│   ├── generate_samples.py  # Generate samples via TensorRT-LLM (70B+ model)
+│   ├── finetune.py          # Fine-tuning script (Unsloth + FP4)
+│   └── export_gguf.py       # Export to GGUF for Ollama
+└── export/                  # Exported GGUF model files (gitignored)
 ```
 
 ## Prerequisites
@@ -56,7 +57,69 @@ pip install -r requirements.txt
 
 > **Note:** Unsloth requires an NVIDIA GPU with CUDA support. See [Unsloth installation](https://github.com/unslothai/unsloth#installation) and [NVIDIA's Unsloth guide](https://build.nvidia.com/spark/unsloth/instructions) for environment-specific instructions.
 
-## 2. Data Preparation
+## 2. Generate Training Data (TensorRT-LLM)
+
+Use a large model (70B+) served by TensorRT-LLM to generate high-quality training samples. TensorRT-LLM exposes an OpenAI-compatible API and supports **continuous batching**, so concurrent requests are efficiently handled server-side.
+
+### Recommended Models
+
+| Model | Parameters | Notes |
+|-------|-----------|-------|
+| `meta-llama/Llama-3.1-70B-Instruct` | 70B | Recommended default, strong instruction following |
+| `meta-llama/Llama-3.3-70B-Instruct` | 70B | Latest Llama, improved quality |
+| `Qwen/Qwen2.5-72B-Instruct` | 72B | Alternative, good at structured JSON output |
+
+### Quick Start
+
+```bash
+# Generate 50 director samples
+python scripts/generate_samples.py --node-type director --count 50
+
+# Generate 100 samples for ALL node types
+python scripts/generate_samples.py --node-type all --count 100
+
+# Custom endpoint and higher concurrency (128GB server)
+python scripts/generate_samples.py --node-type all --count 200 \
+    --endpoint http://my-server:8000 \
+    --model meta-llama/Llama-3.1-70B-Instruct \
+    --concurrency 16 --batch-size 10
+```
+
+### Options
+
+| Option          | Default                                    | Description |
+|-----------------|--------------------------------------------|-------------|
+| `--node-type`   | (required)                                 | `director`, `manager`, `supervisor`, `agent`, or `all` |
+| `--count`       | (required)                                 | Number of samples to generate per node type |
+| `--endpoint`    | `http://localhost:8000`                    | TensorRT-LLM server URL |
+| `--model`       | `meta-llama/Llama-3.1-70B-Instruct`       | Model name served by TensorRT-LLM |
+| `--concurrency` | `8`                                        | Max concurrent API requests |
+| `--batch-size`  | `5`                                        | Samples to request per API call |
+| `--temperature` | `0.8`                                      | Sampling temperature |
+| `--overwrite`   | `false`                                    | Clear existing samples before generating |
+
+### How It Works
+
+1. Builds structured prompts that instruct the large model to produce JSONL training data.
+2. Fires concurrent requests to TensorRT-LLM (utilising continuous batching).
+3. Parses and **validates** each generated sample against the node type's `format.json` schema.
+4. Discards invalid samples and retries until the requested count is reached.
+5. Appends valid samples to `data-samples/<node-type>.jsonl` (deduplicating by input).
+
+### TensorRT-LLM Setup
+
+Start TensorRT-LLM with an OpenAI-compatible API server:
+
+```bash
+# Example using the TensorRT-LLM OpenAI server
+python -m tensorrt_llm.serve \
+    --model meta-llama/Llama-3.1-70B-Instruct \
+    --host 0.0.0.0 --port 8000
+```
+
+> **Concurrency note:** TensorRT-LLM uses continuous batching, so it natively handles concurrent requests. With 128 GB system RAM, you can comfortably run 8–16 concurrent requests against a 70B model. Increase `--concurrency` based on your GPU VRAM and system memory.
+
+## 3. Data Format
 
 ### Data Format
 
@@ -92,7 +155,7 @@ Training data uses **JSONL** (one JSON object per line) with three fields:
 
 Add lines to the corresponding `.jsonl` file in `data-samples/`. Ensure each line is valid JSON and the `output` field is valid JSON matching the node type schema.
 
-## 3. Fine-Tuning
+## 4. Fine-Tuning
 
 Run the fine-tuning script from the `fine-tuning` directory:
 
@@ -125,7 +188,7 @@ python scripts/finetune.py --node-type all \
 4. Trains with `SFTTrainer` (AdamW 8-bit, bf16, gradient checkpointing).
 5. Saves checkpoints after each epoch and final weights to `output/<node-type>/final/`.
 
-## 4. Model Export (GGUF)
+## 5. Model Export (GGUF)
 
 Export the fine-tuned model to GGUF format for Ollama:
 
@@ -147,7 +210,7 @@ python scripts/export_gguf.py --model-dir output/all/final --quantization q4_k_m
 
 Exported files are written to `export/`.
 
-## 5. Run with Ollama
+## 6. Run with Ollama
 
 ### Step 1 — Verify the GGUF file
 
