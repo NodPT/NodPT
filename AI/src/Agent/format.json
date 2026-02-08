@@ -1,0 +1,9 @@
+{
+  "content": "A conversation response from the AI describing the work done by the agent.",
+  "files": [
+    {
+      "filename": "Name of the file including extension",
+      "content": "The full content of the file."
+    }
+  ]
+}

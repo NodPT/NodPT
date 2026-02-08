@@ -1,0 +1,9 @@
+{
+  "content": "A conversation response from the AI describing how the manager plans to handle the assigned job.",
+  "supervisors": [
+    {
+      "name": "Supervisor node name",
+      "job": "Description of the job this supervisor is responsible for."
+    }
+  ]
+}
