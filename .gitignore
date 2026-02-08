@@ -558,3 +558,9 @@ dist
 .env.production
 .env.production
 Frontend/src/.env.production
+
+# Fine-tuning artifacts
+AI/src/fine-tuning/output/
+AI/src/fine-tuning/export/*.gguf
+AI/src/fine-tuning/export/*.bin
+AI/src/fine-tuning/.venv/

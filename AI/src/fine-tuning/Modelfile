@@ -1,0 +1,20 @@
+# Ollama Modelfile for NodPT fine-tuned model
+# Update the FROM line to the actual GGUF filename after export.
+
+FROM ./export/unsloth.Q4_K_M.gguf
+
+TEMPLATE """### Instruction:
+{{ .System }}
+
+### Input:
+{{ .Prompt }}
+
+### Response:
+"""
+
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+PARAMETER stop "### Instruction:"
+PARAMETER stop "### Input:"
+
+SYSTEM "You are a NodPT AI assistant that decomposes project requests into a structured hierarchy of nodes. Respond with valid JSON matching the requested node type format."
