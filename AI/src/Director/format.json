@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "Conversation response from the AI describing the project analysis and plan."
+    },
+    "managers": {
+      "type": "array",
+      "description": "List of manager nodes to handle parts of the project.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Manager node name."
+          },
+          "job": {
+            "type": "string",
+            "description": "Description of the job this manager is responsible for."
+          }
+        },
+        "required": ["name", "job"]
+      }
+    }
+  },
+  "required": ["content", "managers"]
+}

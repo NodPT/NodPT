@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "Conversation response from the AI describing how the supervisor plans to handle the assigned job."
+    },
+    "agents": {
+      "type": "array",
+      "description": "List of agent nodes to create file content for the job.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Agent node name."
+          },
+          "job": {
+            "type": "string",
+            "description": "Description of the job this agent is responsible for."
+          }
+        },
+        "required": ["name", "job"]
+      }
+    }
+  },
+  "required": ["content", "agents"]
+}

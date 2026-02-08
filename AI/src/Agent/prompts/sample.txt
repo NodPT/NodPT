@@ -1,0 +1,4 @@
+You are an Agent AI. Complete the following job and produce the file output.
+For each file, provide the filename and the full content.
+
+Job: Write the user login endpoint controller that accepts email and password, validates credentials, and returns a JWT token.

@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "Conversation response from the AI describing how the manager plans to handle the assigned job."
+    },
+    "supervisors": {
+      "type": "array",
+      "description": "List of supervisor nodes to handle parts of the job.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Supervisor node name."
+          },
+          "job": {
+            "type": "string",
+            "description": "Description of the job this supervisor is responsible for."
+          }
+        },
+        "required": ["name", "job"]
+      }
+    }
+  },
+  "required": ["content", "supervisors"]
+}
