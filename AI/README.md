@@ -27,7 +27,7 @@ Executor Service
 Ollama API (Port 11434)
     │
     ├─→ Model: trt-llm-manager
-    ├─→ Model: trt-llm-inspector
+    ├─→ Model: trt-llm-supervisor
     └─→ Model: trt-llm-agent
     │
     ▼
@@ -179,11 +179,11 @@ ollama list
 
 ### Recommended Models for NodPT
 
-| Role | Model | Size | Purpose |
-|------|-------|------|---------|
-| Manager | `llama2:13b` | 7.3GB | High-level planning and orchestration |
-| Inspector | `codellama:13b` | 7.3GB | Code review and analysis |
-| Worker | `mistral:7b` | 4.1GB | Fast task execution |
+| Role       | Model           | Size  | Purpose                               |
+| ---------- | --------------- | ----- | ------------------------------------- |
+| Manager    | `llama2:13b`    | 7.3GB | High-level planning and orchestration |
+| Supervisor | `codellama:13b` | 7.3GB | Code review and analysis              |
+| Agent      | `mistral:7b`    | 4.1GB | Fast task execution                   |
 
 ### Custom Model Configuration
 

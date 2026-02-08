@@ -21,7 +21,7 @@ jobs:
          - name: 2. Verify directory layout
            working-directory: .
            run: |
-              test -f Executor/src/BackendExecutor.csproj
+              test -f Executor/src/Executor.csproj
               test -f Data/src/NodPT.Data.csproj
               test -f Utils/src/NodPT.Utils.csproj
 

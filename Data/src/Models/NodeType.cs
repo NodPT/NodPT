@@ -4,8 +4,8 @@ namespace NodPT.Data.Models
     {
         Director,
         Manager,
-        Inspector,
-        Worker,
+        Supervisor,
+        Agent,
         Compiler,
         Tester,
         Runner

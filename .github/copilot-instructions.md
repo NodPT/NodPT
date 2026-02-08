@@ -28,7 +28,7 @@ NodPT is a multi-service app with a Riot + Vite frontend, a .NET WebAPI, a Signa
 ### Architecture & entry points
 - App boot: [Frontend/src/src/index.js](Frontend/src/src/index.js) mounts [Frontend/src/src/app.riot](Frontend/src/src/app.riot) 
 - Main graph editor: [Frontend/src/src/components/graph.riot](Frontend/src/src/components/graph.riot) using litegraph.js and `editorService.js` (AddNode, RemoveNode, Clear). Director node is always present and cannot be removed or cleared.
-- Node types: Director, Manager, Inspector, Worker.
+- Node types: Director, Manager, Supervisor, Agent.
 
 ### Folder structure
 - [Frontend/src/src/components](Frontend/src/src/components): `.riot` components only.

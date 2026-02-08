@@ -26,11 +26,11 @@
             }
         },
         {
-            "name": ".NET Core Launch (Executor) - BackendExecutor",
+            "name": ".NET Core Launch (Executor) - Executor",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Executor/src/bin/Debug/net8.0/BackendExecutor.dll",
+            "program": "${workspaceFolder}/Executor/src/bin/Debug/net8.0/Executor.dll",
             "args": [],
             "cwd": "${workspaceFolder}/Executor/src",
             "stopAtEntry": false,

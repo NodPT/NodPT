@@ -341,10 +341,10 @@ The Redis functionality is split into two separate service classes:
 
 ### Services
 
-| Service Class | Namespace | Purpose | Methods |
-|--------------|-----------|---------|---------|
+| Service Class       | Namespace            | Purpose                          | Methods                                                        |
+| ------------------- | -------------------- | -------------------------------- | -------------------------------------------------------------- |
 | `RedisQueueService` | `RedisService.Queue` | Message queuing between services | Add, Listen, Acknowledge, ClaimPending, Trim, Info, StopListen |
-| `RedisCacheService` | `RedisService.Cache` | Caching summaries and history | Get, Set, Exists, Remove, Update, Range, TrimList, Length |
+| `RedisCacheService` | `RedisService.Cache` | Caching summaries and history    | Get, Set, Exists, Remove, Update, Range, TrimList, Length      |
 
 ### Queue Operations (RedisService.Queue.RedisQueueService)
 
@@ -378,7 +378,7 @@ Starts listening to a Redis Stream with consumer group. Handler returns `true` f
 var handle = _queueService.Listen(
     streamKey: "jobs:chat",
     group: "executor",
-    consumerName: "executor-worker-1",
+    consumerName: "executor-agent-1",
     handler: async (envelope, ct) =>
     {
         // Process message
@@ -546,10 +546,10 @@ using RedisService.Queue;
 using RedisService.Cache;
 
 // For queue operations
-public class ChatWorker
+public class ChatAgent
 {
     private readonly RedisQueueService _queue;
-    public ChatWorker(RedisQueueService queue) => _queue = queue;
+    public ChatAgent(RedisQueueService queue) => _queue = queue;
 }
 
 // For cache operations

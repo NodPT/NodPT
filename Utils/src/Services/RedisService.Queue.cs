@@ -23,7 +23,7 @@ namespace RedisService.Queue;
 /// var entryId = await queueService.Add("jobs:chat", envelope);
 /// 
 /// // Consuming messages from a queue
-/// var handle = queueService.Listen("jobs:chat", "executor", "worker-1", 
+/// var handle = queueService.Listen("jobs:chat", "executor", "agent-1", 
 ///     async (msg, ct) => { /* process */ return true; });
 /// </code>
 /// </example>

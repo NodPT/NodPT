@@ -24,8 +24,8 @@ let lastSelectedNodeId = null
 const NODE_TYPES = {
   DIRECTOR: "Director",
   MANAGER: "Manager",
-  INSPECTOR: "Inspector",
-  WORKER: "Worker"
+  SUPERVISOR: "Supervisor",
+  AGENT: "Agent"
 }
 
 const TWILIGHT_PALETTE = {
@@ -39,12 +39,12 @@ const TWILIGHT_PALETTE = {
     bgcolor: "#3b4047",
     boxcolor: "#D0D3D8"
   },
-  [NODE_TYPES.INSPECTOR]: {
+  [NODE_TYPES.SUPERVISOR]: {
     color: "#3b3d3f",
     bgcolor: "#58616d",
     boxcolor: "#C2C6CC"
   },
-  [NODE_TYPES.WORKER]: {
+  [NODE_TYPES.AGENT]: {
     color: "#3b3d3f",
     bgcolor: "#6a8198",
     boxcolor: "#B6BBC2"
@@ -55,76 +55,76 @@ const getGraphState = () => activeGraphState
 
 const getLinksMap = (graph) => graph?.links || graph?._links || {}
 
-const ensureInspectorSubgraph = (inspectorNode) => {
-  if (!inspectorNode?.subgraph) {
+const ensureSupervisorSubgraph = (supervisorNode) => {
+  if (!supervisorNode?.subgraph) {
     const subgraph = new LGraph()
-    subgraph._subgraph_node = inspectorNode
-    inspectorNode.subgraph = subgraph
+    subgraph._subgraph_node = supervisorNode
+    supervisorNode.subgraph = subgraph
   }
-  return inspectorNode.subgraph
+  return supervisorNode.subgraph
 }
 
-const getInspectorWorkers = (graph, inspectorNode) => {
+const getSupervisorAgents = (graph, supervisorNode) => {
   const links = getLinksMap(graph)
-  const workerIds = new Set()
+  const agentIds = new Set()
 
   Object.values(links).forEach((link) => {
-    if (link?.origin_id === inspectorNode.id && link?.target_id != null) {
-      workerIds.add(link.target_id)
+    if (link?.origin_id === supervisorNode.id && link?.target_id != null) {
+      agentIds.add(link.target_id)
     }
   })
 
   return (graph._nodes || []).filter((node) =>
     node &&
-    workerIds.has(node.id) &&
-    node.properties?.nodeType === NODE_TYPES.WORKER
+    agentIds.has(node.id) &&
+    node.properties?.nodeType === NODE_TYPES.AGENT
   )
 }
 
-// move the Worker nodes to inspector node
-const moveWorkersIntoInspectorSubgraph = (inspectorNode, workerNodes = null) => {
+// move the Agent nodes to supervisor node
+const moveAgentsIntoSupervisorSubgraph = (supervisorNode, agentNodes = null) => {
   const state = getGraphState()
-  if (!state || !state.graph || !inspectorNode) {
+  if (!state || !state.graph || !supervisorNode) {
     return
   }
-  if (inspectorNode.properties?.nodeType !== NODE_TYPES.INSPECTOR) {
+  if (supervisorNode.properties?.nodeType !== NODE_TYPES.SUPERVISOR) {
     return
   }
 
   const graph = state.graph
-  const subgraph = ensureInspectorSubgraph(inspectorNode)
-  const nodesToMove = workerNodes && workerNodes.length
-    ? workerNodes
-    : getInspectorWorkers(graph, inspectorNode)
+  const subgraph = ensureSupervisorSubgraph(supervisorNode)
+  const nodesToMove = agentNodes && agentNodes.length
+    ? agentNodes
+    : getSupervisorAgents(graph, supervisorNode)
 
   if (!nodesToMove.length) {
     return
   }
 
-  let inspectorProxy = (subgraph._nodes || []).find((node) => node?.properties?._isInspectorProxy)
-  if (!inspectorProxy) {
+  let supervisorProxy = (subgraph._nodes || []).find((node) => node?.properties?._isSupervisorProxy)
+  if (!supervisorProxy) {
     ensureAgentNodeRegistered()
-    inspectorProxy = LiteGraph.createNode("nodpt/agent")
-    inspectorProxy.title = inspectorNode.title || NODE_TYPES.INSPECTOR
-    inspectorProxy.properties = {
-      ...(inspectorProxy.properties || {}),
-      nodeType: NODE_TYPES.INSPECTOR,
-      _isInspectorProxy: true
+    supervisorProxy = LiteGraph.createNode("nodpt/agent")
+    supervisorProxy.title = supervisorNode.title || NODE_TYPES.SUPERVISOR
+    supervisorProxy.properties = {
+      ...(supervisorProxy.properties || {}),
+      nodeType: NODE_TYPES.SUPERVISOR,
+      _isSupervisorProxy: true
     }
-    inspectorProxy.inputs = []
-    inspectorProxy.outputs = []
-    inspectorProxy.horizontal = false
-    inspectorProxy.pos = [20, 20]
-    inspectorProxy.widgets = inspectorProxy.widgets || []
-    inspectorProxy.widgets.length = 0
-    inspectorProxy.addWidget?.('button', 'X', '', () => {
+    supervisorProxy.inputs = []
+    supervisorProxy.outputs = []
+    supervisorProxy.horizontal = false
+    supervisorProxy.pos = [20, 20]
+    supervisorProxy.widgets = supervisorProxy.widgets || []
+    supervisorProxy.widgets.length = 0
+    supervisorProxy.addWidget?.('button', 'X', '', () => {
       state.graphCanvas?.closeSubgraph?.()
     })
-    subgraph.add(inspectorProxy)
+    subgraph.add(supervisorProxy)
   }
 
   suppressNodeRemoved = true
-  const sortedWorkers = nodesToMove.slice().sort((a, b) => {
+  const sortedAgents = nodesToMove.slice().sort((a, b) => {
     const titleA = a?.title || ''
     const titleB = b?.title || ''
     return titleA.localeCompare(titleB)
@@ -134,36 +134,36 @@ const moveWorkersIntoInspectorSubgraph = (inspectorNode, workerNodes = null) => 
   const startY = 40
   const verticalGap = 30
 
-  sortedWorkers.forEach((workerNode, index) => {
-    if (!workerNode || workerNode.graph !== graph) {
+  sortedAgents.forEach((agentNode, index) => {
+    if (!agentNode || agentNode.graph !== graph) {
       return
     }
-    graph.remove(workerNode)
-    const workerHeight = workerNode.size?.[1] ?? workerNode.height ?? 80
-    workerNode.pos = [240, 40 + index * (workerHeight + verticalGap)]
-    subgraph.add(workerNode)
+    graph.remove(agentNode)
+    const agentHeight = agentNode.size?.[1] ?? agentNode.height ?? 80
+    agentNode.pos = [240, 40 + index * (agentHeight + verticalGap)]
+    subgraph.add(agentNode)
   })
   subgraph.arrange(30)
   suppressNodeRemoved = false
 
-  inspectorProxy.outputs = []
-  sortedWorkers.forEach((workerNode, index) => {
-    const baseLabel = workerNode.title || workerNode.id || 'Worker'
+  supervisorProxy.outputs = []
+  sortedAgents.forEach((agentNode, index) => {
+    const baseLabel = agentNode.title || agentNode.id || 'Agent'
     const outputLabel = index === 0 ? baseLabel : `${baseLabel} ${index + 1}`
-    inspectorProxy.addOutput(outputLabel, 0, { label: outputLabel })
+    supervisorProxy.addOutput(outputLabel, 0, { label: outputLabel })
   })
-  const slotCount = Math.max(inspectorProxy.inputs?.length || 0, inspectorProxy.outputs?.length || 0)
+  const slotCount = Math.max(supervisorProxy.inputs?.length || 0, supervisorProxy.outputs?.length || 0)
   const minHeight = LiteGraph.NODE_TITLE_HEIGHT + slotCount * LiteGraph.NODE_SLOT_HEIGHT + 8
-  if (typeof inspectorProxy.computeSize === 'function') {
-    inspectorProxy.size = inspectorProxy.computeSize()
+  if (typeof supervisorProxy.computeSize === 'function') {
+    supervisorProxy.size = supervisorProxy.computeSize()
   }
-  inspectorProxy.size = inspectorProxy.size || [160, 80]
-  inspectorProxy.size[1] = Math.max(inspectorProxy.size[1], minHeight)
+  supervisorProxy.size = supervisorProxy.size || [160, 80]
+  supervisorProxy.size[1] = Math.max(supervisorProxy.size[1], minHeight)
 
   const prevAllowConnections = allowConnections
   allowConnections = true
-  sortedWorkers.forEach((workerNode, index) => {
-    inspectorProxy.connect(index, workerNode, 0)
+  sortedAgents.forEach((agentNode, index) => {
+    supervisorProxy.connect(index, agentNode, 0)
   })
   allowConnections = prevAllowConnections
 
@@ -201,10 +201,10 @@ export const AddNode = (id, title, nodeType, outputs = [], connectFrom = null, a
   node.title = title || nodeType || ""
   node.properties = {
     ...(node.properties || {}),
-    nodeType: nodeType || NODE_TYPES.WORKER
+    nodeType: nodeType || NODE_TYPES.AGENT
   }
 
-  const palette = TWILIGHT_PALETTE[node.properties.nodeType] || TWILIGHT_PALETTE[NODE_TYPES.WORKER]
+  const palette = TWILIGHT_PALETTE[node.properties.nodeType] || TWILIGHT_PALETTE[NODE_TYPES.AGENT]
   node.color = palette.color
   node.bgcolor = palette.bgcolor
   node.boxcolor = palette.boxcolor
@@ -248,11 +248,11 @@ export const AddNode = (id, title, nodeType, outputs = [], connectFrom = null, a
       sourceNode.connect(outputIndex, node, 0)
       allowConnections = prevAllowConnections
 
-      // special case: if connecting a WORKER to an INSPECTOR, 
-      // move the worker into the inspector's subgraph
-      if (node.properties?.nodeType === NODE_TYPES.WORKER
-        && sourceNode.properties?.nodeType === NODE_TYPES.INSPECTOR) {
-        moveWorkersIntoInspectorSubgraph(sourceNode, [node])
+      // special case: if connecting a AGENT to an SUPERVISOR, 
+      // move the agent into the supervisor's subgraph
+      if (node.properties?.nodeType === NODE_TYPES.AGENT
+        && sourceNode.properties?.nodeType === NODE_TYPES.SUPERVISOR) {
+        moveAgentsIntoSupervisorSubgraph(sourceNode, [node])
       }
     }
   }
@@ -453,8 +453,8 @@ export const initGraph = (canvas, container, options = {}) => {
     createDemoNodes(AddNode, NODE_TYPES, arrangeNodes)
     allowConnections = false;
     (graph._nodes || []).forEach((node) => {
-      if (node.properties?.nodeType === NODE_TYPES.INSPECTOR) {
-        moveWorkersIntoInspectorSubgraph(node)
+      if (node.properties?.nodeType === NODE_TYPES.SUPERVISOR) {
+        moveAgentsIntoSupervisorSubgraph(node)
       }
     })
   }
@@ -554,9 +554,9 @@ export const loadProjectNodes = (nodes) => {
     allowConnections = true
 
     // Map NodeType enum to expected string values
-    const nodeType = nodeDto.NodeType || NODE_TYPES.WORKER
+    const nodeType = nodeDto.NodeType || NODE_TYPES.AGENT
     if (!nodeDto.NodeType) {
-      console.debug('Node missing NodeType, defaulting to WORKER:', nodeDto.Id)
+      console.debug('Node missing NodeType, defaulting to AGENT:', nodeDto.Id)
     }
 
     // Create the node
@@ -590,11 +590,11 @@ export const loadProjectNodes = (nodes) => {
     ensureNodeCreated(nodeDto)
   })
 
-  // Move workers into inspector subgraphs
+  // Move agents into supervisor subgraphs
   allowConnections = true
     ; (state.graph._nodes || []).forEach((node) => {
-      if (node.properties?.nodeType === NODE_TYPES.INSPECTOR) {
-        moveWorkersIntoInspectorSubgraph(node)
+      if (node.properties?.nodeType === NODE_TYPES.SUPERVISOR) {
+        moveAgentsIntoSupervisorSubgraph(node)
       }
     })
   allowConnections = false

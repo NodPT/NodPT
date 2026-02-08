@@ -19,13 +19,12 @@ services:
     ports:
       - "8848:8848"
 
-    # 🔹 Environment variables for .NET Worker Service
+    # 🔹 Environment variables for .NET Agent Service
     environment:
       - DOTNET_ENVIRONMENT=Production
 
     # 🔹 Docker networks for DB, backend & frontend
     networks:
       - backend_network
-
     # 🔹 Auto restart on failure
     # restart: always

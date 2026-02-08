@@ -1,11 +1,11 @@
 # NodPT Executor
 
-Background worker service built with .NET 8 that processes jobs from Redis streams and executes AI-powered tasks. The Executor is the core processing engine that orchestrates workflow execution and AI interactions. **Now uses shared RedisService from NodPT.Data project.**
+Background agent service built with .NET 8 that processes jobs from Redis streams and executes AI-powered tasks. The Executor is the core processing engine that orchestrates workflow execution and AI interactions. **Now uses shared RedisService from NodPT.Data project.**
 
 ## 🛠️ Technology Stack
 
 - **.NET 8.0**: Modern .NET framework for background services
-- **Worker Service**: Long-running background service template
+- **Agent Service**: Long-running background service template
 - **Redis Pub/Sub & Lists**: Message queuing and pub/sub communication
 - **StackExchange.Redis**: Redis client library (v2.9.32)
 - **NodPT.Data**: Shared data layer with RedisService
@@ -14,7 +14,7 @@ Background worker service built with .NET 8 that processes jobs from Redis strea
 
 ### Key Features
 
-- Role-based job execution (Manager, Inspector, Agent)
+- Role-based job execution (Manager, Supervisor, Agent)
 - Chat job processing with AI integration
 - Redis pub/sub for AI request/response communication
 - Shared RedisService for consistent Redis operations
@@ -52,13 +52,13 @@ SignalR Client (ReceiveAIResponse)
 ### Traditional Job Processing Flow
 
 ```
-Redis Stream (jobs:manager/inspector/agent)
+Redis Stream (jobs:manager/supervisor/agent)
     │
     ▼
 RedisConsumer
     │
     ├─→ Manager Runner ──→ LLM (trt-llm-manager)
-    ├─→ Inspector Runner ──→ LLM (trt-llm-inspector)
+    ├─→ Supervisor Runner ──→ LLM (trt-llm-supervisor)
     └─→ Agent Runner ──→ LLM (trt-llm-agent)
     │
     ▼
@@ -86,14 +86,14 @@ Executor/
 │   │   └── ISignalRNotifier.cs   # SignalR notification
 │   ├── Runners/           # Job execution runners
 │   │   ├── ManagerRunner.cs      # Manager job runner
-│   │   ├── InspectorRunner.cs    # Inspector job runner
+│   │   ├── SupervisorRunner.cs    # Supervisor job runner
 │   │   └── AgentRunner.cs        # Agent job runner
 │   ├── Services/          # External services
 │   │   └── LlmChatService.cs     # LLM communication
 │   ├── Program.cs         # Application entry point
-│   ├── Worker.cs          # Background worker for jobs
-│   ├── ChatWorker.cs      # Background worker for chat
-│   └── BackendExecutor.csproj    # Project file
+│   ├── Agent.cs          # Background agent for jobs
+│   ├── ChatAgent.cs      # Background agent for chat
+│   └── Executor.csproj    # Project file
 ├── Dockerfile             # Docker container config
 ├── docker-compose.yml     # Docker Compose config
 └── README.md             # This file
@@ -144,7 +144,7 @@ Executor/
       },
       "Concurrency": {
         "MaxManager": 5,
-        "MaxInspector": 10,
+        "MaxSupervisor": 10,
         "MaxAgent": 20,
         "MaxTotal": 50
       },
@@ -187,7 +187,7 @@ REDIS_CONNECTION=nodpt-redis:6379
 
 # Concurrency Limits (0 = unlimited)
 MAX_MANAGER=5
-MAX_INSPECTOR=10
+MAX_SUPERVISOR=10
 MAX_AGENT=20
 MAX_TOTAL=50
 
@@ -230,25 +230,25 @@ Multi-stage build optimized for .NET 8:
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DB_HOST` | - | Database host (required) |
-| `DB_PORT` | - | Database port (required) |
-| `DB_NAME` | - | Database name (required) |
-| `DB_USER` | - | Database username (required) |
-| `DB_PASSWORD` | - | Database password (required) |
-| `REDIS_CONNECTION` | `localhost:6379` | Redis connection string |
-| `MAX_MANAGER` | `0` | Max concurrent manager jobs (0 = unlimited) |
-| `MAX_INSPECTOR` | `0` | Max concurrent inspector jobs (0 = unlimited) |
-| `MAX_AGENT` | `0` | Max concurrent agent jobs (0 = unlimited) |
-| `MAX_TOTAL` | `0` | Max total concurrent jobs (0 = unlimited) |
-| `LLM_ENDPOINT` | `http://localhost:11434/v1/chat/completions` | LLM API endpoint |
+| Variable           | Default                                      | Description                                    |
+| ------------------ | -------------------------------------------- | ---------------------------------------------- |
+| `DB_HOST`          | -                                            | Database host (required)                       |
+| `DB_PORT`          | -                                            | Database port (required)                       |
+| `DB_NAME`          | -                                            | Database name (required)                       |
+| `DB_USER`          | -                                            | Database username (required)                   |
+| `DB_PASSWORD`      | -                                            | Database password (required)                   |
+| `REDIS_CONNECTION` | `localhost:6379`                             | Redis connection string                        |
+| `MAX_MANAGER`      | `0`                                          | Max concurrent manager jobs (0 = unlimited)    |
+| `MAX_SUPERVISOR`   | `0`                                          | Max concurrent supervisor jobs (0 = unlimited) |
+| `MAX_AGENT`        | `0`                                          | Max concurrent agent jobs (0 = unlimited)      |
+| `MAX_TOTAL`        | `0`                                          | Max total concurrent jobs (0 = unlimited)      |
+| `LLM_ENDPOINT`     | `http://localhost:11434/v1/chat/completions` | LLM API endpoint                               |
 
 ### Concurrency Control
 
 The dispatcher ensures jobs don't exceed configured limits:
 
-- Per-role limits (Manager, Inspector, Agent)
+- Per-role limits (Manager, Supervisor, Agent)
 - Total concurrent job limit
 - Automatic queuing when at capacity
 
@@ -273,7 +273,7 @@ The Executor uses Redis for bidirectional communication with WebAPI:
 
 **2. Workflow Jobs (Redis Streams)**
 - `jobs:manager`: Manager-level jobs (high-level planning)
-- `jobs:inspector`: Inspector-level jobs (code review, analysis)
+- `jobs:supervisor`: Supervisor-level jobs (code review, analysis)
 - `jobs:agent`: Agent-level jobs (specific tasks)
 
 ```json
@@ -357,7 +357,7 @@ var messageObject = new
 
 var response = await _llmChatService.SendChatMessageAsync(
     messageObject: messageObject,
-    model: "trt-llm-inspector",
+    model: "trt-llm-supervisor",
     maxTokens: 256,
     cancellationToken: cancellationToken
 );
@@ -397,7 +397,7 @@ Response format:
 ### Supported Models
 
 - `trt-llm-manager`: Manager-level reasoning
-- `trt-llm-inspector`: Code inspection and analysis
+- `trt-llm-supervisor`: Code inspection and analysis
 - `trt-llm-agent`: Task execution
 
 ## 🔄 Job Execution Flow
@@ -441,7 +441,7 @@ public async Task<string> ExecuteAsync(JobMessage job, CancellationToken ct)
 }
 ```
 
-### Inspector Runner
+### Supervisor Runner
 
 Code review and analysis:
 
@@ -451,7 +451,7 @@ public async Task<string> ExecuteAsync(JobMessage job, CancellationToken ct)
     // Use LLM for inspection
     var response = await _llmService.SendChatMessageAsync(
         messageObject: new { code = job.Payload, task = job.Task },
-        model: "trt-llm-inspector",
+        model: "trt-llm-supervisor",
         maxTokens: 512,
         cancellationToken: ct
     );

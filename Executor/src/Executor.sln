@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.0.11217.181
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BackendExecutor", "BackendExecutor.csproj", "{6D8B4781-5E9D-6CE8-0CA7-F5A127D82A6E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Executor", "Executor.csproj", "{6D8B4781-5E9D-6CE8-0CA7-F5A127D82A6E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodPT.Data", "..\..\Data\src\NodPT.Data.csproj", "{6EC1D2AE-6FE9-E637-CE33-F6F4664EF97A}"
 EndProject

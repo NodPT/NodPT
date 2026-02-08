@@ -15,7 +15,7 @@ const buildHierarchy = (graph, nodeTypes) => {
   nodes.forEach((node) => {
     nodeMap.set(node.id, {
       node,
-      nodeType: node.properties?.nodeType || nodeTypes.WORKER,
+      nodeType: node.properties?.nodeType || nodeTypes.AGENT,
       children: []
     })
   })
@@ -39,13 +39,13 @@ const sortByTitle = (a, b) => {
   return titleA.localeCompare(titleB)
 }
 
-const arrangeInspectorChildren = (inspectorInfo, parentX, parentY, parentWidth, parentHeight, spacing, marginBottom) => {
+const arrangeSupervisorChildren = (supervisorInfo, parentX, parentY, parentWidth, parentHeight, spacing, marginBottom) => {
   let agentY = parentY
   let agentX = parentX + parentWidth + spacing
   let childrenTotalHeight = 0
   let childrenTotalWidth = 0
 
-  const children = (inspectorInfo.children || []).slice().sort(sortByTitle)
+  const children = (supervisorInfo.children || []).slice().sort(sortByTitle)
   children.forEach((agentInfo) => {
     const [agentWidth, agentHeight] = getNodeSize(agentInfo.node)
     childrenTotalHeight += agentHeight / 2
@@ -60,25 +60,25 @@ const arrangeInspectorChildren = (inspectorInfo, parentX, parentY, parentWidth, 
 }
 
 const arrangeManagerChildren = (managerInfo, parentX, parentY, parentWidth, parentHeight, spacing, marginBottom) => {
-  let inspectorX = parentX + parentWidth + spacing
-  let inspectorY = parentY
+  let supervisorX = parentX + parentWidth + spacing
+  let supervisorY = parentY
   let childrenTotalHeight = 0
   let childrenTotalWidth = 0
 
   const children = (managerInfo.children || []).slice().sort(sortByTitle)
-  children.forEach((inspectorInfo) => {
-    const [inspectorWidth, inspectorHeight] = getNodeSize(inspectorInfo.node)
+  children.forEach((supervisorInfo) => {
+    const [supervisorWidth, supervisorHeight] = getNodeSize(supervisorInfo.node)
 
-    setNodePosition(inspectorInfo.node, inspectorX, inspectorY)
+    setNodePosition(supervisorInfo.node, supervisorX, supervisorY)
 
     let childDimension = [0, 0]
-    if (inspectorInfo.children && inspectorInfo.children.length > 0) {
-      childDimension = arrangeInspectorChildren(inspectorInfo, inspectorX, inspectorY, inspectorWidth, inspectorHeight, spacing, marginBottom)
+    if (supervisorInfo.children && supervisorInfo.children.length > 0) {
+      childDimension = arrangeSupervisorChildren(supervisorInfo, supervisorX, supervisorY, supervisorWidth, supervisorHeight, spacing, marginBottom)
     }
 
-    inspectorY += Math.max(inspectorHeight, childDimension[1]) + marginBottom
-    childrenTotalWidth = Math.max(childDimension[0] + inspectorWidth + parentWidth + spacing, childrenTotalWidth)
-    childrenTotalHeight += Math.max(inspectorHeight, childDimension[1]) + marginBottom
+    supervisorY += Math.max(supervisorHeight, childDimension[1]) + marginBottom
+    childrenTotalWidth = Math.max(childDimension[0] + supervisorWidth + parentWidth + spacing, childrenTotalWidth)
+    childrenTotalHeight += Math.max(supervisorHeight, childDimension[1]) + marginBottom
   })
 
   return [childrenTotalWidth, childrenTotalHeight]
@@ -176,32 +176,32 @@ export const createDemoNodes = (addNode, nodeTypes, arrangeFn) => {
   ]
 
   managers.forEach((manager, managerIndex) => {
-    const inspectorOutputs = ['Inspector 1', 'Inspector 2', 'Inspector 3']
-    addNode(manager.id, manager.id === 'manager-1' ? 'Manager 1' : 'Manager 2', nodeTypes.MANAGER, inspectorOutputs, {
+    const supervisorOutputs = ['Supervisor 1', 'Supervisor 2', 'Supervisor 3']
+    addNode(manager.id, manager.id === 'manager-1' ? 'Manager 1' : 'Manager 2', nodeTypes.MANAGER, supervisorOutputs, {
       nodeId: 'director-1',
       outputName: manager.output
     })
 
-    inspectorOutputs.forEach((inspectorOutput, inspectorIndex) => {
-      const inspectorId = `inspector-${managerIndex + 1}-${inspectorIndex + 1}`
-      const workerOutputs = [
-        'Worker 1',
-        'Worker 2',
-        'Worker 3',
-        'Worker 4',
-        'Worker 5'
+    supervisorOutputs.forEach((supervisorOutput, supervisorIndex) => {
+      const supervisorId = `supervisor-${managerIndex + 1}-${supervisorIndex + 1}`
+      const agentOutputs = [
+        'Agent 1',
+        'Agent 2',
+        'Agent 3',
+        'Agent 4',
+        'Agent 5'
       ]
 
-      addNode(inspectorId, inspectorOutput, nodeTypes.INSPECTOR, workerOutputs, {
+      addNode(supervisorId, supervisorOutput, nodeTypes.SUPERVISOR, agentOutputs, {
         nodeId: manager.id,
-        outputName: inspectorOutput
+        outputName: supervisorOutput
       })
 
-      workerOutputs.forEach((workerOutput, workerIndex) => {
-        const workerId = `worker-${managerIndex + 1}-${inspectorIndex + 1}-${workerIndex + 1}`
-        addNode(workerId, workerOutput, nodeTypes.WORKER, [], {
-          nodeId: inspectorId,
-          outputName: workerOutput
+      agentOutputs.forEach((agentOutput, agentIndex) => {
+        const agentId = `agent-${managerIndex + 1}-${supervisorIndex + 1}-${agentIndex + 1}`
+        addNode(agentId, agentOutput, nodeTypes.AGENT, [], {
+          nodeId: supervisorId,
+          outputName: agentOutput
         })
       })
     })

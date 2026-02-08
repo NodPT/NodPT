@@ -61,7 +61,7 @@ namespace NodPT.Data.Models
         }
 
         /// <summary>
-        /// Node type: Director, Manager, Inspector, Worker, etc.
+        /// Node type: Director, Manager, Supervisor, Agent, etc.
         /// </summary>
         public NodeType NodeType
         {

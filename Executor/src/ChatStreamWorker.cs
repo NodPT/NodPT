@@ -1,4 +1,4 @@
-using BackendExecutor.Services;
+using Executor.Services;
 using NodPT.Data.Services;
 using NodPT.Data.Models;
 using DevExpress.Xpo;
@@ -7,7 +7,7 @@ using NodPT.Data.DTOs;
 using RedisService.Queue;
 using RedisService.Cache;
 
-namespace BackendExecutor;
+namespace Executor;
 
 /// <summary>
 /// Background service that listens to Redis stream for chat jobs,
@@ -35,16 +35,16 @@ namespace BackendExecutor;
 /// 19. Prepare new Redis data (data B) with new chatId
 /// 20. Acknowledge the Redis data from WebAPI (data A)
 /// </summary>
-public class ChatStreamWorker : BackgroundService
+public class ChatStreamAgent : BackgroundService
 {
-    private readonly ILogger<ChatStreamWorker> _logger;
+    private readonly ILogger<ChatStreamAgent> _logger;
     private readonly RedisQueueService _redisService;
     private readonly LlmChatService _llmChatService;
     private readonly MemoryService _memoryService;
     private ListenHandle? _listenHandle;
 
-    public ChatStreamWorker(
-        ILogger<ChatStreamWorker> logger,
+    public ChatStreamAgent(
+        ILogger<ChatStreamAgent> logger,
         RedisQueueService redisService,
         LlmChatService llmChatService,
         MemoryService memoryService)
@@ -57,7 +57,7 @@ public class ChatStreamWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("ChatStreamWorker starting...");
+        _logger.LogInformation("ChatStreamAgent starting...");
 
         var options = new ListenOptions
         {
@@ -80,7 +80,7 @@ public class ChatStreamWorker : BackgroundService
             handler: HandleChatJob,
             options: options);
 
-        _logger.LogInformation("ChatStreamWorker is now listening to jobs:chat stream");
+        _logger.LogInformation("ChatStreamAgent is now listening to jobs:chat stream");
 
         // Wait for cancellation
         await Task.Delay(Timeout.Infinite, stoppingToken);
@@ -93,16 +93,16 @@ public class ChatStreamWorker : BackgroundService
             var fields = envelope.Fields;
             var isSolutionJob = fields.TryGetValue("jobType", out var jobType) && jobType == "solution";
             var isRetryJob = jobType == "retry";
-            
+
             // Log high-level information about the Redis job entry
             _logger.LogInformation("=== Processing Redis Job Entry ===");
             _logger.LogInformation("Entry ID: {EntryId}", envelope.EntryId);
             _logger.LogInformation("Stream Key: {StreamKey}", envelope.StreamKey);
             _logger.LogInformation("Payload Fields Count: {FieldCount}", fields.Count);
-            
+
             // Log detailed payload fields only at Debug level to avoid exposing sensitive data
             _logger.LogDebug("Redis job payload fields: {@Fields}", fields);
-            
+
             // Step 1-2: Extract required fields from Redis data (data A)
             // The message is marked as processing by Redis consumer group automatically
             if (!fields.TryGetValue("chatId", out var chatId) || string.IsNullOrEmpty(chatId))
@@ -149,7 +149,7 @@ public class ChatStreamWorker : BackgroundService
 
             // extract chat message content
             var userMessage = chatMessage.Message ?? "";
-            _logger.LogInformation("Retrieved chat message for chatId {ChatId}: {MessageLength} chars", 
+            _logger.LogInformation("Retrieved chat message for chatId {ChatId}: {MessageLength} chars",
                 chatId, userMessage.Length);
 
             if (string.IsNullOrEmpty(userMessage))
@@ -192,7 +192,7 @@ public class ChatStreamWorker : BackgroundService
                 return true; // Ack anyway - no template association
             }
 
-            _logger.LogInformation("Template found: TemplateId={TemplateId}, Name={TemplateName}", 
+            _logger.LogInformation("Template found: TemplateId={TemplateId}, Name={TemplateName}",
                 template.Oid, template.Name);
 
             // Step 8: Get prompts from template data based on Node's level and message type
@@ -202,14 +202,14 @@ public class ChatStreamWorker : BackgroundService
                 .Select(p => p.Content!)
                 .ToList();
 
-            _logger.LogInformation("Found {PromptCount} matching prompts for NodeType={NodeType}, MessageType={MessageType}", 
+            _logger.LogInformation("Found {PromptCount} matching prompts for NodeType={NodeType}, MessageType={MessageType}",
                 promptContents.Count, node.NodeType, node.MessageType);
 
             // Step 9: Get model name from template data based on Node's type
             var matchingAiModel = node.GetMatchingAIModel();
             var modelName = matchingAiModel?.ModelIdentifier ?? Environment.GetEnvironmentVariable("DEFAULT_MODEL") ?? "deepseek-r1:1.5b";
 
-            _logger.LogInformation("Using model: {ModelName} (from AIModel: {AIModelName})", 
+            _logger.LogInformation("Using model: {ModelName} (from AIModel: {AIModelName})",
                 modelName, matchingAiModel?.Name ?? "default");
 
             // Send thinking message about loading memory context
@@ -227,7 +227,7 @@ public class ChatStreamWorker : BackgroundService
 
             // Step 11: Prepare Ollama data object with messages array
             var messages = new List<OllamaMessage>();
-            
+
             // Add system prompts first
             foreach (var promptContent in promptContents)
             {
@@ -252,16 +252,16 @@ public class ChatStreamWorker : BackgroundService
             // Add recent history messages
             foreach (var historyMessage in history)
             {
-                messages.Add(new OllamaMessage 
-                { 
-                    role = historyMessage.Role, 
-                    content = historyMessage.Content 
+                messages.Add(new OllamaMessage
+                {
+                    role = historyMessage.Role,
+                    content = historyMessage.Content
                 });
             }
-            
+
             // Add current user message
             messages.Add(new OllamaMessage { role = "user", content = userMessage });
-            
+
             // Build Ollama request with options from AIModel
             var ollamaRequest = new OllamaRequest
             {
@@ -277,20 +277,20 @@ public class ChatStreamWorker : BackgroundService
                 ollamaRequest.response_format = BuildDirectorSolutionSchema();
             }
 
-            _logger.LogInformation("Prepared Ollama request with {MessageCount} messages for chatId {ChatId} (including memory context)", 
+            _logger.LogInformation("Prepared Ollama request with {MessageCount} messages for chatId {ChatId} (including memory context)",
                 messages.Count, chatId);
-            _logger.LogInformation("Ollama Request Details - Model: {Model}, SystemPrompts: {SystemPromptCount}, History: {HistoryCount}, UserMessage Length: {UserMessageLength}", 
+            _logger.LogInformation("Ollama Request Details - Model: {Model}, SystemPrompts: {SystemPromptCount}, History: {HistoryCount}, UserMessage Length: {UserMessageLength}",
                 modelName, promptContents.Count, history.Count, userMessage.Length);
-            
+
             // Get endpoint from AIModel or use default from config
-            var endpoint = !string.IsNullOrEmpty(matchingAiModel?.EndpointAddress) 
-                ? matchingAiModel.EndpointAddress 
+            var endpoint = !string.IsNullOrEmpty(matchingAiModel?.EndpointAddress)
+                ? matchingAiModel.EndpointAddress
                 : "default endpoint from config";
-            
-            var endpointSource = !string.IsNullOrEmpty(matchingAiModel?.EndpointAddress) 
-                ? "Template AIModel" 
+
+            var endpointSource = !string.IsNullOrEmpty(matchingAiModel?.EndpointAddress)
+                ? "Template AIModel"
                 : "Config Default";
-            _logger.LogInformation("Using LLM Endpoint: {Endpoint} (Source: {EndpointSource})", 
+            _logger.LogInformation("Using LLM Endpoint: {Endpoint} (Source: {EndpointSource})",
                 endpoint, endpointSource);
 
             // Send thinking message before sending to LLM
@@ -303,12 +303,12 @@ public class ChatStreamWorker : BackgroundService
             // Use AIModel's endpoint and options if available
             _logger.LogInformation("=== Sending Request to LLM ===");
             _logger.LogInformation("ChatId: {ChatId}, NodeId: {NodeId}, Model: {Model}", chatId, nodeId, modelName);
-            
+
             var aiResponse = await _llmChatService.SendChatRequestAsync(ollamaRequest, matchingAiModel, cancellationToken);
 
             _logger.LogInformation("=== Received AI Response ===");
             _logger.LogInformation("ChatId: {ChatId}, Response Length: {Length} chars", chatId, aiResponse.Length);
-            
+
             // Log response preview only at Debug level to avoid exposing sensitive content
             if (aiResponse.Length > 0 && aiResponse.Length <= 500)
             {
@@ -334,7 +334,7 @@ public class ChatStreamWorker : BackgroundService
             session.Save(aiMessage);
             await session.CommitChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Saved AI response: NewChatId={NewChatId} for original chatId {ChatId}", 
+            _logger.LogInformation("Saved AI response: NewChatId={NewChatId} for original chatId {ChatId}",
                 aiMessage.Oid, chatId);
 
             // Step 17: Update memory - add user message to history and queue rolling summarization (non-blocking)
@@ -391,14 +391,14 @@ public class ChatStreamWorker : BackgroundService
             var entryId = await _redisService.Add("signalr:updates", resultEnvelope);
 
             _logger.LogInformation("=== Published Result to SignalR ===");
-            _logger.LogInformation("EntryId: {EntryId}, NewChatId: {NewChatId}, OriginalChatId: {OriginalChatId}", 
+            _logger.LogInformation("EntryId: {EntryId}, NewChatId: {NewChatId}, OriginalChatId: {OriginalChatId}",
                 entryId, aiMessage.Oid, chatId);
 
             // Step 20: Acknowledge the Redis data (data A) - handled by returning true
             _logger.LogInformation("=== Chat Job Completed Successfully ===");
-            _logger.LogInformation("Original ChatId: {ChatId}, New ChatId: {NewChatId}, NodeId: {NodeId}", 
+            _logger.LogInformation("Original ChatId: {ChatId}, New ChatId: {NewChatId}, NodeId: {NodeId}",
                 chatId, aiMessage.Oid, nodeId);
-            
+
             return true; // Success, ack the message
         }
         catch (Exception ex)
@@ -410,7 +410,7 @@ public class ChatStreamWorker : BackgroundService
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("ChatStreamWorker stopping...");
+        _logger.LogInformation("ChatStreamAgent stopping...");
 
         if (_listenHandle != null)
         {
@@ -418,8 +418,8 @@ public class ChatStreamWorker : BackgroundService
         }
 
         await base.StopAsync(cancellationToken);
-        
-        _logger.LogInformation("ChatStreamWorker stopped");
+
+        _logger.LogInformation("ChatStreamAgent stopped");
     }
 
     private static bool ShouldApplyDirectorSolutionFormat(Node node, bool isSolutionJob)
@@ -507,7 +507,7 @@ public class ChatStreamWorker : BackgroundService
 
             // Send to signalr:updates stream for immediate delivery
             await _redisService.Add("signalr:updates", thinkingEnvelope);
-            
+
             _logger.LogDebug("Sent thinking message to SignalR: {Message}", message);
         }
         catch (Exception ex)

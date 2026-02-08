@@ -1,6 +1,6 @@
 <add-node-modal>
-  <div class="modal fade" id="addNodeModal" tabindex="-1" 
-  aria-labelledby="addNodeModalLabel" aria-hidden="true">
+  <div class="modal fade" id="addNodeModal" tabindex="-1"
+       aria-labelledby="addNodeModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header border-secondary">
@@ -8,18 +8,16 @@
             <i class="bi bi-plus-circle me-2"></i>Add New Node
           </h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"
-            onclick={resetModal}></button>
+                  onclick={resetModal}></button>
         </div>
         <div class="modal-body">
           <div class="mb-3">
             <label for="nodeNameInput" class="form-label">Node Name</label>
             <input type="text" class="form-control form-control-lg border-secondary" id="nodeNameInput"
-              value={state.nodeName} oninput={handleNameInput} onkeyup={handleKeyUp}
-               placeholder="Enter node name..."
-              ref={nodeNameInputRef} autofocus>
-            <div class="form-text text-muted">
-              Node will be created as a child of the currently selected node
-            </div>
+                   value={state.nodeName} oninput={handleNameInput} onkeyup={handleKeyUp}
+                   placeholder="Enter node name..."
+                   ref={nodeNameInputRef} autofocus>
+            <div class="form-text text-muted"> Node will be created as a child of the currently selected node </div>
           </div>
           <div if={state.hierarchyInfo} class="alert alert-info mb-0">
             <i class="bi bi-info-circle me-2"></i>{state.hierarchyInfo}
@@ -30,22 +28,18 @@
         </div>
         <div class="modal-footer border-secondary">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick={resetModal}
-            disabled={state.isCreating}>Cancel</button>
+                  disabled={state.isCreating}>Cancel</button>
           <button type="button" class="btn btn-primary" onclick={createNode}
-           disabled={!state.nodeName.trim() || state.isCreating || !state.canAddChild}>
+                  disabled={!state.nodeName.trim() || state.isCreating || !state.canAddChild}>
             <span if={state.isCreating}>
-              <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-              Creating...
-            </span>
+              <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Creating... </span>
             <span if={!state.isCreating}>
-              <i class="bi bi-check-lg me-1"></i>Create Node
-            </span>
+              <i class="bi bi-check-lg me-1"></i>Create Node </span>
           </button>
         </div>
       </div>
     </div>
   </div>
-
   <script>
     import { Modal } from 'bootstrap'
     import nodeApiService from '../services/nodeApiService'
@@ -102,9 +96,9 @@
       updateSelectedNode(nodeData) {
         const hierarchyMap = {
           'director': { child: 'Manager', childType: 'manager' },
-          'manager': { child: 'Inspector', childType: 'inspector' },
-          'inspector': { child: 'Worker', childType: 'worker' },
-          'worker': null
+          'manager': { child: 'Supervisor', childType: 'supervisor' },
+          'supervisor': { child: 'Agent', childType: 'agent' },
+          'agent': null
         }
 
         const nodeType = nodeData?.type ? nodeData.type.toLowerCase() : null

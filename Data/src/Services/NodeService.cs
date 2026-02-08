@@ -103,8 +103,8 @@ namespace NodPT.Data.Services
         {
             var project = session.GetObjectByKey<Project>(projectId);
             if (project == null) return new List<NodeDto>();
-            
-            var nodes = new XPCollection<Node>(session, 
+
+            var nodes = new XPCollection<Node>(session,
                 new DevExpress.Data.Filtering.BinaryOperator("Project", project));
             return nodes.Select(n => MapToDto(n)).ToList();
         }
@@ -143,7 +143,7 @@ namespace NodPT.Data.Services
 
                 session.Save(node);
                 session.CommitTransaction();
-                
+
                 return node;
             }
             catch
@@ -264,7 +264,7 @@ namespace NodPT.Data.Services
 
         /// <summary>
         /// Determines the child node type based on parent node type
-        /// Following hierarchy: Director → Manager → Inspector → Worker
+        /// Following hierarchy: Director → Manager → Supervisor → Agent
         /// </summary>
         /// <param name="parentNodeType">Parent node type</param>
         /// <returns>Child node type or null if parent cannot have children</returns>
@@ -273,9 +273,9 @@ namespace NodPT.Data.Services
             return parentNodeType switch
             {
                 NodeType.Director => NodeType.Manager,
-                NodeType.Manager => NodeType.Inspector,
-                NodeType.Inspector => NodeType.Worker,
-                _ => null // Worker and other types cannot have children
+                NodeType.Manager => NodeType.Supervisor,
+                NodeType.Supervisor => NodeType.Agent,
+                _ => null // Agent and other types cannot have children
             };
         }
     }

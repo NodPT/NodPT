@@ -88,7 +88,7 @@ class ProjectApiService {
 	 *     {
 	 *       Id: string,                   // GUID - Required for frontend node creation
 	 *       Name: string,                 // Node display name
-	 *       NodeType: string,             // Enum: "Director", "Manager", "Inspector", "Worker", "Compiler", "Tester", "Runner"
+	 *       NodeType: string,             // Enum: "Director", "Manager", "Supervisor", "Agent", "Compiler", "Tester", "Runner"
 	 *       MessageType: string,          // Enum value
 	 *       Status: string,               // "Active", etc.
 	 *       ParentId: string,             // Optional: Parent node GUID

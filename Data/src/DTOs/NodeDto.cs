@@ -6,7 +6,7 @@ namespace NodPT.Data.DTOs
     {
         public string? Id { get; set; }
         public string? Name { get; set; }
-        public NodeType NodeType { get; set; } = NodeType.Worker;
+        public NodeType NodeType { get; set; } = NodeType.Agent;
         public Dictionary<string, string> Properties { get; set; } = new();
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

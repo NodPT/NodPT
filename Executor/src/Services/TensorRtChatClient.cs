@@ -2,7 +2,7 @@ using NodPT.Data.DTOs;
 using System.Text;
 using System.Text.Json;
 
-namespace BackendExecutor.Services;
+namespace Executor.Services;
 
 public class TensorRtChatClient
 {

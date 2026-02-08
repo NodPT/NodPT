@@ -1,8 +1,8 @@
-using BackendExecutor.Config;
+using Executor.Config;
 using NodPT.Data.DTOs;
 using NodPT.Data.Models;
 
-namespace BackendExecutor.Services;
+namespace Executor.Services;
 
 
 public class LlmChatService

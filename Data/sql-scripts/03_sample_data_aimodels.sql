@@ -2,7 +2,7 @@
 -- Sample Data: AI Models with Ollama Configuration
 -- Description: Creates AI model configurations for different node levels
 -- =============================================
--- Note: NodeType enum values: Director=0, Manager=1, Inspector=2, Worker=3, Compiler=4, Tester=5, Runner=6
+-- Note: NodeType enum values: Director=0, Manager=1, Supervisor=2, Agent=3, Compiler=4, Tester=5, Runner=6
 -- Note: MessageTypeEnum values: Discussion=0, Decision=1
 -- Get Template OIDs
 SET @coding_template_oid = (
@@ -268,7 +268,7 @@ VALUES (
         0,
         NULL
     );
--- Inspector AI Model for Coding (Discussion)
+-- Supervisor AI Model for Coding (Discussion)
 INSERT INTO AIModel (
         Name,
         ModelIdentifier,
@@ -294,13 +294,13 @@ INSERT INTO AIModel (
         GCRecord
     )
 VALUES (
-        'Inspector Discussion Model - Coding',
+        'Supervisor Discussion Model - Coding',
         'deepseek-coder:1.3b',
         -- Needs good understanding for code review
         0,
         -- Discussion
         2,
-        -- Inspector
+        -- Supervisor
         'Code review and quality assurance AI model. Configured for thorough analysis and constructive feedback on code quality.',
         1,
         -- IsActive
@@ -330,7 +330,7 @@ VALUES (
         0,
         NULL
     );
--- Inspector AI Model for Coding (Decision)
+-- Supervisor AI Model for Coding (Decision)
 INSERT INTO AIModel (
         Name,
         ModelIdentifier,
@@ -356,12 +356,12 @@ INSERT INTO AIModel (
         GCRecord
     )
 VALUES (
-        'Inspector Decision Model - Coding',
+        'Supervisor Decision Model - Coding',
         'deepseek-coder:1.3b',
         1,
         -- Decision
         2,
-        -- Inspector
+        -- Supervisor
         'Quality gate decision AI model. Optimized for clear pass/fail decisions on code quality and standards compliance.',
         1,
         -- IsActive
@@ -391,7 +391,7 @@ VALUES (
         0,
         NULL
     );
--- Worker AI Model for Coding (Discussion)
+-- Agent AI Model for Coding (Discussion)
 INSERT INTO AIModel (
         Name,
         ModelIdentifier,
@@ -417,13 +417,13 @@ INSERT INTO AIModel (
         GCRecord
     )
 VALUES (
-        'Worker Discussion Model - Coding',
+        'Agent Discussion Model - Coding',
         'deepseek-coder:1.3b',
         -- Fast, efficient for code generation
         0,
         -- Discussion
         3,
-        -- Worker
+        -- Agent
         'Code implementation AI model. Optimized for generating clean, efficient code with good documentation and error handling.',
         1,
         -- IsActive
@@ -453,7 +453,7 @@ VALUES (
         0,
         NULL
     );
--- Worker AI Model for Coding (Decision)
+-- Agent AI Model for Coding (Decision)
 INSERT INTO AIModel (
         Name,
         ModelIdentifier,
@@ -479,12 +479,12 @@ INSERT INTO AIModel (
         GCRecord
     )
 VALUES (
-        'Worker Decision Model - Coding',
+        'Agent Decision Model - Coding',
         'deepseek-coder:1.3b',
         1,
         -- Decision
         3,
-        -- Worker
+        -- Agent
         'Implementation decision AI model. Configured for making technical choices about algorithms, libraries, and approaches.',
         1,
         -- IsActive
@@ -762,7 +762,7 @@ VALUES (
         0,
         NULL
     );
--- Inspector AI Model for Writing (Discussion)
+-- Supervisor AI Model for Writing (Discussion)
 INSERT INTO AIModel (
         Name,
         ModelIdentifier,
@@ -788,13 +788,13 @@ INSERT INTO AIModel (
         GCRecord
     )
 VALUES (
-        'Inspector Discussion Model - Writing',
+        'Supervisor Discussion Model - Writing',
         'gemma3:1b',
         -- Better understanding for editorial review
         0,
         -- Discussion
         2,
-        -- Inspector
+        -- Supervisor
         'Editorial review AI model for quality control and style consistency. Configured for thorough content analysis and feedback.',
         1,
         -- IsActive
@@ -824,7 +824,7 @@ VALUES (
         0,
         NULL
     );
--- Inspector AI Model for Writing (Decision)
+-- Supervisor AI Model for Writing (Decision)
 INSERT INTO AIModel (
         Name,
         ModelIdentifier,
@@ -850,12 +850,12 @@ INSERT INTO AIModel (
         GCRecord
     )
 VALUES (
-        'Inspector Decision Model - Writing',
+        'Supervisor Decision Model - Writing',
         'gemma3:1b',
         1,
         -- Decision
         2,
-        -- Inspector
+        -- Supervisor
         'Editorial approval AI model for publication readiness. Optimized for clear editorial judgments on content quality.',
         1,
         -- IsActive
@@ -885,7 +885,7 @@ VALUES (
         0,
         NULL
     );
--- Worker AI Model for Writing (Discussion)
+-- Agent AI Model for Writing (Discussion)
 INSERT INTO AIModel (
         Name,
         ModelIdentifier,
@@ -911,13 +911,13 @@ INSERT INTO AIModel (
         GCRecord
     )
 VALUES (
-        'Worker Discussion Model - Writing',
+        'Agent Discussion Model - Writing',
         'gemma3:1b',
         -- Fast, efficient for content generation
         0,
         -- Discussion
         3,
-        -- Worker
+        -- Agent
         'Content creation AI model for writing book sections. Optimized for engaging, well-structured prose.',
         1,
         -- IsActive
@@ -947,7 +947,7 @@ VALUES (
         0,
         NULL
     );
--- Worker AI Model for Writing (Decision)
+-- Agent AI Model for Writing (Decision)
 INSERT INTO AIModel (
         Name,
         ModelIdentifier,
@@ -973,12 +973,12 @@ INSERT INTO AIModel (
         GCRecord
     )
 VALUES (
-        'Worker Decision Model - Writing',
+        'Agent Decision Model - Writing',
         'gemma3:1b',
         1,
         -- Decision
         3,
-        -- Worker
+        -- Agent
         'Writing decision AI model for content choices and structure. Configured for practical decisions on examples, depth, and style.',
         1,
         -- IsActive

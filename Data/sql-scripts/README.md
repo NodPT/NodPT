@@ -13,8 +13,8 @@ The sample data includes:
 2. **Prompts**: Role-specific instructions for AI agents at different hierarchy levels
    - **Director**: Strategic planning and high-level decisions
    - **Manager**: Task coordination and workflow management
-   - **Inspector**: Quality assurance and review
-   - **Worker**: Implementation and content creation
+   - **Supervisor**: Quality assurance and review
+   - **Agent**: Implementation and content creation
    - Each role has both Discussion and Decision prompts
 
 3. **AI Models**: Ollama-based model configurations
@@ -101,10 +101,10 @@ The script will:
 
 ### Templates (2 total)
 
-| Name | Category | Description |
-|------|----------|-------------|
+| Name           | Category    | Description                                    |
+| -------------- | ----------- | ---------------------------------------------- |
 | Coding Project | Development | Software development with AI-assisted workflow |
-| Book Writing | Writing | Structured book writing with AI collaboration |
+| Book Writing   | Writing     | Structured book writing with AI collaboration  |
 
 ### Prompts (16 total)
 
@@ -112,53 +112,53 @@ Each template has 8 prompts (4 node types × 2 message types):
 
 **Hierarchical Role Architecture:**
 - **Director**: Top-level orchestrator - analyzes project/book concept, defines architecture/structure, creates and instructs Managers
-- **Manager**: Module owner - owns a module/section, designs internal structure, creates and instructs Inspectors
-- **Inspector**: Task decomposer - converts modules into concrete tasks, creates and instructs Workers
-- **Worker**: Code/content generator - produces actual artifacts following exact instructions
+- **Manager**: Module owner - owns a module/section, designs internal structure, creates and instructs Supervisors
+- **Supervisor**: Task decomposer - converts modules into concrete tasks, creates and instructs Agents
+- **Agent**: Code/content generator - produces actual artifacts following exact instructions
 
-**Communication Flow:** Director → Manager → Inspector → Worker (strict downward flow)
+**Communication Flow:** Director → Manager → Supervisor → Agent (strict downward flow)
 
-| Template | Node Type | Message Type | Purpose |
-|----------|-----------|--------------|---------|
-| Coding Project | Director | Discussion | Analyze project, define architecture, create Manager nodes with instructions |
-| Coding Project | Director | Decision | Approve architecture, set standards, make final structural decisions |
-| Coding Project | Manager | Discussion | Design module structure, create Inspector nodes with task specifications |
-| Coding Project | Manager | Decision | Approve module design, assign Inspectors, resolve sub-module conflicts |
-| Coding Project | Inspector | Discussion | Decompose sub-module into tasks, create Worker nodes with exact specifications |
-| Coding Project | Inspector | Decision | Approve task breakdown, validate Worker instructions, verify code compliance |
-| Coding Project | Worker | Discussion | Generate code artifacts following exact Inspector specifications |
-| Coding Project | Worker | Decision | Minor implementation details only (within specification boundaries) |
-| Book Writing | Director | Discussion | Analyze book concept, define structure, create Manager nodes with content plans |
-| Book Writing | Director | Decision | Approve book structure, set style standards, make final content decisions |
-| Book Writing | Manager | Discussion | Design content module, create Inspector nodes with writing assignments |
-| Book Writing | Manager | Decision | Approve content design, assign Inspectors, resolve section conflicts |
-| Book Writing | Inspector | Discussion | Decompose section into writing tasks, create Worker nodes with exact instructions |
-| Book Writing | Inspector | Decision | Approve task breakdown, validate Worker instructions, verify content compliance |
-| Book Writing | Worker | Discussion | Generate written content following exact Inspector specifications |
-| Book Writing | Worker | Decision | Minor word choice only (within specification boundaries) |
+| Template       | Node Type  | Message Type | Purpose                                                                          |
+| -------------- | ---------- | ------------ | -------------------------------------------------------------------------------- |
+| Coding Project | Director   | Discussion   | Analyze project, define architecture, create Manager nodes with instructions     |
+| Coding Project | Director   | Decision     | Approve architecture, set standards, make final structural decisions             |
+| Coding Project | Manager    | Discussion   | Design module structure, create Supervisor nodes with task specifications        |
+| Coding Project | Manager    | Decision     | Approve module design, assign Supervisors, resolve sub-module conflicts          |
+| Coding Project | Supervisor | Discussion   | Decompose sub-module into tasks, create Agent nodes with exact specifications    |
+| Coding Project | Supervisor | Decision     | Approve task breakdown, validate Agent instructions, verify code compliance      |
+| Coding Project | Agent      | Discussion   | Generate code artifacts following exact Supervisor specifications                |
+| Coding Project | Agent      | Decision     | Minor implementation details only (within specification boundaries)              |
+| Book Writing   | Director   | Discussion   | Analyze book concept, define structure, create Manager nodes with content plans  |
+| Book Writing   | Director   | Decision     | Approve book structure, set style standards, make final content decisions        |
+| Book Writing   | Manager    | Discussion   | Design content module, create Supervisor nodes with writing assignments          |
+| Book Writing   | Manager    | Decision     | Approve content design, assign Supervisors, resolve section conflicts            |
+| Book Writing   | Supervisor | Discussion   | Decompose section into writing tasks, create Agent nodes with exact instructions |
+| Book Writing   | Supervisor | Decision     | Approve task breakdown, validate Agent instructions, verify content compliance   |
+| Book Writing   | Agent      | Discussion   | Generate written content following exact Supervisor specifications               |
+| Book Writing   | Agent      | Decision     | Minor word choice only (within specification boundaries)                         |
 
 ### AI Models (16 total)
 
 Each template has 8 AI model configurations:
 
-| Template | Node Type | Message Type | Model | Endpoint |
-|----------|-----------|--------------|-------|----------|
-| Coding Project | Director | Discussion | codellama:13b | http://ollama:11434/api/generate |
-| Coding Project | Director | Decision | codellama:13b | http://ollama:11434/api/generate |
-| Coding Project | Manager | Discussion | codellama:7b | http://ollama:11434/api/generate |
-| Coding Project | Manager | Decision | codellama:7b | http://ollama:11434/api/generate |
-| Coding Project | Inspector | Discussion | codellama:13b | http://ollama:11434/api/generate |
-| Coding Project | Inspector | Decision | codellama:13b | http://ollama:11434/api/generate |
-| Coding Project | Worker | Discussion | codellama:7b | http://ollama:11434/api/generate |
-| Coding Project | Worker | Decision | codellama:7b | http://ollama:11434/api/generate |
-| Book Writing | Director | Discussion | llama2:13b | http://ollama:11434/api/generate |
-| Book Writing | Director | Decision | llama2:13b | http://ollama:11434/api/generate |
-| Book Writing | Manager | Discussion | llama2:7b | http://ollama:11434/api/generate |
-| Book Writing | Manager | Decision | llama2:7b | http://ollama:11434/api/generate |
-| Book Writing | Inspector | Discussion | llama2:13b | http://ollama:11434/api/generate |
-| Book Writing | Inspector | Decision | llama2:13b | http://ollama:11434/api/generate |
-| Book Writing | Worker | Discussion | llama2:7b | http://ollama:11434/api/generate |
-| Book Writing | Worker | Decision | llama2:7b | http://ollama:11434/api/generate |
+| Template       | Node Type  | Message Type | Model         | Endpoint                         |
+| -------------- | ---------- | ------------ | ------------- | -------------------------------- |
+| Coding Project | Director   | Discussion   | codellama:13b | http://ollama:11434/api/generate |
+| Coding Project | Director   | Decision     | codellama:13b | http://ollama:11434/api/generate |
+| Coding Project | Manager    | Discussion   | codellama:7b  | http://ollama:11434/api/generate |
+| Coding Project | Manager    | Decision     | codellama:7b  | http://ollama:11434/api/generate |
+| Coding Project | Supervisor | Discussion   | codellama:13b | http://ollama:11434/api/generate |
+| Coding Project | Supervisor | Decision     | codellama:13b | http://ollama:11434/api/generate |
+| Coding Project | Agent      | Discussion   | codellama:7b  | http://ollama:11434/api/generate |
+| Coding Project | Agent      | Decision     | codellama:7b  | http://ollama:11434/api/generate |
+| Book Writing   | Director   | Discussion   | llama2:13b    | http://ollama:11434/api/generate |
+| Book Writing   | Director   | Decision     | llama2:13b    | http://ollama:11434/api/generate |
+| Book Writing   | Manager    | Discussion   | llama2:7b     | http://ollama:11434/api/generate |
+| Book Writing   | Manager    | Decision     | llama2:7b     | http://ollama:11434/api/generate |
+| Book Writing   | Supervisor | Discussion   | llama2:13b    | http://ollama:11434/api/generate |
+| Book Writing   | Supervisor | Decision     | llama2:13b    | http://ollama:11434/api/generate |
+| Book Writing   | Agent      | Discussion   | llama2:7b     | http://ollama:11434/api/generate |
+| Book Writing   | Agent      | Decision     | llama2:7b     | http://ollama:11434/api/generate |
 
 ### Execution Rules
 
@@ -167,16 +167,16 @@ The prompts enforce strict hierarchical execution rules:
 1. **Responsibility Boundaries**: Each level operates only within its assigned responsibility
 2. **No Upward Override**: No role may override or redesign decisions made at a higher level
 3. **Deterministic Output**: All outputs must be explicit and implementation-ready
-4. **Strict Downward Flow**: Communication flows strictly downward: Director → Manager → Inspector → Worker
+4. **Strict Downward Flow**: Communication flows strictly downward: Director → Manager → Supervisor → Agent
 5. **Node Creation**: Each level creates the next level down with complete, unambiguous instructions
 6. **Escalation Only**: Lower levels can only ask for clarification, not change higher-level decisions
 
 **Example for Coding Project:**
 - **Director** receives: "Create an HRMS web application"
 - **Director** creates: Authentication Manager, Employee Manager, Salary Manager, Performance Manager
-- **Manager** (Authentication) creates: Login Inspector, Dashboard Inspector, User Management Inspector
-- **Inspector** (Login) creates: Frontend Worker, Backend Worker, Database Worker
-- **Worker** generates: Actual code files following exact specifications
+- **Manager** (Authentication) creates: Login Supervisor, Dashboard Supervisor, User Management Supervisor
+- **Supervisor** (Login) creates: Frontend Agent, Backend Agent, Database Agent
+- **Agent** generates: Actual code files following exact specifications
 
 ## 🔧 Model Parameters
 
@@ -192,12 +192,12 @@ AI models are configured with different parameters based on their role:
 - Moderate temperature (0.3-0.6)
 - Medium predictions (512-1024 tokens)
 
-### Inspector Models
+### Supervisor Models
 - Large context for full code/content review (4096 tokens)
 - Lower temperature for objective analysis (0.2-0.5)
 - Detailed feedback predictions (512-1536 tokens)
 
-### Worker Models
+### Agent Models
 - Good context for implementation (3072 tokens)
 - Variable temperature based on creativity needs (0.4-0.7)
 - Longer predictions for content generation (512-2048 tokens)

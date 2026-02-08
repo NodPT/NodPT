@@ -14,8 +14,13 @@ public static class DatabaseInitializer
     static void UpdateSchema()
     {
         var session = DatabaseHelper.GetSession();
+        if (session == null)
+        {
+            Console.WriteLine("Unable to get database session for schema update");
+            return;
+        }
         session.AutoCreateOption.ToString();
-        session?.UpdateSchema();
+        session.UpdateSchema();
     }
 
     public static void Initialize(WebApplicationBuilder builder)

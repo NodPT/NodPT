@@ -1,7 +1,7 @@
-using BackendExecutor;
-using BackendExecutor.Config;
-using BackendExecutor.Data;
-using BackendExecutor.Services;
+using Executor;
+using Executor.Config;
+using Executor.Data;
+using Executor.Services;
 using NodPT.Data.Services;
 using StackExchange.Redis;
 using DevExpress.Xpo;
@@ -28,7 +28,7 @@ builder.Services.Configure<ExecutorOptions>(options =>
     // Read from environment variables with defaults
     options.RedisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION") ?? "localhost:6379";
     options.MaxManager = int.TryParse(Environment.GetEnvironmentVariable("MAX_MANAGER"), out var maxManager) ? maxManager : 0;
-    options.MaxInspector = int.TryParse(Environment.GetEnvironmentVariable("MAX_INSPECTOR"), out var maxInspector) ? maxInspector : 0;
+    options.MaxSupervisor = int.TryParse(Environment.GetEnvironmentVariable("MAX_SUPERVISOR"), out var maxSupervisor) ? maxSupervisor : 0;
     options.MaxAgent = int.TryParse(Environment.GetEnvironmentVariable("MAX_AGENT"), out var maxAgent) ? maxAgent : 0;
     options.MaxTotal = int.TryParse(Environment.GetEnvironmentVariable("MAX_TOTAL"), out var maxTotal) ? maxTotal : 0;
     options.LlmEndpoint = Environment.GetEnvironmentVariable("LLM_ENDPOINT") ?? "http://ollama:11434/api/generate";
@@ -46,7 +46,7 @@ builder.Services.AddSingleton<ExecutorOptions>(provider =>
     // Override with environment variables
     options.RedisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION") ?? options.RedisConnection;
     options.MaxManager = int.TryParse(Environment.GetEnvironmentVariable("MAX_MANAGER"), out var maxManager) ? maxManager : options.MaxManager;
-    options.MaxInspector = int.TryParse(Environment.GetEnvironmentVariable("MAX_INSPECTOR"), out var maxInspector) ? maxInspector : options.MaxInspector;
+    options.MaxSupervisor = int.TryParse(Environment.GetEnvironmentVariable("MAX_SUPERVISOR"), out var maxSupervisor) ? maxSupervisor : options.MaxSupervisor;
     options.MaxAgent = int.TryParse(Environment.GetEnvironmentVariable("MAX_AGENT"), out var maxAgent) ? maxAgent : options.MaxAgent;
     options.MaxTotal = int.TryParse(Environment.GetEnvironmentVariable("MAX_TOTAL"), out var maxTotal) ? maxTotal : options.MaxTotal;
     options.LlmEndpoint = Environment.GetEnvironmentVariable("LLM_ENDPOINT") ?? options.LlmEndpoint;
@@ -125,8 +125,8 @@ builder.Services.AddSingleton<MemoryService>(provider =>
 // Register database services
 builder.Services.AddScoped<UnitOfWork>(provider => new UnitOfWork());
 
-// NEW: ChatStreamWorker using unified RedisService
-builder.Services.AddHostedService<ChatStreamWorker>();
+// NEW: ChatStreamAgent using unified RedisService
+builder.Services.AddHostedService<ChatStreamAgent>();
 
 var host = builder.Build();
 

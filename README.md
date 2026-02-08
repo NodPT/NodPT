@@ -62,15 +62,15 @@ NodPT is built using a modern microservices architecture with Docker containers.
 
 ### Technology Stack
 
-| Service | Technology | Description | Port |
-|---------|-----------|-------------|------|
-| **Frontend** | Vue.js 3, Rete.js, Bootstrap 5, Vite | Visual workflow editor with node-based interface | 8443 |
-| **WebAPI** | .NET 8, ASP.NET Core, DevExpress XPO | RESTful API for data management and authentication | 8846 |
-| **SignalR** | .NET 8, SignalR Core | Real-time communication hub | 8848 |
-| **Executor** | .NET 8, Worker Service | Background job processor | N/A |
-| **AI** | Ollama | LLM inference engine (requires GPU) | 11434 |
-| **Redis** | Redis 7 Alpine | Message broker and caching | 6379 |
-| **Data** | DevExpress XPO, MySQL/MariaDB | Data access layer and ORM | N/A |
+| Service      | Technology                           | Description                                        | Port  |
+| ------------ | ------------------------------------ | -------------------------------------------------- | ----- |
+| **Frontend** | Vue.js 3, Rete.js, Bootstrap 5, Vite | Visual workflow editor with node-based interface   | 8443  |
+| **WebAPI**   | .NET 8, ASP.NET Core, DevExpress XPO | RESTful API for data management and authentication | 8846  |
+| **SignalR**  | .NET 8, SignalR Core                 | Real-time communication hub                        | 8848  |
+| **Executor** | .NET 8, Agent Service                | Background job processor                           | N/A   |
+| **AI**       | Ollama                               | LLM inference engine (requires GPU)                | 11434 |
+| **Redis**    | Redis 7 Alpine                       | Message broker and caching                         | 6379  |
+| **Data**     | DevExpress XPO, MySQL/MariaDB        | Data access layer and ORM                          | N/A   |
 
 ## 🚀 Quick Start with Docker
 
@@ -147,7 +147,7 @@ NodPT/
 │   ├── src/          # SignalR source code
 │   ├── Dockerfile    # SignalR container
 │   └── README.md     # SignalR documentation
-├── Executor/         # .NET 8 background worker
+├── Executor/         # .NET 8 background agent
 │   ├── src/          # Executor source code
 │   ├── Dockerfile    # Executor container
 │   └── README.md     # Executor documentation

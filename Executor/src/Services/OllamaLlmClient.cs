@@ -1,11 +1,11 @@
-using BackendExecutor.Config;
+using Executor.Config;
 using NodPT.Data.DTOs;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace BackendExecutor.Services;
+namespace Executor.Services;
 
 public class OllamaLlmClient
 {

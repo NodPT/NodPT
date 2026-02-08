@@ -4,7 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>dotnet-BackendExecutor-accc3c9a-9ee8-4594-81e2-56daa45901b7</UserSecretsId>
+    <UserSecretsId>dotnet-Executor-accc3c9a-9ee8-4594-81e2-56daa45901b7</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

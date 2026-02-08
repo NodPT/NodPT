@@ -1,4 +1,4 @@
-namespace BackendExecutor.Data;
+namespace Executor.Data;
 
 /// <summary>
 /// Data structure for job information read from Redis Streams

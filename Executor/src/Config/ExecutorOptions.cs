@@ -1,4 +1,4 @@
-namespace BackendExecutor.Config;
+namespace Executor.Config;
 
 /// <summary>
 /// Configuration options for the executor service
@@ -18,9 +18,9 @@ public class ExecutorOptions
     public int MaxManager { get; set; } = 0;
 
     /// <summary>
-    /// Maximum concurrent inspector jobs (0 = unlimited)
+    /// Maximum concurrent supervisor jobs (0 = unlimited)
     /// </summary>
-    public int MaxInspector { get; set; } = 0;
+    public int MaxSupervisor { get; set; } = 0;
 
     /// <summary>
     /// Maximum concurrent agent jobs (0 = unlimited)

@@ -7,8 +7,8 @@
   nodeTypes:
    - Director (cannot delete or clear)
    - Manager
-   - Inspector
-   - Worker
+   - Supervisor
+   - Agent
 
 - file `components/graph.riot` is the main graph editor component. used litegraph.js to visualize the nodes and connections. use `editorService.js` to control the graph with public functions of AddNode, RemoveNode, Clear. Important: Director node is always present and cannot be removed.
 

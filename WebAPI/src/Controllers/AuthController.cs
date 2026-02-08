@@ -45,7 +45,7 @@ namespace NodPT.API.Controllers
 #if DEBUG
                 // In Development mode, bypass Firebase validation and return first active user
                 Console.WriteLine("DEBUG MODE: Bypassing Firebase authentication in AuthController");
-                
+
                 session!.BeginTransaction();
 
                 // Find first active, approved, non-banned user
@@ -56,11 +56,11 @@ namespace NodPT.API.Controllers
                 if (user == null)
                 {
                     // If no valid user exists, create a development user
-                    user = CreateNewUser(session, 
-                        "dev-user", 
-                        "dev@example.com", 
-                        "Development User", 
-                        null, 
+                    user = CreateNewUser(session,
+                        "dev-user",
+                        "dev@example.com",
+                        "Development User",
+                        null,
                         true);
                     isNewUser = true;
                 }
@@ -395,7 +395,7 @@ namespace NodPT.API.Controllers
         private async Task LogUserAccessAsync(User? user, string action, bool success, string? errorMessage = null)
         {
 
-            if (user == null)
+            if (user == null || session == null)
                 return;
 
             // Console log for immediate feedback
@@ -409,12 +409,12 @@ namespace NodPT.API.Controllers
             // Database logging in background task to avoid transaction conflicts
             try
             {
-                var freshUser = this.session!.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("Oid", user.Oid));
+                var freshUser = session.GetObjectByKey<User>(user.Oid);
                 if (freshUser == null)
                     return;
 
-                this.session.BeginTransaction();
-                freshUser.AccessLogs.Add(new UserAccessLog(this.session)
+                session.BeginTransaction();
+                freshUser.AccessLogs.Add(new UserAccessLog(session)
                 {
                     User = freshUser,
                     Action = action,
