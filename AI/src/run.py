@@ -42,8 +42,24 @@ def send_request(ollama_url, model, prompt, fmt, stream=False):
         url,
         headers={"Content-Type": "application/json"},
         json=payload,
+        stream=stream,
     )
     response.raise_for_status()
+
+    if stream:
+        collected = []
+        for line in response.iter_lines():
+            if line:
+                chunk = json.loads(line)
+                token = chunk.get("response", "")
+                if token:
+                    print(token, end="", flush=True)
+                    collected.append(token)
+                if chunk.get("done"):
+                    break
+        print()
+        return {"response": "".join(collected)}
+
     return response.json()
 
 
@@ -123,7 +139,10 @@ def main():
             print(response_text)
     except requests.exceptions.ConnectionError:
         print(f"\nError: Could not connect to Ollama at {args.ollama_url}")
-        print("Make sure Ollama is running: docker compose up -d")
+        print("Make sure Ollama is running. For example, from the repo root run:")
+        print("  cd AI && docker compose up -d")
+        print("or start it directly with:")
+        print("  ollama serve")
         sys.exit(1)
     except requests.exceptions.HTTPError as e:
         print(f"\nHTTP Error: {e}")
