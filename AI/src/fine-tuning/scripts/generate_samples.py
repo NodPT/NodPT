@@ -47,6 +47,8 @@ DEFAULT_ENDPOINT = "http://localhost:8000"
 DEFAULT_MODEL = "meta-llama/Llama-3.1-70B-Instruct"
 DEFAULT_CONCURRENCY = 8
 DEFAULT_BATCH_SIZE = 5
+MAX_STALL_ITERATIONS = 5
+MAX_GENERATION_SECONDS = 1800  # 30 minutes absolute cap per node type
 
 # ── Node type configuration ──────────────────────────────────────────────────
 
@@ -348,8 +350,6 @@ async def generate_all(args):
         total_invalid = 0
         start_time = time.time()
         stall_iterations = 0
-        max_stall_iterations = 5
-        max_elapsed_seconds = 1800  # 30 minutes absolute cap
 
         # Calculate how many batches we need
         remaining = args.count
@@ -409,15 +409,15 @@ async def generate_all(args):
                 else:
                     stall_iterations = 0
 
-                if stall_iterations >= max_stall_iterations:
+                if stall_iterations >= MAX_STALL_ITERATIONS:
                     print(
-                        f"  No new samples for {max_stall_iterations} consecutive "
+                        f"  No new samples for {MAX_STALL_ITERATIONS} consecutive "
                         f"iterations. Stopping."
                     )
                     break
 
-                if elapsed > max_elapsed_seconds:
-                    print(f"  Reached {max_elapsed_seconds}s time limit. Stopping.")
+                if elapsed > MAX_GENERATION_SECONDS:
+                    print(f"  Reached {MAX_GENERATION_SECONDS}s time limit. Stopping.")
                     break
 
         # Append new samples to the JSONL file
