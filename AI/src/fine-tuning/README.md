@@ -102,7 +102,7 @@ python scripts/generate_samples.py --node-type all --count 200 \
 
 1. Builds structured prompts that instruct the large model to produce JSONL training data.
 2. Fires concurrent requests to TensorRT-LLM (utilising continuous batching).
-3. Parses and **validates** each generated sample against the node type's `format.json` schema.
+3. Parses and **validates** each generated sample to ensure it matches the expected structure for the node type (required fields, array item counts, non-empty values).
 4. Discards invalid samples and retries until the requested count is reached.
 5. Appends valid samples to `data-samples/<node-type>.jsonl` (deduplicating by input).
 
@@ -185,8 +185,8 @@ python scripts/finetune.py --node-type all \
 1. Loads the base model in FP4 (4-bit) quantisation via Unsloth.
 2. Applies LoRA adapters (rank 16) to attention and MLP layers.
 3. Loads JSONL data from `data-samples/` and converts to Alpaca-style prompts.
-4. Trains with `SFTTrainer` (AdamW 8-bit, bf16, gradient checkpointing).
-5. Saves checkpoints after each epoch and final weights to `output/<node-type>/final/`.
+4. Trains with `SFTTrainer` (AdamW 8-bit, bf16 or fp16 based on GPU capability, gradient checkpointing).
+5. Saves checkpoints after each epoch and final weights to `output/<node-type>/final/` (e.g. `output/all/final/` when using `--node-type all`).
 
 ## 5. Model Export (GGUF)
 

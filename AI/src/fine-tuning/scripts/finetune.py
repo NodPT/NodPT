@@ -15,6 +15,7 @@ import json
 import os
 import sys
 
+import torch
 from datasets import Dataset
 from trl import SFTTrainer
 from transformers import TrainingArguments
@@ -114,8 +115,11 @@ def run_finetune(args):
     print(f"Total training samples: {len(dataset)}")
 
     # ── 4. Training arguments ──
-    output_dir = os.path.join(OUTPUT_BASE, "-".join(node_types))
+    output_dir = os.path.join(OUTPUT_BASE, args.node_type)
     os.makedirs(output_dir, exist_ok=True)
+
+    # Select precision based on GPU capability
+    use_bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
 
     training_args = TrainingArguments(
         output_dir=output_dir,
@@ -124,8 +128,8 @@ def run_finetune(args):
         warmup_steps=5,
         num_train_epochs=args.epochs,
         learning_rate=2e-4,
-        fp16=False,
-        bf16=True,
+        fp16=not use_bf16,
+        bf16=use_bf16,
         logging_steps=1,
         save_strategy="epoch",
         optim="adamw_8bit",

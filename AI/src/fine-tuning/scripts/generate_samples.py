@@ -59,6 +59,8 @@ NODE_CONFIG = {
         ),
         "array_field": "managers",
         "item_fields": ["name", "job"],
+        "min_items": 2,
+        "max_items": 5,
     },
     "manager": {
         "instruction": (
@@ -68,6 +70,8 @@ NODE_CONFIG = {
         ),
         "array_field": "supervisors",
         "item_fields": ["name", "job"],
+        "min_items": 2,
+        "max_items": 5,
     },
     "supervisor": {
         "instruction": (
@@ -77,6 +81,8 @@ NODE_CONFIG = {
         ),
         "array_field": "agents",
         "item_fields": ["name", "job"],
+        "min_items": 2,
+        "max_items": 5,
     },
     "agent": {
         "instruction": (
@@ -86,43 +92,10 @@ NODE_CONFIG = {
         ),
         "array_field": "files",
         "item_fields": ["filename", "content"],
+        "min_items": 2,
+        "max_items": 5,
     },
 }
-
-# ── Seed topics for diverse input generation ─────────────────────────────────
-
-SEED_PROJECT_IDEAS = [
-    "Build a social media dashboard with analytics, scheduling, and multi-platform support.",
-    "Create a hospital patient management system with appointments, records, and billing.",
-    "Develop an online learning platform with courses, quizzes, progress tracking, and certificates.",
-    "Build a restaurant ordering system with menu management, kitchen display, and delivery tracking.",
-    "Create a personal finance app with budgeting, expense tracking, and investment portfolio.",
-    "Develop a CI/CD pipeline management tool with build monitoring, deployment, and rollback.",
-    "Build a real-time multiplayer game lobby with matchmaking, chat, and leaderboards.",
-    "Create a document collaboration platform with version control, comments, and access control.",
-    "Develop an IoT device management dashboard with telemetry, alerts, and firmware updates.",
-    "Build a travel booking platform with flights, hotels, itineraries, and payment processing.",
-    "Create a customer support ticketing system with SLA tracking, escalation, and knowledge base.",
-    "Develop a warehouse inventory management system with barcode scanning and order fulfillment.",
-    "Build a video conferencing app with screen sharing, recording, and virtual backgrounds.",
-    "Create a recipe sharing platform with meal planning, grocery lists, and nutritional info.",
-    "Develop an HR management system with recruitment, onboarding, payroll, and performance reviews.",
-    "Build a music streaming service with playlists, recommendations, and offline playback.",
-    "Create a fleet management system with GPS tracking, maintenance schedules, and driver logs.",
-    "Develop a code review platform with inline comments, approvals, and CI integration.",
-    "Build a weather monitoring dashboard with forecasts, alerts, and historical data visualization.",
-    "Create an event management platform with ticketing, venue maps, and attendee check-in.",
-    "Develop a cryptocurrency portfolio tracker with real-time prices, alerts, and tax reporting.",
-    "Build a pet care app with appointment booking, health records, and medication reminders.",
-    "Create a supply chain management platform with supplier portals, purchase orders, and logistics.",
-    "Develop a smart home automation dashboard with device control, scenes, and energy monitoring.",
-    "Build a freelancer marketplace with job posting, bidding, contracts, and invoicing.",
-    "Create a fitness tracking app with workout plans, progress charts, and social challenges.",
-    "Develop a news aggregation platform with personalized feeds, bookmarks, and offline reading.",
-    "Build a property management system with tenant portals, maintenance requests, and rent collection.",
-    "Create a language learning app with lessons, flashcards, speech recognition, and streaks.",
-    "Develop a farm management system with crop planning, irrigation monitoring, and yield tracking.",
-]
 
 
 def load_format_schema(node_type):
@@ -154,8 +127,13 @@ def validate_sample_output(output_str, node_type):
     if array_field not in obj or not isinstance(obj[array_field], list):
         return False, f"missing or invalid '{array_field}' field"
 
-    if len(obj[array_field]) == 0:
-        return False, f"'{array_field}' array is empty"
+    min_items = config.get("min_items", 2)
+    max_items = config.get("max_items", 5)
+    length = len(obj[array_field])
+    if length < min_items:
+        return False, f"'{array_field}' array has {length} items; expected at least {min_items}"
+    if length > max_items:
+        return False, f"'{array_field}' array has {length} items; expected at most {max_items}"
 
     for i, item in enumerate(obj[array_field]):
         if not isinstance(item, dict):
@@ -172,9 +150,7 @@ def validate_sample_output(output_str, node_type):
 def build_generation_prompt(node_type, batch_size, existing_inputs=None):
     """Build the prompt that asks the large model to generate training samples."""
     config = NODE_CONFIG[node_type]
-    schema = load_format_schema(node_type)
     array_field = config["array_field"]
-    item_fields = config["item_fields"]
 
     # Build the schema description for the output
     if node_type == "agent":
@@ -364,12 +340,16 @@ async def generate_all(args):
                             obj = json.loads(line)
                             existing_inputs.add(obj.get("input", ""))
                         except json.JSONDecodeError:
+                            # Skip lines that aren't valid JSON (e.g. partial writes)
                             pass
             print(f"Existing samples: {len(existing_inputs)}")
 
         collected = []
         total_invalid = 0
         start_time = time.time()
+        stall_iterations = 0
+        max_stall_iterations = 5
+        max_elapsed_seconds = 1800  # 30 minutes absolute cap
 
         # Calculate how many batches we need
         remaining = args.count
@@ -401,7 +381,7 @@ async def generate_all(args):
                 tasks = [bounded_batch(s) for s in batch_sizes]
                 results = await asyncio.gather(*tasks)
 
-                batch_new = 0
+                prev_count = len(collected)
                 for valid, invalid, err in results:
                     if err:
                         print(f"  Batch error: {err}")
@@ -411,7 +391,6 @@ async def generate_all(args):
                         if sample["input"] not in existing_inputs:
                             collected.append(sample)
                             existing_inputs.add(sample["input"])
-                            batch_new += 1
 
                 remaining = args.count - len(collected)
                 elapsed = time.time() - start_time
@@ -424,9 +403,21 @@ async def generate_all(args):
                 if remaining <= 0:
                     break
 
-                # Safety: stop if we've made too many attempts without progress
-                if elapsed > 600 and len(collected) == 0:
-                    print("  No samples generated after 10 minutes. Stopping.")
+                # Track stall iterations (no new samples produced)
+                if len(collected) == prev_count:
+                    stall_iterations += 1
+                else:
+                    stall_iterations = 0
+
+                if stall_iterations >= max_stall_iterations:
+                    print(
+                        f"  No new samples for {max_stall_iterations} consecutive "
+                        f"iterations. Stopping."
+                    )
+                    break
+
+                if elapsed > max_elapsed_seconds:
+                    print(f"  Reached {max_elapsed_seconds}s time limit. Stopping.")
                     break
 
         # Append new samples to the JSONL file
@@ -501,12 +492,6 @@ def main():
         type=float,
         default=0.8,
         help="Sampling temperature for generation (default: 0.8).",
-    )
-    parser.add_argument(
-        "--append",
-        action="store_true",
-        default=True,
-        help="Append to existing JSONL files (default: true).",
     )
     parser.add_argument(
         "--overwrite",
