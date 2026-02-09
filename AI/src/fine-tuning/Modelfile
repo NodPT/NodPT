@@ -1,0 +1,28 @@
+# Ollama Modelfile for NodPT fine-tuned model
+# Update the FROM line to the actual GGUF filename after export.
+#
+# Template maps to the Alpaca-style training format:
+#   ### Instruction: → .System (set to the node-type instruction per request)
+#   ### Input:       → .Prompt (the user's project request or job description)
+#   ### Response:    → model output
+#
+# Override .System per node type when calling the API, e.g.:
+#   "system": "You are a Director AI. Analyze the following project request..."
+
+FROM ./export/unsloth.Q4_K_M.gguf
+
+TEMPLATE """### Instruction:
+{{ .System }}
+
+### Input:
+{{ .Prompt }}
+
+### Response:
+"""
+
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+PARAMETER stop "### Instruction:"
+PARAMETER stop "### Input:"
+
+SYSTEM "You are a Director AI. Analyze the following project request and break it down into manager assignments. For each manager, provide a clear name and job description."
