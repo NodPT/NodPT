@@ -35,4 +35,5 @@ curl http://localhost:8001/v1/models
 
 - Host port `8001` maps to the container's port `8000`.
 - `--gpu-memory-utilization 0.65` limits GPU memory usage to 65%.
-- `--quantization fp4` enables FP4 weights for the Llama 70B model.
+- `--quantization fp4` enables 4-bit floating point weights for the Llama 70B model, trading a small amount of quality for lower memory usage.
+- Keep `HUGGING_FACE_HUB_TOKEN` in your shell environment or secret manager and never commit real tokens to version control.
