@@ -26,9 +26,12 @@ Each file is in JSONL format (one JSON object per line):
 
 ## Generation
 
-Samples are generated using `/home/runner/work/NodPT/NodPT/AI/src/generate_vllm_samples.py`:
+Samples are generated using `../generate_vllm_samples.py`:
 
 ```bash
+# From AI/src directory
+cd ..
+
 # Generate 10 coding samples
 python generate_vllm_samples.py --type coding --count 10
 
