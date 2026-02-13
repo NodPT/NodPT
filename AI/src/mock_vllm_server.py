@@ -7,7 +7,6 @@ for testing purposes without needing an actual vLLM instance.
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
-import sys
 
 PORT = 8001
 
