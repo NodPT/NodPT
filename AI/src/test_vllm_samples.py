@@ -5,7 +5,6 @@ Test suite for generate_vllm_samples.py
 Validates the sample generation logic without requiring a vLLM server.
 """
 
-import json
 import sys
 import os
 
