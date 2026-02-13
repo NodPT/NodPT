@@ -1,0 +1,5 @@
+# Ignore JSONL sample files (can be regenerated)
+*.jsonl
+
+# Keep directory structure
+!.gitkeep
