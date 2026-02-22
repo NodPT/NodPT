@@ -54,7 +54,7 @@
   <div class="chat-input-container">
     <div class="chat-input-box h-100">
       <textarea class="chat-textarea form-control"
-        onkeyup={textAreaAdjust} placeholder="Ask anything..."
+        onkeyup={textAreaAdjust} placeholder="Ask anything... (Ctrl+Enter to send)"
         value={state.newMessage} oninput={handleInput}
         onkeydown={handleEnter} ref={messageTextareaRef}
         disabled={state.isLoading}></textarea>
@@ -138,9 +138,9 @@
       handleInput(event) {
         this.update({ newMessage: event.target.value })
       },
-      // send message on Enter key press
+      // send message on Ctrl+Enter key press
       handleEnter(event) {
-        if (event.key === 'Enter' && !event.shiftKey) {
+        if (event.key === 'Enter' && event.ctrlKey) {
           event.preventDefault()
           this.sendMessage()
         }
