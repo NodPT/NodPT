@@ -21,8 +21,10 @@
                 // Basic sanitization to prevent XSS attacks
                 // allow safe tags only like <b>, <i>, <strong>, <em>, <p>, <br>, <ul>, <ol>, <li>, <a>
                 // the return the sanitized html
-                const allowedTags = new Set(['B', 'I', 'STRONG', 'EM', 'P', 'BR', 'UL', 'OL', 'LI', 'A']);
-                const allowedAttrs = new Set(['href', 'title', 'target', 'rel', 'class', 'style']);
+                const allowedTags = new Set(['B', 'I', 'STRONG', 'EM', 'P', 'BR', 'UL', 'OL', 'LI', 'A',
+                    'CODE', 'PRE', 'BLOCKQUOTE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HR', 'SPAN',
+                    'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD']);
+                const allowedAttrs = new Set(['href', 'title', 'target', 'rel', 'class']);
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
                 const sanitizeNode = (node) => {

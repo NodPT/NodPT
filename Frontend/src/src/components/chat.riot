@@ -99,8 +99,15 @@
         this.$$('.chat-input-container')[0].style.height = (36 + h) + "px";
       },
       onMounted() {
-        // configure marked for markdown rendering
-        marked.setOptions({ breaks: true, gfm: true, headerIds: false, mangle: false })
+        // configure marked for markdown rendering with external link support
+        const renderer = new marked.Renderer()
+        renderer.link = ({ href, title, text }) => {
+          const isExternal = /^https?:\/\//i.test(href || '')
+          const titleAttr = title ? ` title="${title}"` : ''
+          const externalAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : ''
+          return `<a href="${href}"${titleAttr}${externalAttrs}>${text}</a>`
+        }
+        marked.use({ breaks: true, gfm: true, renderer })
         // set some API services
         chatApiService.setApi(this.api);
         nodeApiService.setApi(this.api);
@@ -154,21 +161,12 @@
         if (!content) return ''
         const rawHtml = marked(content)
         return DOMPurify.sanitize(rawHtml, {
-          ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'code', 'pre', 'a', 'ul', 'ol', 'li', 'blockquote'],
-          ALLOWED_ATTR: { a: ['href', 'target', 'rel'] },
+          ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'b', 'i', 'code', 'pre', 'a', 'ul', 'ol', 'li',
+            'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'span',
+            'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+          ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
           ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):)/i,
-          ADD_ATTR: ['target', 'rel'],
-          FORBID_ATTR: ['style', 'onerror', 'onload'],
-          transformTags: {
-            a: (el) => {
-              const href = el.getAttribute('href') || ''
-              if (/^https?:\/\//i.test(href)) {
-                el.setAttribute('target', '_blank')
-                el.setAttribute('rel', 'noopener noreferrer')
-              }
-              return el
-            }
-          }
+          FORBID_ATTR: ['style', 'onerror', 'onload']
         })
       },
       // format timestamp to readable string and local time
@@ -204,6 +202,7 @@
             id: msg.Id,
             type: msg.Sender === 'user' ? 'user' : 'ai',
             content: this.renderMarkdown(msg.Message),
+            rawContent: msg.Message,
             timestamp: msg.Timestamp,
             markedAsSolution: msg.MarkedAsSolution,
             solutionPending: false,
@@ -244,7 +243,8 @@
           const userMessage = {
             id: Date.now(),
             type: 'user',
-            content: userMessageContent,
+            content: this.renderMarkdown(userMessageContent),
+            rawContent: userMessageContent,
             timestamp: new Date().toISOString()
           }
           this.update({ messages: [...this.state.messages, userMessage] })
@@ -336,12 +336,13 @@
       // copy message content to clipboard
       async copyMessage(message) {
         if (!message?.content) return
+        const textToCopy = message.rawContent || message.content
         try {
           if (navigator.clipboard?.writeText) {
-            await navigator.clipboard.writeText(message.content)
+            await navigator.clipboard.writeText(textToCopy)
           } else {
             const el = document.createElement('textarea')
-            el.value = message.content
+            el.value = textToCopy
             el.setAttribute('readonly', '')
             el.style.position = 'absolute'
             el.style.left = '-9999px'
@@ -417,7 +418,8 @@
         const aiMessage = {
           id: data.messageId,
           type: 'ai',
-          content: data.content,
+          content: this.renderMarkdown(data.content),
+          rawContent: data.content,
           timestamp: data.timestamp,
           markedAsSolution: false,
           solutionPending: false,
@@ -458,7 +460,8 @@
           const targetMessage = this.state.messages
             .find(msg => msg.id === data.messageId);
           if (targetMessage) {
-            targetMessage.content = solutionMessage
+            targetMessage.content = this.renderMarkdown(solutionMessage)
+            targetMessage.rawContent = solutionMessage
             targetMessage.markedAsSolution = true
             targetMessage.solutionPending = false
             this.update()
