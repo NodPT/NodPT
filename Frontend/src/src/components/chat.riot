@@ -69,8 +69,6 @@
   </div>
 
   <script>
-    import { marked } from 'marked'
-    import DOMPurify from 'dompurify'
     import chatApiService from '../services/chatApiService.js'
     import nodeApiService from '../services/nodeApiService.js'
     import raw from '../components/raw.riot'
@@ -99,8 +97,6 @@
         this.$$('.chat-input-container')[0].style.height = (36 + h) + "px";
       },
       onMounted() {
-        // configure marked for markdown rendering
-        marked.setOptions({ breaks: true, gfm: true, headerIds: false, mangle: false })
         // set some API services
         chatApiService.setApi(this.api);
         nodeApiService.setApi(this.api);
@@ -149,28 +145,6 @@
           this.sendMessage()
         }
       },
-      // render markdown content safely
-      renderMarkdown(content) {
-        if (!content) return ''
-        const rawHtml = marked(content)
-        return DOMPurify.sanitize(rawHtml, {
-          ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'code', 'pre', 'a', 'ul', 'ol', 'li', 'blockquote'],
-          ALLOWED_ATTR: { a: ['href', 'target', 'rel'] },
-          ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):)/i,
-          ADD_ATTR: ['target', 'rel'],
-          FORBID_ATTR: ['style', 'onerror', 'onload'],
-          transformTags: {
-            a: (el) => {
-              const href = el.getAttribute('href') || ''
-              if (/^https?:\/\//i.test(href)) {
-                el.setAttribute('target', '_blank')
-                el.setAttribute('rel', 'noopener noreferrer')
-              }
-              return el
-            }
-          }
-        })
-      },
       // format timestamp to readable string and local time
       formatTime(timestamp) {
         if (!timestamp) return ''
@@ -203,7 +177,7 @@
           const messages = apiMessages.map((msg) => ({
             id: msg.Id,
             type: msg.Sender === 'user' ? 'user' : 'ai',
-            content: this.renderMarkdown(msg.Message),
+            content: msg.Message,
             timestamp: msg.Timestamp,
             markedAsSolution: msg.MarkedAsSolution,
             solutionPending: false,
