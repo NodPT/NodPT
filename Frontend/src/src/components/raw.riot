@@ -1,12 +1,24 @@
 <raw>
     <p></p>
     <script>
+        import { marked } from 'marked'
+        import DOMPurify from 'dompurify'
+
+        const renderer = new marked.Renderer()
+        renderer.link = ({ href, title, text }) => {
+            const isExternal = /^https?:\/\//i.test(href || '')
+            const titleAttr = title ? ` title="${title}"` : ''
+            const externalAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : ''
+            return `<a href="${href}"${titleAttr}${externalAttrs}>${text}</a>`
+        }
+        marked.use({ breaks: true, gfm: true, renderer })
+
         export default {
             state: {
                 default: null
             },
             setInnerHTML() {
-                this.root.innerHTML = this.sanitizeHtml(this.props.html || '');
+                this.root.innerHTML = this.renderMarkdown(this.props.html || '');
                 if (this.props.class) {
                     this.root.className = this.props.class;
                 }
@@ -17,36 +29,18 @@
             onUpdated() {
                 this.setInnerHTML();
             },
-            sanitizeHtml(html) {
-                // Basic sanitization to prevent XSS attacks
-                // allow safe tags only like <b>, <i>, <strong>, <em>, <p>, <br>, <ul>, <ol>, <li>, <a>
-                // the return the sanitized html
-                const allowedTags = new Set(['B', 'I', 'STRONG', 'EM', 'P', 'BR', 'UL', 'OL', 'LI', 'A',
-                    'CODE', 'PRE', 'BLOCKQUOTE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HR', 'SPAN',
-                    'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD']);
-                const allowedAttrs = new Set(['href', 'title', 'target', 'rel', 'class']);
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const sanitizeNode = (node) => {
-                    if (node.nodeType === Node.ELEMENT_NODE) {
-                        if (!allowedTags.has(node.tagName)) {
-                            const textNode = document.createTextNode(node.textContent);
-                            node.parentNode.replaceChild(textNode, node);
-                            return;
-                        }
-                        // Remove disallowed attributes
-                        for (let i = node.attributes.length - 1; i >= 0; i--) {
-                            const attr = node.attributes[i];
-                            if (!allowedAttrs.has(attr.name)) {
-                                node.removeAttribute(attr.name);
-                            }
-                        }
-                    }
-                    // Recursively sanitize child nodes
-                    node.childNodes.forEach(sanitizeNode);
-                };
-                doc.body.childNodes.forEach(sanitizeNode);
-                return doc.body.innerHTML;
+            // render markdown and sanitize the resulting HTML
+            renderMarkdown(content) {
+                if (!content) return ''
+                const rawHtml = marked(content)
+                return DOMPurify.sanitize(rawHtml, {
+                    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'b', 'i', 'code', 'pre', 'a', 'ul', 'ol', 'li',
+                        'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'span',
+                        'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+                    ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'class'],
+                    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):)/i,
+                    FORBID_ATTR: ['style', 'onerror', 'onload']
+                })
             }
         }
     </script>
