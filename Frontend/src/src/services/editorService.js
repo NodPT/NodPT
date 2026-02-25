@@ -20,6 +20,10 @@ let activeGraphState = null
 let allowConnections = true
 let suppressNodeRemoved = false
 let lastSelectedNodeId = null
+let expandCanvasTimeout = null
+
+const MIN_CANVAS_WIDTH = 1920
+const MIN_CANVAS_HEIGHT = 1080
 
 const NODE_TYPES = {
   DIRECTOR: "Director",
@@ -320,8 +324,53 @@ export const Clear = () => {
   return removed
 }
 
+/**
+ * Expand the canvas dimensions if any node's rendered position exceeds current canvas size.
+ * Uses a debounce to avoid excessive resizes during dragging.
+ */
+const expandCanvasForNodes = () => {
+  const state = getGraphState()
+  if (!state || !state.graph || !state.graphCanvas) return
+
+  const nodes = state.graph._nodes || []
+  if (!nodes.length) return
+
+  const { canvas, ds } = state.graphCanvas
+  const scale = (ds && ds.scale) || 1
+  const offset = (ds && ds.offset) || [0, 0]
+  const padding = 200
+
+  let newWidth = canvas.width
+  let newHeight = canvas.height
+
+  nodes.forEach((node) => {
+    const pos = node.pos || [0, 0]
+    const size = node.size || [200, 100]
+    const canvasX = (pos[0] + size[0]) * scale + offset[0] + padding
+    const canvasY = (pos[1] + size[1]) * scale + offset[1] + padding
+    if (canvasX > newWidth) newWidth = Math.ceil(canvasX)
+    if (canvasY > newHeight) newHeight = Math.ceil(canvasY)
+  })
+
+  if (newWidth > canvas.width || newHeight > canvas.height) {
+    canvas.width = newWidth
+    canvas.height = newHeight
+    state.graphCanvas.resize()
+  }
+}
+
+// Debounced wrapper for expandCanvasForNodes (used during node dragging)
+const scheduleExpandCanvas = () => {
+  clearTimeout(expandCanvasTimeout)
+  expandCanvasTimeout = setTimeout(expandCanvasForNodes, 200)
+}
+
 // export arrangeNodes function
-export const arrangeNodes = (margin = 50) => arrangeNodesPlugin(getGraphState(), NODE_TYPES, margin)
+export const arrangeNodes = (margin = 50) => {
+  const result = arrangeNodesPlugin(getGraphState(), NODE_TYPES, margin)
+  expandCanvasForNodes()
+  return result
+}
 
 // export zoomFit function
 export const zoomFit = (padding = 80, maxScale = 1) => {
@@ -375,11 +424,11 @@ export const initGraph = (canvas, container, options = {}) => {
   const graph = new LGraph() // create the graph instance
   const graphCanvas = new LGraphCanvas(canvas, graph) // create the canvas
 
-  // resize handler
+  // resize handler – enforces minimum canvas dimensions of MIN_CANVAS_WIDTH × MIN_CANVAS_HEIGHT
   const resize = () => {
     const rect = container.getBoundingClientRect()
-    canvas.width = Math.max(1, Math.floor(rect.width))
-    canvas.height = Math.max(1, Math.floor(rect.height))
+    canvas.width = Math.max(MIN_CANVAS_WIDTH, Math.floor(rect.width))
+    canvas.height = Math.max(MIN_CANVAS_HEIGHT, Math.floor(rect.height))
     graphCanvas.resize()
   }
 
@@ -444,6 +493,11 @@ export const initGraph = (canvas, container, options = {}) => {
     emitEvent(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
   }
 
+  // auto-expand canvas when a node is moved outside the current canvas bounds
+  graphCanvas.onNodeMoved = () => {
+    scheduleExpandCanvas()
+  }
+
   // Set up the graph state
   activeGraphState = { graph, graphCanvas, resize }
 
@@ -470,6 +524,8 @@ export const destroyGraph = (state) => {
     return
   }
 
+  clearTimeout(expandCanvasTimeout)
+  expandCanvasTimeout = null
   window.removeEventListener("resize", state.resize)
 
   if (state.graph) {
