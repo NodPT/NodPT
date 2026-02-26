@@ -335,9 +335,8 @@ const expandCanvasForNodes = () => {
   const nodes = state.graph._nodes || []
   if (!nodes.length) return
 
-  const { canvas, ds } = state.graphCanvas
-  const scale = (ds && ds.scale) || 1
-  const offset = (ds && ds.offset) || [0, 0]
+  const { canvas } = state.graphCanvas
+  const scale = (state.graphCanvas.ds && state.graphCanvas.ds.scale) || 1
   const padding = 200
 
   let newWidth = canvas.width
@@ -346,8 +345,8 @@ const expandCanvasForNodes = () => {
   nodes.forEach((node) => {
     const pos = node.pos || [0, 0]
     const size = node.size || [200, 100]
-    const canvasX = (pos[0] + size[0]) * scale + offset[0] + padding
-    const canvasY = (pos[1] + size[1]) * scale + offset[1] + padding
+    const canvasX = (pos[0] + size[0]) * scale + padding
+    const canvasY = (pos[1] + size[1]) * scale + padding
     if (canvasX > newWidth) newWidth = Math.ceil(canvasX)
     if (canvasY > newHeight) newHeight = Math.ceil(canvasY)
   })
@@ -422,19 +421,22 @@ export const initGraph = (canvas, container, options = {}) => {
   }
 
   const graph = new LGraph() // create the graph instance
-  // Enable LiteGraph's built-in autoresize so it calls graphCanvas.resize() on every mouse-move event.
-  // We override the instance resize() below to enforce the minimum canvas size.
+  // Enable LiteGraph's built-in autoresize so it calls graphCanvas.resize() on every mouse-move event,
+  // keeping the canvas sized to its container during interaction.
   const graphCanvas = new LGraphCanvas(canvas, graph, { autoresize: true })
 
-  // Override LiteGraph's built-in resize() on this instance to enforce minimum canvas dimensions.
-  // When called without arguments, LiteGraph fills the canvas to its parentNode size; we apply our
-  // minimum (1920×1080) so the canvas is always at least that large even on small viewports.
+  // Override LiteGraph's built-in resize() on this instance to enforce minimum canvas dimensions and
+  // preserve any canvas size that was expanded by expandCanvasForNodes beyond the viewport size.
   const _lgResize = graphCanvas.resize.bind(graphCanvas)
   graphCanvas.resize = (width, height) => {
     if (width === undefined && height === undefined) {
       const parent = canvas.parentNode
-      width = Math.max(MIN_CANVAS_WIDTH, parent ? parent.offsetWidth : 0)
-      height = Math.max(MIN_CANVAS_HEIGHT, parent ? parent.offsetHeight : 0)
+      const parentWidth = parent ? parent.offsetWidth : 0
+      const parentHeight = parent ? parent.offsetHeight : 0
+      const currentWidth = canvas.width || 0
+      const currentHeight = canvas.height || 0
+      width = Math.max(MIN_CANVAS_WIDTH, parentWidth, currentWidth)
+      height = Math.max(MIN_CANVAS_HEIGHT, parentHeight, currentHeight)
     }
     _lgResize(width, height)
   }

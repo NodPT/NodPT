@@ -223,13 +223,3 @@
   width: 100%;
   height: 100%;
 }
-
-.left-panel  {
-  position: relative;
-}
-
-.left-panel  {
-  position: absolute;
-  top: 0;
-  left: 0;
-}
