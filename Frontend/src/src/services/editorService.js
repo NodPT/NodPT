@@ -422,19 +422,27 @@ export const initGraph = (canvas, container, options = {}) => {
   }
 
   const graph = new LGraph() // create the graph instance
-  const graphCanvas = new LGraphCanvas(canvas, graph) // create the canvas
+  // Enable LiteGraph's built-in autoresize so it calls graphCanvas.resize() on every mouse-move event.
+  // We override the instance resize() below to enforce the minimum canvas size.
+  const graphCanvas = new LGraphCanvas(canvas, graph, { autoresize: true })
 
-  // resize handler – enforces minimum canvas dimensions of MIN_CANVAS_WIDTH × MIN_CANVAS_HEIGHT
-  const resize = () => {
-    const rect = container.getBoundingClientRect()
-    canvas.width = Math.max(MIN_CANVAS_WIDTH, Math.floor(rect.width))
-    canvas.height = Math.max(MIN_CANVAS_HEIGHT, Math.floor(rect.height))
-    graphCanvas.resize()
+  // Override LiteGraph's built-in resize() on this instance to enforce minimum canvas dimensions.
+  // When called without arguments, LiteGraph fills the canvas to its parentNode size; we apply our
+  // minimum (1920×1080) so the canvas is always at least that large even on small viewports.
+  const _lgResize = graphCanvas.resize.bind(graphCanvas)
+  graphCanvas.resize = (width, height) => {
+    if (width === undefined && height === undefined) {
+      const parent = canvas.parentNode
+      width = Math.max(MIN_CANVAS_WIDTH, parent ? parent.offsetWidth : 0)
+      height = Math.max(MIN_CANVAS_HEIGHT, parent ? parent.offsetHeight : 0)
+    }
+    _lgResize(width, height)
   }
 
-  // attach resize event to the window
-  window.addEventListener("resize", resize)
-  resize() // initial resize
+  // Also handle window resize events (autoresize only fires on canvas mousemove)
+  const onWindowResize = () => graphCanvas.resize()
+  window.addEventListener("resize", onWindowResize)
+  graphCanvas.resize() // initial size
 
   // graphCanvas.read_only = true;
   // graphCanvas.allow_interaction = false;
@@ -499,7 +507,7 @@ export const initGraph = (canvas, container, options = {}) => {
   }
 
   // Set up the graph state
-  activeGraphState = { graph, graphCanvas, resize }
+  activeGraphState = { graph, graphCanvas, onWindowResize }
 
   // Only create demo nodes if explicitly requested
   if (options.createDemo) {
@@ -526,7 +534,7 @@ export const destroyGraph = (state) => {
 
   clearTimeout(expandCanvasTimeout)
   expandCanvasTimeout = null
-  window.removeEventListener("resize", state.resize)
+  window.removeEventListener("resize", state.onWindowResize)
 
   if (state.graph) {
     state.graph.stop()
