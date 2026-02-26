@@ -114,6 +114,33 @@
   overflow: auto;
 }
 
+/* ─── Global thin, high-contrast scrollbars for the entire editor ─────────── */
+
+/* Webkit (Chrome, Safari, Edge) */
+.main-editor ::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.main-editor ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.main-editor ::-webkit-scrollbar-thumb {
+  background: rgba(60, 110, 220, 0.75);
+  border-radius: 2px;
+}
+
+.main-editor ::-webkit-scrollbar-thumb:hover {
+  background: rgba(60, 110, 220, 1);
+}
+
+/* Firefox */
+.main-editor * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(60, 110, 220, 0.75) rgba(0, 0, 0, 0.12);
+}
+
 .studio-footer {
   background-color:  #fff;
 }
@@ -195,56 +222,4 @@
 .left-panel {
   width: 100%;
   height: 100%;
-}
-
-.left-panel  {
-  position: relative;
-}
-
-.left-panel  {
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-/* Custom scrollbar styles */
-.left-panel ,
-.main-editor-right-panel .tab-content {
-  overflow: auto;
-}
-
-/* Webkit browsers (Chrome, Safari, Edge) */
-.left-panel ::-webkit-scrollbar,
-.main-editor-right-panel .tab-content::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.left-panel ::-webkit-scrollbar-track,
-.left-panel ::-webkit-scrollbar-track,
-.main-editor-right-panel .tab-content::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 4px;
-}
-
-.left-panel ::-webkit-scrollbar-thumb,
-.left-panel ::-webkit-scrollbar-thumb,
-.main-editor-right-panel .tab-content::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
-  transition: background 0.2s ease;
-}
-
-.left-panel ::-webkit-scrollbar-thumb:hover,
-.left-panel ::-webkit-scrollbar-thumb:hover,
-.main-editor-right-panel .tab-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.5);
-}
-
-/* Firefox */
-.left-panel ,
-.left-panel ,
-.main-editor-right-panel .tab-content {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.05);
 }
