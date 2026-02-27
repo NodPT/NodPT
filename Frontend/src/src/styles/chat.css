@@ -28,35 +28,23 @@
 
 /* Always visible scrollbar */
 .chat-messages::-webkit-scrollbar {
-  width: 4px;
+  width: 8px;
 }
 
 .chat-messages::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-  background: rgba(60, 110, 220, 0.75);
-  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
 }
 
 .chat-messages::-webkit-scrollbar-thumb:hover {
-  background: rgba(60, 110, 220, 1);
+  background: rgba(0, 0, 0, 0.3);
 }
 
-/* Dark theme overrides for chat scrollbars */
-[data-theme="dark"] .chat-messages::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-[data-theme="dark"] .chat-messages::-webkit-scrollbar-thumb {
-  background: rgba(144, 188, 255, 0.85);
-  border-radius: 2px;
-}
-
-[data-theme="dark"] .chat-messages::-webkit-scrollbar-thumb:hover {
-  background: rgba(144, 188, 255, 1);
-}
 /* Fixed chat input at bottom */
 .chat-input-container {
   position: relative;

@@ -92,8 +92,6 @@
         this.bus.off(this.EVENT_TYPES.ARRANGE_NODES, this.handleArrangeNodes)
         this.bus.off(this.EVENT_TYPES.ZOOM_FIT, this.handleZoomFit)
         this.bus.off(this.EVENT_TYPES.EDITOR_READY, this.handleEditorReady)
-        // clean up any lingering resize listeners
-        this.stopResize()
         // stop the signalr
         signalRService
           .stop()
@@ -106,8 +104,6 @@
         if (!this.state.rightPanelVisible) {
           return
         }
-        // clean up any lingering listeners from a previous drag before starting a new one
-        this.stopResize()
         event.preventDefault()
         this.isResizing = true
         this.onResizeMove = this.handleResizeMove.bind(this)
@@ -128,14 +124,8 @@
       },
       stopResize() {
         this.isResizing = false
-        if (this.onResizeMove) {
-          document.removeEventListener('mousemove', this.onResizeMove)
-          this.onResizeMove = null
-        }
-        if (this.onResizeUp) {
-          document.removeEventListener('mouseup', this.onResizeUp)
-          this.onResizeUp = null
-        }
+        document.removeEventListener('mousemove', this.onResizeMove)
+        document.removeEventListener('mouseup', this.onResizeUp)
         document.body.style.cursor = ''
         document.body.style.userSelect = ''
       },

@@ -20,10 +20,6 @@ let activeGraphState = null
 let allowConnections = true
 let suppressNodeRemoved = false
 let lastSelectedNodeId = null
-let expandCanvasTimeout = null
-
-const MIN_CANVAS_WIDTH = 1920
-const MIN_CANVAS_HEIGHT = 1080
 
 const NODE_TYPES = {
   DIRECTOR: "Director",
@@ -324,52 +320,8 @@ export const Clear = () => {
   return removed
 }
 
-/**
- * Expand the canvas dimensions if any node's rendered position exceeds current canvas size.
- * Uses a debounce to avoid excessive resizes during dragging.
- */
-const expandCanvasForNodes = () => {
-  const state = getGraphState()
-  if (!state || !state.graph || !state.graphCanvas) return
-
-  const nodes = state.graph._nodes || []
-  if (!nodes.length) return
-
-  const { canvas } = state.graphCanvas
-  const scale = (state.graphCanvas.ds && state.graphCanvas.ds.scale) || 1
-  const padding = 200
-
-  let newWidth = canvas.width
-  let newHeight = canvas.height
-
-  nodes.forEach((node) => {
-    const pos = node.pos || [0, 0]
-    const size = node.size || [200, 100]
-    const canvasX = (pos[0] + size[0]) * scale + padding
-    const canvasY = (pos[1] + size[1]) * scale + padding
-    if (canvasX > newWidth) newWidth = Math.ceil(canvasX)
-    if (canvasY > newHeight) newHeight = Math.ceil(canvasY)
-  })
-
-  if (newWidth > canvas.width || newHeight > canvas.height) {
-    canvas.width = newWidth
-    canvas.height = newHeight
-    state.graphCanvas.resize()
-  }
-}
-
-// Debounced wrapper for expandCanvasForNodes (used during node dragging)
-const scheduleExpandCanvas = () => {
-  clearTimeout(expandCanvasTimeout)
-  expandCanvasTimeout = setTimeout(expandCanvasForNodes, 200)
-}
-
 // export arrangeNodes function
-export const arrangeNodes = (margin = 50) => {
-  const result = arrangeNodesPlugin(getGraphState(), NODE_TYPES, margin)
-  expandCanvasForNodes()
-  return result
-}
+export const arrangeNodes = (margin = 50) => arrangeNodesPlugin(getGraphState(), NODE_TYPES, margin)
 
 // export zoomFit function
 export const zoomFit = (padding = 80, maxScale = 1) => {
@@ -421,30 +373,19 @@ export const initGraph = (canvas, container, options = {}) => {
   }
 
   const graph = new LGraph() // create the graph instance
-  // Enable LiteGraph's built-in autoresize so it calls graphCanvas.resize() on every mouse-move event,
-  // keeping the canvas sized to its container during interaction.
-  const graphCanvas = new LGraphCanvas(canvas, graph, { autoresize: true })
+  const graphCanvas = new LGraphCanvas(canvas, graph) // create the canvas
 
-  // Override LiteGraph's built-in resize() on this instance to enforce minimum canvas dimensions and
-  // preserve any canvas size that was expanded by expandCanvasForNodes beyond the viewport size.
-  const _lgResize = graphCanvas.resize.bind(graphCanvas)
-  graphCanvas.resize = (width, height) => {
-    if (width === undefined && height === undefined) {
-      const parent = canvas.parentNode
-      const parentWidth = parent ? parent.offsetWidth : 0
-      const parentHeight = parent ? parent.offsetHeight : 0
-      const currentWidth = canvas.width || 0
-      const currentHeight = canvas.height || 0
-      width = Math.max(MIN_CANVAS_WIDTH, parentWidth, currentWidth)
-      height = Math.max(MIN_CANVAS_HEIGHT, parentHeight, currentHeight)
-    }
-    _lgResize(width, height)
+  // resize handler
+  const resize = () => {
+    const rect = container.getBoundingClientRect()
+    canvas.width = Math.max(1, Math.floor(rect.width))
+    canvas.height = Math.max(1, Math.floor(rect.height))
+    graphCanvas.resize()
   }
 
-  // Also handle window resize events (autoresize only fires on canvas mousemove)
-  const onWindowResize = () => graphCanvas.resize()
-  window.addEventListener("resize", onWindowResize)
-  graphCanvas.resize() // initial size
+  // attach resize event to the window
+  window.addEventListener("resize", resize)
+  resize() // initial resize
 
   // graphCanvas.read_only = true;
   // graphCanvas.allow_interaction = false;
@@ -503,13 +444,8 @@ export const initGraph = (canvas, container, options = {}) => {
     emitEvent(EVENT_TYPES.NODE_DELETED, { id: node.id, title: node.title, nodeType: node.properties?.nodeType })
   }
 
-  // auto-expand canvas when a node is moved outside the current canvas bounds
-  graphCanvas.onNodeMoved = () => {
-    scheduleExpandCanvas()
-  }
-
   // Set up the graph state
-  activeGraphState = { graph, graphCanvas, onWindowResize }
+  activeGraphState = { graph, graphCanvas, resize }
 
   // Only create demo nodes if explicitly requested
   if (options.createDemo) {
@@ -534,9 +470,7 @@ export const destroyGraph = (state) => {
     return
   }
 
-  clearTimeout(expandCanvasTimeout)
-  expandCanvasTimeout = null
-  window.removeEventListener("resize", state.onWindowResize)
+  window.removeEventListener("resize", state.resize)
 
   if (state.graph) {
     state.graph.stop()
