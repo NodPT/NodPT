@@ -95,6 +95,8 @@
         this.bus.off(this.EVENT_TYPES.ARRANGE_NODES, this.handleArrangeNodes)
         this.bus.off(this.EVENT_TYPES.ZOOM_FIT, this.handleZoomFit)
         this.bus.off(this.EVENT_TYPES.EDITOR_READY, this.handleEditorReady)
+        // clean up any in-progress resize listeners
+        this.stopResize()
         // stop the signalr
         signalRService
           .stop()
@@ -126,11 +128,18 @@
         this.update({ rightPanelWidth: newWidth })
       },
       stopResize() {
+        if (!this.isResizing) {
+          return
+        }
         this.isResizing = false
-        document.removeEventListener('mousemove', this.onResizeMove)
-        document.removeEventListener('mouseup', this.onResizeUp)
-        this.onResizeMove = null
-        this.onResizeUp = null
+        if (this.onResizeMove) {
+          document.removeEventListener('mousemove', this.onResizeMove)
+          this.onResizeMove = null
+        }
+        if (this.onResizeUp) {
+          document.removeEventListener('mouseup', this.onResizeUp)
+          this.onResizeUp = null
+        }
         document.body.style.cursor = ''
         document.body.style.userSelect = ''
       },

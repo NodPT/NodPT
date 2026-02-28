@@ -225,13 +225,11 @@
 }
 
 .left-panel ::-webkit-scrollbar-track,
-.left-panel ::-webkit-scrollbar-track,
 .main-editor-right-panel .tab-content::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.06);
   border-radius: 4px;
 }
 
-.left-panel ::-webkit-scrollbar-thumb,
 .left-panel ::-webkit-scrollbar-thumb,
 .main-editor-right-panel .tab-content::-webkit-scrollbar-thumb {
   background: rgba(60, 110, 220, 0.55);
@@ -240,13 +238,11 @@
 }
 
 .left-panel ::-webkit-scrollbar-thumb:hover,
-.left-panel ::-webkit-scrollbar-thumb:hover,
 .main-editor-right-panel .tab-content::-webkit-scrollbar-thumb:hover {
   background: rgba(60, 110, 220, 0.85);
 }
 
 /* Firefox */
-.left-panel ,
 .left-panel ,
 .main-editor-right-panel .tab-content {
   scrollbar-width: thin;
