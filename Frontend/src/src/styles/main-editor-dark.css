@@ -47,4 +47,33 @@
   color: #e8eaf6;
 }
 
+/* Dark theme scrollbars */
+[data-theme="dark"] .left-panel ::-webkit-scrollbar,
+[data-theme="dark"] .main-editor-right-panel .tab-content::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
 
+[data-theme="dark"] .left-panel ::-webkit-scrollbar-track,
+[data-theme="dark"] .main-editor-right-panel .tab-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+[data-theme="dark"] .left-panel ::-webkit-scrollbar-thumb,
+[data-theme="dark"] .main-editor-right-panel .tab-content::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.7);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+[data-theme="dark"] .left-panel ::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] .main-editor-right-panel .tab-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 1);
+}
+
+[data-theme="dark"] .left-panel ,
+[data-theme="dark"] .main-editor-right-panel .tab-content {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(102, 126, 234, 0.7) rgba(255, 255, 255, 0.05);
+}

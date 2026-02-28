@@ -30,7 +30,7 @@
     import '../styles/main-editor-dark.css'
     import HeaderBar from '../components/header.riot'
     import FooterBar from '../components/footer.riot'
-    import { arrangeNodes, zoomFit, loadProjectNodes } from '../services/editorService'
+    import { arrangeNodes, zoomFit, loadProjectNodes, resizeEditor } from '../services/editorService'
     import signalRService from '../services/signalRService'
     import projectApiService from '../services/projectApiService'
     import nodeApiService from '../services/nodeApiService'
@@ -65,7 +65,10 @@
         // add events
         this.handleSignalRStatus = (status) => this.update({ connectionStatus: status })
         this.handleNodeSelected = (nodeData) => this.update({ selectedNode: nodeData })
-        this.handleToggleRightPanel = () => this.update({ rightPanelVisible: !this.state.rightPanelVisible })
+        this.handleToggleRightPanel = () => {
+          this.update({ rightPanelVisible: !this.state.rightPanelVisible })
+          resizeEditor()
+        }
         this.handleArrangeNodes = () => arrangeNodes()
         this.handleZoomFit = () => zoomFit()
         this.handleEditorReady = () => this.loadProject()
@@ -101,7 +104,7 @@
         return `width: ${this.state.rightPanelWidth}px;`
       },
       startResize(event) {
-        if (!this.state.rightPanelVisible) {
+        if (!this.state.rightPanelVisible || this.isResizing) {
           return
         }
         event.preventDefault()
@@ -126,6 +129,8 @@
         this.isResizing = false
         document.removeEventListener('mousemove', this.onResizeMove)
         document.removeEventListener('mouseup', this.onResizeUp)
+        this.onResizeMove = null
+        this.onResizeUp = null
         document.body.style.cursor = ''
         document.body.style.userSelect = ''
       },

@@ -464,6 +464,13 @@ export const initGraph = (canvas, container, options = {}) => {
   return activeGraphState
 }
 
+// trigger a canvas resize for the active graph (e.g. after panel toggle)
+export const resizeEditor = () => {
+  if (activeGraphState?.resize) {
+    requestAnimationFrame(activeGraphState.resize)
+  }
+}
+
 // destroy the graph instance and clean up
 export const destroyGraph = (state) => {
   if (!state) {

@@ -28,21 +28,21 @@
 
 /* Always visible scrollbar */
 .chat-messages::-webkit-scrollbar {
-  width: 8px;
+  width: 4px;
 }
 
 .chat-messages::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.06);
   border-radius: 4px;
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(60, 110, 220, 0.55);
   border-radius: 4px;
 }
 
 .chat-messages::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(60, 110, 220, 0.85);
 }
 
 /* Fixed chat input at bottom */
