@@ -19,7 +19,19 @@
             <a href="#support" class="btn btn-warning btn-sm px-3">
               <i class="bi bi-heart-fill me-2"></i>Support
             </a>
-            <a href="/login" class="btn btn-success btn-sm px-3">Login</a>
+            <div if={state.isLoggedIn} class="user-session-group">
+              <a href="/project" class="user-session-projects btn btn-sm">
+                <i class="bi bi-grid-fill me-1"></i>Projects
+              </a>
+              <span class="user-session-divider"></span>
+              <div class="user-session-profile">
+                <img if={state.userPhotoUrl} src={state.userPhotoUrl} alt="Profile"
+                  class="rounded-circle user-session-avatar"
+                  onerror={clearUserPhoto} />
+                <i if={!state.userPhotoUrl} class="bi bi-person-circle"></i>
+              </div>
+            </div>
+            <a if={!state.isLoggedIn} href="/login" class="btn btn-success btn-sm px-3">Login</a>
             <button onclick={toggleTheme} class="btn btn-sm text-white" title={state.isDarkTheme
               ? 'Switch to Light Theme' : 'Switch to Dark Theme' }>
               <i class={state.isDarkTheme ? 'bi bi-sun-fill' : 'bi bi-moon-fill' }></i>
@@ -461,11 +473,15 @@
 
   <script>
     import { router } from '@riotjs/route'
+    import authApiService from '../services/authApiService'
 
     export default {
       state: {
         isScrolled: false,
         isDarkTheme: true,
+        isLoggedIn: false,
+        userPhotoUrl: null,
+        userDisplayName: null,
         useCases: [
           {
             id: 1,
@@ -511,6 +527,7 @@
         this.onScroll = this.handleScroll.bind(this)
         window.addEventListener('scroll', this.onScroll)
         this.createParticles()
+        this.checkSession()
       },
       onBeforeUnmount() {
         window.removeEventListener('scroll', this.onScroll)
@@ -531,6 +548,20 @@
         const isDark = savedTheme ? savedTheme === 'dark' : true
         this.update({ isDarkTheme: isDark })
         this.applyBodyTheme(isDark)
+      },
+      checkSession() {
+        if (authApiService.isSessionValid()) {
+          authApiService.updateLastActivity()
+          const userData = authApiService.getUserData()
+          this.update({
+            isLoggedIn: true,
+            userPhotoUrl: userData?.PhotoUrl || null,
+            userDisplayName: userData?.DisplayName || null
+          })
+        }
+      },
+      clearUserPhoto() {
+        this.update({ userPhotoUrl: null })
       },
       toggleTheme() {
         const nextThemeIsDark = !this.state.isDarkTheme
