@@ -481,7 +481,6 @@
         isDarkTheme: true,
         isLoggedIn: false,
         userPhotoUrl: null,
-        userDisplayName: null,
         useCases: [
           {
             id: 1,
@@ -555,8 +554,7 @@
           const userData = authApiService.getUserData()
           this.update({
             isLoggedIn: true,
-            userPhotoUrl: userData?.PhotoUrl || null,
-            userDisplayName: userData?.DisplayName || null
+            userPhotoUrl: userData?.PhotoUrl || null
           })
         }
       },

@@ -207,8 +207,8 @@ namespace NodPT.API.Controllers
                     });
                 }
 
-                // Check refresh token expiry (3-month maximum)
-                if (user.RefreshTokenExpiry.HasValue && user.RefreshTokenExpiry.Value < DateTime.UtcNow)
+                // Check refresh token expiry (3-month maximum); null means no expiry was set (pre-migration), treat as expired
+                if (!user.RefreshTokenExpiry.HasValue || user.RefreshTokenExpiry.Value < DateTime.UtcNow)
                 {
                     user.RefreshToken = null;
                     user.RefreshTokenExpiry = null;

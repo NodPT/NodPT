@@ -132,6 +132,10 @@ class AuthApiService {
 			if (rememberMe) {
 				localStorage.setItem('rememberMeTimestamp', Date.now().toString());
 				localStorage.setItem('lastActivity', Date.now().toString());
+			} else {
+				// Clear any stale remembered session from a prior rememberMe login to avoid
+				// the API layer picking up a stale localStorage token for this new session
+				this.clearRememberedSession();
 			}
 
 			return response;
@@ -197,7 +201,7 @@ class AuthApiService {
 
 	/**
 	 * Check if a valid remembered session exists (rememberMe was used and session is not expired)
-	 * Validates: token in localStorage, 3-month max life, 1-week inactivity rule
+	 * Validates: token in localStorage, 3-month max life (calendar months), 1-week inactivity rule
 	 * @returns {boolean} True if a valid remembered session exists
 	 */
 	isSessionValid() {
@@ -212,19 +216,38 @@ class AuthApiService {
 		if (!rememberMeTimestamp) return false;
 
 		const now = Date.now();
-		// Using 90 days as a close approximation of 3 months (matches backend AddMonths(3) intent)
-		const THREE_MONTHS_MS = 90 * 24 * 60 * 60 * 1000;
 		const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-		// Check 3-month maximum token lifetime
-		if (now - parseInt(rememberMeTimestamp) > THREE_MONTHS_MS) {
+		// Parse and validate rememberMe timestamp
+		const rememberMeTimestampMs = Number(rememberMeTimestamp);
+		if (!Number.isFinite(rememberMeTimestampMs)) {
+			this.clearRememberedSession();
+			return false;
+		}
+
+		// Check 3-month maximum token lifetime using calendar months (matches backend AddMonths(3))
+		const rememberMeDate = new Date(rememberMeTimestampMs);
+		const maxLifetimeDate = new Date(rememberMeDate.getTime());
+		maxLifetimeDate.setMonth(maxLifetimeDate.getMonth() + 3);
+		if (now > maxLifetimeDate.getTime()) {
 			this.clearRememberedSession();
 			return false;
 		}
 
 		// Check 1-week inactivity rule
 		const lastActivity = localStorage.getItem('lastActivity');
-		if (!lastActivity || now - parseInt(lastActivity) > ONE_WEEK_MS) {
+		if (!lastActivity) {
+			this.clearRememberedSession();
+			return false;
+		}
+
+		const lastActivityMs = Number(lastActivity);
+		if (!Number.isFinite(lastActivityMs)) {
+			this.clearRememberedSession();
+			return false;
+		}
+
+		if (now - lastActivityMs > ONE_WEEK_MS) {
 			this.clearRememberedSession();
 			return false;
 		}
