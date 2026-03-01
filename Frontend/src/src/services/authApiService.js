@@ -115,6 +115,15 @@ class AuthApiService {
 				rememberMe,
 			});
 
+			if (rememberMe) {
+				localStorage.setItem('rememberMeTimestamp', Date.now().toString());
+				localStorage.setItem('lastActivity', Date.now().toString());
+			} else {
+				// Clear any stale remembered session from a prior rememberMe login BEFORE
+				// storing new session tokens, to avoid wiping the just-stored sessionStorage tokens
+				this.clearRememberedSession();
+			}
+
 			// Store user data including PhotoUrl in localStorage/sessionStorage
 			if (response && response.User) {
 				const storage = rememberMe ? localStorage : sessionStorage;
@@ -127,15 +136,6 @@ class AuthApiService {
 			}
 			if (response?.refreshToken && rememberMe) {
 				storeToken('refreshToken', response.refreshToken, true);
-			}
-
-			if (rememberMe) {
-				localStorage.setItem('rememberMeTimestamp', Date.now().toString());
-				localStorage.setItem('lastActivity', Date.now().toString());
-			} else {
-				// Clear any stale remembered session from a prior rememberMe login to avoid
-				// the API layer picking up a stale localStorage token for this new session
-				this.clearRememberedSession();
 			}
 
 			return response;
