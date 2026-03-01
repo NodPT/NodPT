@@ -1,7 +1,7 @@
 import { auth, googleProvider, facebookProvider, microsoftProvider, signOutAll as firebaseSignOutAll } from '../plugins/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { bus, EVENT_TYPES } from '../plugins/bus';
-import { storeToken, clearAllTokens } from '../plugins/tokenStorage';
+import { storeToken, clearAllTokens, clearLocalStorageTokens } from '../plugins/tokenStorage';
 
 class AuthApiService {
 	constructor() {
@@ -269,7 +269,7 @@ class AuthApiService {
 		localStorage.removeItem('userData');
 		localStorage.removeItem('rememberMeTimestamp');
 		localStorage.removeItem('lastActivity');
-		clearAllTokens();
+		clearLocalStorageTokens();
 	}
 }
 

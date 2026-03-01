@@ -96,11 +96,19 @@ export function removeToken(key) {
 	sessionStorage.removeItem(key);
 }
 
+const AUTH_TOKEN_KEYS = ['FirebaseToken', 'AccessToken', 'refreshToken'];
+
 /**
  * Clear all auth tokens
  */
 export function clearAllTokens() {
-	removeToken('FirebaseToken');
-	removeToken('AccessToken');
-	removeToken('refreshToken');
+	AUTH_TOKEN_KEYS.forEach((key) => removeToken(key));
+}
+
+/**
+ * Clear auth tokens from localStorage only, leaving sessionStorage untouched.
+ * Use this when purging a remembered session without affecting an active non-remembered session.
+ */
+export function clearLocalStorageTokens() {
+	AUTH_TOKEN_KEYS.forEach((key) => localStorage.removeItem(key));
 }
