@@ -549,7 +549,7 @@
         this.applyBodyTheme(isDark)
       },
       checkSession() {
-        if (authApiService.isSessionValid()) {
+        if (authApiService.hasActiveSession()) {
           authApiService.updateLastActivity()
           const userData = authApiService.getUserData()
           this.update({

@@ -200,6 +200,18 @@ class AuthApiService {
 	}
 
 	/**
+	 * Check if the user has any active session (remembered or non-remembered)
+	 * @returns {boolean} True if a session token and user data exist in either storage
+	 */
+	hasActiveSession() {
+		if (this.isSessionValid()) return true;
+		// Fall back to sessionStorage-based session (non-remembered login)
+		const token = sessionStorage.getItem('AccessToken');
+		const userData = sessionStorage.getItem('userData');
+		return !!(token && userData);
+	}
+
+	/**
 	 * Check if a valid remembered session exists (rememberMe was used and session is not expired)
 	 * Validates: token in localStorage, 3-month max life (calendar months), 1-week inactivity rule
 	 * @returns {boolean} True if a valid remembered session exists
@@ -216,7 +228,7 @@ class AuthApiService {
 		if (!rememberMeTimestamp) return false;
 
 		const now = Date.now();
-		const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+		const SEVENTY_TWO_HOURS_MS = 72 * 60 * 60 * 1000;
 
 		// Parse and validate rememberMe timestamp
 		const rememberMeTimestampMs = Number(rememberMeTimestamp);
@@ -225,29 +237,8 @@ class AuthApiService {
 			return false;
 		}
 
-		// Check 3-month maximum token lifetime using calendar months (matches backend AddMonths(3))
-		const rememberMeDate = new Date(rememberMeTimestampMs);
-		const maxLifetimeDate = new Date(rememberMeDate.getTime());
-		maxLifetimeDate.setMonth(maxLifetimeDate.getMonth() + 3);
-		if (now > maxLifetimeDate.getTime()) {
-			this.clearRememberedSession();
-			return false;
-		}
-
-		// Check 1-week inactivity rule
-		const lastActivity = localStorage.getItem('lastActivity');
-		if (!lastActivity) {
-			this.clearRememberedSession();
-			return false;
-		}
-
-		const lastActivityMs = Number(lastActivity);
-		if (!Number.isFinite(lastActivityMs)) {
-			this.clearRememberedSession();
-			return false;
-		}
-
-		if (now - lastActivityMs > ONE_WEEK_MS) {
+		// Check 72-hour maximum session lifetime
+		if (now - rememberMeTimestampMs > SEVENTY_TWO_HOURS_MS) {
 			this.clearRememberedSession();
 			return false;
 		}
