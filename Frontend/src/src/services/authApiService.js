@@ -1,7 +1,7 @@
 import { auth, googleProvider, facebookProvider, microsoftProvider, signOutAll as firebaseSignOutAll } from '../plugins/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { bus, EVENT_TYPES } from '../plugins/bus';
-import { storeToken } from '../plugins/tokenStorage';
+import { storeToken, clearAllTokens } from '../plugins/tokenStorage';
 
 class AuthApiService {
 	constructor() {
@@ -129,6 +129,15 @@ class AuthApiService {
 				storeToken('refreshToken', response.refreshToken, true);
 			}
 
+			if (rememberMe) {
+				localStorage.setItem('rememberMeTimestamp', Date.now().toString());
+				localStorage.setItem('lastActivity', Date.now().toString());
+			} else {
+				// Clear any stale remembered session from a prior rememberMe login to avoid
+				// the API layer picking up a stale localStorage token for this new session
+				this.clearRememberedSession();
+			}
+
 			return response;
 		} catch (error) {
 			console.error('Failed to login:', error);
@@ -188,6 +197,79 @@ class AuthApiService {
 			console.error('Failed to parse user data:', error);
 			return null;
 		}
+	}
+
+	/**
+	 * Check if a valid remembered session exists (rememberMe was used and session is not expired)
+	 * Validates: token in localStorage, 3-month max life (calendar months), 1-week inactivity rule
+	 * @returns {boolean} True if a valid remembered session exists
+	 */
+	isSessionValid() {
+		// Check if the AccessToken key exists directly in localStorage (key is stored as-is, only value is obfuscated)
+		const token = localStorage.getItem('AccessToken');
+		if (!token) return false;
+
+		const userData = localStorage.getItem('userData');
+		if (!userData) return false;
+
+		const rememberMeTimestamp = localStorage.getItem('rememberMeTimestamp');
+		if (!rememberMeTimestamp) return false;
+
+		const now = Date.now();
+		const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+		// Parse and validate rememberMe timestamp
+		const rememberMeTimestampMs = Number(rememberMeTimestamp);
+		if (!Number.isFinite(rememberMeTimestampMs)) {
+			this.clearRememberedSession();
+			return false;
+		}
+
+		// Check 3-month maximum token lifetime using calendar months (matches backend AddMonths(3))
+		const rememberMeDate = new Date(rememberMeTimestampMs);
+		const maxLifetimeDate = new Date(rememberMeDate.getTime());
+		maxLifetimeDate.setMonth(maxLifetimeDate.getMonth() + 3);
+		if (now > maxLifetimeDate.getTime()) {
+			this.clearRememberedSession();
+			return false;
+		}
+
+		// Check 1-week inactivity rule
+		const lastActivity = localStorage.getItem('lastActivity');
+		if (!lastActivity) {
+			this.clearRememberedSession();
+			return false;
+		}
+
+		const lastActivityMs = Number(lastActivity);
+		if (!Number.isFinite(lastActivityMs)) {
+			this.clearRememberedSession();
+			return false;
+		}
+
+		if (now - lastActivityMs > ONE_WEEK_MS) {
+			this.clearRememberedSession();
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Update the last activity timestamp (call on each page visit with valid session)
+	 */
+	updateLastActivity() {
+		localStorage.setItem('lastActivity', Date.now().toString());
+	}
+
+	/**
+	 * Clear all remembered session data from localStorage
+	 */
+	clearRememberedSession() {
+		localStorage.removeItem('userData');
+		localStorage.removeItem('rememberMeTimestamp');
+		localStorage.removeItem('lastActivity');
+		clearAllTokens();
 	}
 }
 
