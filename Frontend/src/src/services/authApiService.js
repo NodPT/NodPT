@@ -134,8 +134,8 @@ class AuthApiService {
 			if (response?.AccessToken) {
 				storeToken('AccessToken', response.AccessToken, rememberMe);
 			}
-			if (response?.refreshToken && rememberMe) {
-				storeToken('refreshToken', response.refreshToken, true);
+			if (response?.RefreshToken && rememberMe) {
+				storeToken('refreshToken', response.RefreshToken, true);
 			}
 
 			return response;
