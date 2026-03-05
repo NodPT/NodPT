@@ -62,8 +62,8 @@ public class UserService
         {
             var user = session.FindObject<User>(CriteriaOperator.Parse("FirebaseUid=?", firebaseUId));
 #if DEBUG
-            if (user ==null) 
-                user = session.Query<User>().FirstOrDefault(x=>x.Active && x.Approved && !x.Banned);
+            if (user == null)
+                user = session.Query<User>().FirstOrDefault(x => x.Active && x.Approved && !x.Banned);
 #endif
             if (user != null && user.Active && user.Approved && !user.Banned)
                 return user;
@@ -107,7 +107,7 @@ public class UserService
     {
 #if DEBUG
         return true;
-#endif
+#else
         if (User.Identity == null)
         {
             return false;
@@ -119,5 +119,6 @@ public class UserService
         }
         string? currentFbUID = GetFirebaseUIDFromContent(User);
         return !string.IsNullOrEmpty(currentFbUID) && currentFbUID.Equals(firebaseUid, StringComparison.OrdinalIgnoreCase);
+#endif
     }
 }

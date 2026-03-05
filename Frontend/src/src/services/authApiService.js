@@ -1,7 +1,7 @@
 import { auth, googleProvider, facebookProvider, microsoftProvider, signOutAll as firebaseSignOutAll } from '../plugins/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { bus, EVENT_TYPES } from '../plugins/bus';
-import { storeToken, clearAllTokens, clearLocalStorageTokens } from '../plugins/tokenStorage';
+import { storeToken, getToken, clearAllTokens, clearLocalStorageTokens } from '../plugins/tokenStorage';
 
 class AuthApiService {
 	constructor() {
@@ -253,6 +253,42 @@ class AuthApiService {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Attempt to restore a remembered session by refreshing the access token.
+	 * Call this on app startup / page load when the user returns after a browser close.
+	 * @returns {Promise<boolean>} True if session was successfully restored
+	 */
+	async restoreSession() {
+		if (!this.isSessionValid()) return false;
+
+		const refreshTokenValue = getToken('refreshToken', true);
+		if (!refreshTokenValue) {
+			this.clearRememberedSession();
+			return false;
+		}
+
+		try {
+			const response = await this.refresh(refreshTokenValue);
+			if (response?.Success && response.AccessToken) {
+				storeToken('AccessToken', response.AccessToken, true);
+				if (response.RefreshToken) {
+					storeToken('refreshToken', response.RefreshToken, true);
+				}
+				if (response.User) {
+					localStorage.setItem('userData', JSON.stringify(response.User));
+				}
+				this.updateLastActivity();
+				return true;
+			}
+			this.clearRememberedSession();
+			return false;
+		} catch (error) {
+			console.error('Session restore failed:', error);
+			this.clearRememberedSession();
+			return false;
+		}
 	}
 
 	/**

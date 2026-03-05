@@ -1,7 +1,7 @@
 // src/plugins/api-plugin.js
 import axios from 'axios';
 import { router } from '@riotjs/route';
-import { getToken } from './tokenStorage';
+import { getToken, storeToken } from './tokenStorage';
 
 /**
  * Read the access token from storage using the existing tokenStorage service
@@ -41,6 +41,51 @@ function createApi(options = {}) {
 		(err) => Promise.reject(err),
 	);
 
+	// Track whether a token refresh is already in progress to avoid concurrent refreshes
+	let isRefreshing = false;
+	let refreshPromise = null;
+
+	/**
+	 * Attempt to refresh the access token using the stored refresh token.
+	 * Returns true if the token was refreshed and the caller should retry.
+	 */
+	async function tryRefreshToken() {
+		const refreshTokenValue = getToken('refreshToken', true);
+		if (!refreshTokenValue) return false;
+
+		if (isRefreshing) {
+			// Another call is already refreshing – wait for it
+			return refreshPromise;
+		}
+
+		isRefreshing = true;
+		refreshPromise = (async () => {
+			try {
+				const res = await axios.post(`${baseURL}/auth/refresh`, { refreshToken: refreshTokenValue });
+				const data = res?.data;
+				if (data?.Success && data.AccessToken) {
+					storeToken('AccessToken', data.AccessToken, true);
+					if (data.RefreshToken) {
+						storeToken('refreshToken', data.RefreshToken, true);
+					}
+					if (data.User) {
+						localStorage.setItem('userData', JSON.stringify(data.User));
+					}
+					localStorage.setItem('lastActivity', Date.now().toString());
+					return true;
+				}
+				return false;
+			} catch {
+				return false;
+			} finally {
+				isRefreshing = false;
+				refreshPromise = null;
+			}
+		})();
+
+		return refreshPromise;
+	}
+
 	// Lightweight fetch wrapper that returns response.data
 	async function fetch(url, config = {}) {
 		try {
@@ -48,7 +93,31 @@ function createApi(options = {}) {
 			return res.data;
 		} catch (error) {
 			const statusCode = error?.response?.status;
-			if (statusCode === 401 || statusCode === 403) {
+
+			// On 401, try refreshing the token once before giving up
+			if (statusCode === 401) {
+				// Avoid refreshing in a loop if the refresh call itself was the 401 source
+				const isRefreshCall = url?.includes('/auth/refresh');
+				if (!isRefreshCall) {
+					const refreshed = await tryRefreshToken();
+					if (refreshed) {
+						// Retry the original request with the new token
+						try {
+							const retryRes = await apiAxios.request({ url, ...config });
+							return retryRes.data;
+						} catch (retryError) {
+							// Retry also failed – fall through to redirect
+						}
+					}
+				}
+				const toast = window?.$toast;
+				if (toast && typeof toast.alert === 'function') {
+					toast.alert('Access denied. Please log in again.');
+				}
+				router.push('/login');
+				return null;
+			}
+			if (statusCode === 403) {
 				const toast = window?.$toast;
 				if (toast && typeof toast.alert === 'function') {
 					toast.alert('Access denied. Please log in again.');

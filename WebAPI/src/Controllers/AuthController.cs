@@ -63,6 +63,7 @@ namespace NodPT.API.Controllers
                         null,
                         true);
                     isNewUser = true;
+                    Console.WriteLine($"DEBUG MODE: No valid user found, created development user with FirebaseUid 'dev-user' {isNewUser}");
                 }
                 else
                 {

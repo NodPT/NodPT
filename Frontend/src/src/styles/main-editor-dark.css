@@ -33,7 +33,6 @@
 
 [data-theme="dark"] .main-editor-right-panel .nav-link:hover {
   color: #ffffff;
-  background-color: rgba(102, 126, 234, 0.2);
   border-color: transparent;
 }
 
@@ -72,7 +71,7 @@
   background: rgba(102, 126, 234, 1);
 }
 
-[data-theme="dark"] .left-panel ,
+[data-theme="dark"] .left-panel,
 [data-theme="dark"] .main-editor-right-panel .tab-content {
   scrollbar-width: thin;
   scrollbar-color: rgba(102, 126, 234, 0.7) rgba(255, 255, 255, 0.05);

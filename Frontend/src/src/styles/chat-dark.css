@@ -44,7 +44,6 @@
 /* Button styles in dark theme */
 [data-theme="dark"] .message-actions .btn,
 [data-theme="dark"] .message-controls .btn {
-  background-color: rgba(102, 126, 234, 0.2);
   border-color: rgba(102, 126, 234, 0.3);
   color: #e8eaf6;
 }
