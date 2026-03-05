@@ -8,8 +8,6 @@ namespace NodPT.Data.DTOs
         public DateTime Timestamp { get; set; }
         public bool MarkedAsSolution { get; set; }
         public string? NodeId { get; set; }
-        public bool Liked { get; set; }
-        public bool Disliked { get; set; }
         public string? ConnectionId { get; set; }
     }
 }

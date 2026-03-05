@@ -125,8 +125,6 @@ namespace NodPT.API.Controllers
                         Timestamp = savedMessage.Timestamp,
                         NodeId = savedMessage.Node?.Id,
                         MarkedAsSolution = savedMessage.MarkedAsSolution,
-                        Liked = savedMessage.Liked,
-                        Disliked = savedMessage.Disliked,
                         ConnectionId = savedMessage.ConnectionId
                     },
                     status = "queued"
@@ -212,8 +210,6 @@ namespace NodPT.API.Controllers
                     Timestamp = message.Timestamp,
                     NodeId = message.Node?.Id,
                     MarkedAsSolution = message.MarkedAsSolution,
-                    Liked = message.Liked,
-                    Disliked = message.Disliked,
                     ConnectionId = message.ConnectionId
                 });
             }
@@ -230,84 +226,6 @@ namespace NodPT.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in MarkAsSolution");
-                return StatusCode(500, new { error = "Internal server error" });
-            }
-        }
-
-        [HttpPost("like")]
-        public IActionResult LikeMessage([FromBody] ChatResponseDto chatResponse)
-        {
-            if (chatResponse == null) return BadRequest("ChatResponse cannot be null");
-
-            try
-            {
-                var user = UserService.GetUser(User, _session);
-                if (user == null)
-                {
-                    return Unauthorized(new { error = "User not found or not authorized" });
-                }
-
-                var message = _chatService.UpdateMessageReaction(chatResponse.ChatMessageId, "like", user, _session);
-                if (message == null)
-                {
-                    return NotFound(new { error = "Message not found" });
-                }
-
-                return Ok(new ChatMessageDto
-                {
-                    Id = message.Oid,
-                    Sender = message.Sender,
-                    Message = message.Message,
-                    Timestamp = message.Timestamp,
-                    NodeId = message.Node?.Id,
-                    MarkedAsSolution = message.MarkedAsSolution,
-                    Liked = message.Liked,
-                    Disliked = message.Disliked,
-                    ConnectionId = message.ConnectionId
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in LikeMessage");
-                return StatusCode(500, new { error = "Internal server error" });
-            }
-        }
-
-        [HttpPost("dislike")]
-        public IActionResult DislikeMessage([FromBody] ChatResponseDto chatResponse)
-        {
-            if (chatResponse == null) return BadRequest("ChatResponse cannot be null");
-
-            try
-            {
-                var user = UserService.GetUser(User, _session);
-                if (user == null)
-                {
-                    return Unauthorized(new { error = "User not found or not authorized" });
-                }
-
-                var message = _chatService.UpdateMessageReaction(chatResponse.ChatMessageId, "dislike", user, _session);
-                if (message == null)
-                {
-                    return NotFound(new { error = "Message not found" });
-                }
-
-                return Ok(new ChatMessageDto
-                {
-                    Id = message.Oid,
-                    Sender = message.Sender,
-                    Message = message.Message,
-                    Timestamp = message.Timestamp,
-                    NodeId = message.Node?.Id,
-                    MarkedAsSolution = message.MarkedAsSolution,
-                    Liked = message.Liked,
-                    Disliked = message.Disliked,
-                    ConnectionId = message.ConnectionId
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in DislikeMessage");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -377,8 +295,6 @@ namespace NodPT.API.Controllers
                     Timestamp = message.Timestamp,
                     NodeId = message.Node?.Id,
                     MarkedAsSolution = message.MarkedAsSolution,
-                    Liked = message.Liked,
-                    Disliked = message.Disliked,
                     ConnectionId = message.ConnectionId
                 });
             }
