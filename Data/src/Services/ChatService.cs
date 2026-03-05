@@ -48,8 +48,6 @@ namespace NodPT.Data.Services
                 Timestamp = m.Timestamp,
                 MarkedAsSolution = m.MarkedAsSolution,
                 NodeId = m.Node?.Id,
-                Liked = m.Liked,
-                Disliked = m.Disliked,
                 ConnectionId = m.ConnectionId
             }).ToList();
         }
@@ -65,8 +63,6 @@ namespace NodPT.Data.Services
                 Message = messageDto.Message,
                 Timestamp = DateTime.UtcNow,
                 MarkedAsSolution = messageDto.MarkedAsSolution,
-                Liked = false,
-                Disliked = false,
                 User = user,
                 ConnectionId = messageDto.ConnectionId
             };
@@ -111,59 +107,6 @@ namespace NodPT.Data.Services
             }
 
             message.MarkedAsSolution = true;
-            message.Save();
-            return message;
-        }
-
-        /// <summary>
-        /// Update a chat message's like/dislike status
-        /// </summary>
-        public ChatMessage? UpdateMessageReaction(int messageId, string action, User user, UnitOfWork session)
-        {
-            var message = session.GetObjectByKey<ChatMessage>(messageId);
-            if (message == null)
-            {
-                throw new ArgumentException($"Message with ID '{messageId}' not found");
-            }
-
-            // Verify the message belongs to a node in a project owned by the user
-            if (message.Node?.Project == null || message.Node.Project.User == null || message.Node.Project.User.Oid != user.Oid)
-            {
-                throw new UnauthorizedAccessException("Message does not belong to a project owned by the current user");
-            }
-
-            switch (action?.ToLower())
-            {
-                case "like":
-                    if (message.Liked)
-                    {
-                        // If already liked, remove the like (unlike)
-                        message.Liked = false;
-                        // Do not touch Disliked
-                    }
-                    else
-                    {
-                        // If disliked or neutral, set like and clear dislike
-                        message.Liked = true;
-                        message.Disliked = false;
-                    }
-                    break;
-                case "dislike":
-                    if (message.Disliked)
-                    {
-                        // If already disliked, remove the dislike (undislike)
-                        message.Disliked = false;
-                        // Do not touch Liked
-                    }
-                    else
-                    {
-                        // If liked or neutral, set dislike and clear like
-                        message.Disliked = true;
-                        message.Liked = false;
-                    }
-                    break;
-            }
-
             message.Save();
             return message;
         }
