@@ -39,8 +39,6 @@ namespace NodPT.Data.Services
                 Message = selectedMessage,
                 Timestamp = DateTime.UtcNow,
                 MarkedAsSolution = false,
-                Liked = false,
-                Disliked = false,
                 Node = node,
                 User = user
             };
