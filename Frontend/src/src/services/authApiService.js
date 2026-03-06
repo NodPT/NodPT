@@ -1,7 +1,7 @@
-import { auth, googleProvider, facebookProvider, microsoftProvider, signOutAll as firebaseSignOutAll } from '../plugins/firebase';
+import { auth, googleProvider, facebookProvider, microsoftProvider } from '../plugins/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { bus, EVENT_TYPES } from '../plugins/bus';
-import { storeToken, getToken, clearAllTokens, clearLocalStorageTokens } from '../plugins/tokenStorage';
+import { storeToken } from '../plugins/tokenStorage';
 
 class AuthApiService {
 	constructor() {
@@ -64,8 +64,6 @@ class AuthApiService {
 	async logout() {
 		try {
 			await this.logoutApi();
-			// await firebaseSignOuAll();
-			// Event is emitted by signOutAll function
 		} catch (error) {
 			console.error('Logout error:', error);
 			throw error;
@@ -93,12 +91,11 @@ class AuthApiService {
 	}
 
 	/**
-	 * Login with Firebase token and optional remember me
+	 * Login with Firebase token
 	 * @param {string} FirebaseToken - Firebase ID token
-	 * @param {boolean} rememberMe - Whether to remember the user
 	 * @returns {Promise<Object>} API response with auth tokens
 	 */
-	async login(FirebaseToken, rememberMe = false, providerName = 'Google') {
+	async login(FirebaseToken, providerName = 'Google') {
 		try {
 			// Check if we're in Development mode
 			const isDevelopment = import.meta.env.VITE_ENV === 'Development';
@@ -112,30 +109,19 @@ class AuthApiService {
 
 			const response = await this.api.post(`${this.baseURL}/login`, {
 				FirebaseToken: tokenToSend,
-				rememberMe,
 			});
 
-			if (rememberMe) {
-				localStorage.setItem('rememberMeTimestamp', Date.now().toString());
-				localStorage.setItem('lastActivity', Date.now().toString());
-			} else {
-				// Clear any stale remembered session from a prior rememberMe login BEFORE
-				// storing new session tokens, to avoid wiping the just-stored sessionStorage tokens
-				this.clearRememberedSession();
-			}
+			// Clear any legacy localStorage auth state from previous sessions
+			['AccessToken', 'FirebaseToken', 'refreshToken', 'userData', 'rememberMeTimestamp', 'lastActivity'].forEach(k => localStorage.removeItem(k));
 
-			// Store user data including PhotoUrl in localStorage/sessionStorage
+			// Store user data in sessionStorage
 			if (response && response.User) {
-				const storage = rememberMe ? localStorage : sessionStorage;
-				storage.setItem('userData', JSON.stringify(response.User));
+				sessionStorage.setItem('userData', JSON.stringify(response.User));
 			}
 
-			storeToken('FirebaseToken', tokenToSend, rememberMe);
+			storeToken('FirebaseToken', tokenToSend);
 			if (response?.AccessToken) {
-				storeToken('AccessToken', response.AccessToken, rememberMe);
-			}
-			if (response?.RefreshToken && rememberMe) {
-				storeToken('refreshToken', response.RefreshToken, true);
+				storeToken('AccessToken', response.AccessToken);
 			}
 
 			return response;
@@ -145,7 +131,7 @@ class AuthApiService {
 		}
 	}
 
-	async loginAndStore(rememberMe = false, provider = 'Google') {
+	async loginAndStore(provider = 'Google') {
 		const isDevelopment = import.meta.env.VITE_ENV === 'Development';
 		let firebaseToken = 'dev-mock-token';
 		const providerName = this.loginProviders[provider] ? provider : 'Google';
@@ -163,26 +149,9 @@ class AuthApiService {
 		}
 
 		// Now perform backend login with the obtained Firebase token
-		const response = await this.login(firebaseToken, rememberMe, providerName);
+		const response = await this.login(firebaseToken, providerName);
 		this.notifySignIn(); // Notify other parts of the app about sign-in
 		return response;
-	}
-
-	/**
-	 * Refresh authentication token
-	 * @param {string} refreshToken - Refresh token
-	 * @returns {Promise<Object>} API response with new tokens
-	 */
-	async refresh(refreshToken) {
-		try {
-			const response = await this.api.post(`${this.baseURL}/refresh`, {
-				refreshToken,
-			});
-			return response;
-		} catch (error) {
-			console.error('Failed to refresh token:', error);
-			throw error;
-		}
 	}
 
 	/**
@@ -191,121 +160,12 @@ class AuthApiService {
 	 */
 	getUserData() {
 		try {
-			const userData = localStorage.getItem('userData') || sessionStorage.getItem('userData');
+			const userData = sessionStorage.getItem('userData');
 			return userData ? JSON.parse(userData) : null;
 		} catch (error) {
 			console.error('Failed to parse user data:', error);
 			return null;
 		}
-	}
-
-	/**
-	 * Check if a valid remembered session exists (rememberMe was used and session is not expired)
-	 * Validates: token in localStorage, 3-month max life (calendar months), 1-week inactivity rule
-	 * @returns {boolean} True if a valid remembered session exists
-	 */
-	isSessionValid() {
-		// Check if the AccessToken key exists directly in localStorage (key is stored as-is, only value is obfuscated)
-		const token = localStorage.getItem('AccessToken');
-		if (!token) return false;
-
-		const userData = localStorage.getItem('userData');
-		if (!userData) return false;
-
-		const rememberMeTimestamp = localStorage.getItem('rememberMeTimestamp');
-		if (!rememberMeTimestamp) return false;
-
-		const now = Date.now();
-		const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
-		// Parse and validate rememberMe timestamp
-		const rememberMeTimestampMs = Number(rememberMeTimestamp);
-		if (!Number.isFinite(rememberMeTimestampMs)) {
-			this.clearRememberedSession();
-			return false;
-		}
-
-		// Check 3-month maximum token lifetime using calendar months (matches backend AddMonths(3))
-		const rememberMeDate = new Date(rememberMeTimestampMs);
-		const maxLifetimeDate = new Date(rememberMeDate.getTime());
-		maxLifetimeDate.setMonth(maxLifetimeDate.getMonth() + 3);
-		if (now > maxLifetimeDate.getTime()) {
-			this.clearRememberedSession();
-			return false;
-		}
-
-		// Check 1-week inactivity rule
-		const lastActivity = localStorage.getItem('lastActivity');
-		if (!lastActivity) {
-			this.clearRememberedSession();
-			return false;
-		}
-
-		const lastActivityMs = Number(lastActivity);
-		if (!Number.isFinite(lastActivityMs)) {
-			this.clearRememberedSession();
-			return false;
-		}
-
-		if (now - lastActivityMs > ONE_WEEK_MS) {
-			this.clearRememberedSession();
-			return false;
-		}
-
-		return true;
-	}
-
-	/**
-	 * Attempt to restore a remembered session by refreshing the access token.
-	 * Call this on app startup / page load when the user returns after a browser close.
-	 * @returns {Promise<boolean>} True if session was successfully restored
-	 */
-	async restoreSession() {
-		if (!this.isSessionValid()) return false;
-
-		const refreshTokenValue = getToken('refreshToken', true);
-		if (!refreshTokenValue) {
-			this.clearRememberedSession();
-			return false;
-		}
-
-		try {
-			const response = await this.refresh(refreshTokenValue);
-			if (response?.Success && response.AccessToken) {
-				storeToken('AccessToken', response.AccessToken, true);
-				if (response.RefreshToken) {
-					storeToken('refreshToken', response.RefreshToken, true);
-				}
-				if (response.User) {
-					localStorage.setItem('userData', JSON.stringify(response.User));
-				}
-				this.updateLastActivity();
-				return true;
-			}
-			this.clearRememberedSession();
-			return false;
-		} catch (error) {
-			console.error('Session restore failed:', error);
-			this.clearRememberedSession();
-			return false;
-		}
-	}
-
-	/**
-	 * Update the last activity timestamp (call on each page visit with valid session)
-	 */
-	updateLastActivity() {
-		localStorage.setItem('lastActivity', Date.now().toString());
-	}
-
-	/**
-	 * Clear all remembered session data from localStorage
-	 */
-	clearRememberedSession() {
-		localStorage.removeItem('userData');
-		localStorage.removeItem('rememberMeTimestamp');
-		localStorage.removeItem('lastActivity');
-		clearLocalStorageTokens();
 	}
 }
 

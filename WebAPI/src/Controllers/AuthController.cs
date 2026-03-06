@@ -125,14 +125,9 @@ namespace NodPT.API.Controllers
                 }
 #endif
 
-                // Generate refresh token if remember me is enabled
-                string? refreshToken = null;
-                if (request.RememberMe)
-                {
-                    refreshToken = GenerateRefreshToken();
-                    user.RefreshToken = refreshToken;
-                    user.RefreshTokenExpiry = DateTime.UtcNow.AddMonths(3);
-                }
+                // Invalidate any existing refresh tokens
+                user.RefreshToken = null;
+                user.RefreshTokenExpiry = null;
 
                 session.Save(user);
                 session.CommitTransaction();
@@ -160,8 +155,7 @@ namespace NodPT.API.Controllers
                         LastLoginAt = user.LastLoginAt
                     },
                     AccessToken = request.FirebaseToken, // In real implementation, generate JWT
-                    RefreshToken = refreshToken,
-                    ExpiresAt = request.RememberMe ? DateTime.UtcNow.AddMonths(3) : DateTime.UtcNow.AddHours(1)
+                    ExpiresAt = DateTime.UtcNow.AddHours(1)
                 });
             }
             catch (Exception ex)

@@ -3,22 +3,20 @@
 # Base URL
 @baseUrl = http://localhost:5049/api
 
-### Login with Firebase token (remember me enabled)
+### Login with Firebase token
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "firebaseToken": "firebase_token_testuser123_john",
-  "rememberMe": true
+  "firebaseToken": "firebase_token_testuser123_john"
 }
 
-### Login with Firebase token (remember me disabled)
+### Login with Firebase token (new user)
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "firebaseToken": "firebase_token_newuser456_alice",
-  "rememberMe": false
+  "firebaseToken": "firebase_token_newuser456_alice"
 }
 
 ### Test invalid Firebase token
@@ -26,25 +24,11 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "firebaseToken": "invalid_token",
-  "rememberMe": false
+  "firebaseToken": "invalid_token"
 }
 
-### Refresh token (replace with actual refresh token from login response)
-POST {{baseUrl}}/auth/refresh
-Content-Type: application/json
-
-{
-  "refreshToken": "REPLACE_WITH_ACTUAL_REFRESH_TOKEN_FROM_LOGIN"
-}
-
-### Logout (replace with actual refresh token)
-POST {{baseUrl}}/auth/logout
-Content-Type: application/json
-
-{
-  "refreshToken": "REPLACE_WITH_ACTUAL_REFRESH_TOKEN"
-}
+### Logout
+GET {{baseUrl}}/auth/logout
 
 ### Get all users (to verify user creation and approval status)
 GET {{baseUrl}}/users

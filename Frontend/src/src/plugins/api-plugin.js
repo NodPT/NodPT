@@ -1,17 +1,15 @@
 // src/plugins/api-plugin.js
 import axios from 'axios';
 import { router } from '@riotjs/route';
-import { getToken, storeToken, clearAllTokens } from './tokenStorage';
+import { getToken, clearAllTokens } from './tokenStorage';
 
 /**
- * Read the access token from storage using the existing tokenStorage service
- * The tokenStorage service automatically checks both localStorage and sessionStorage
+ * Read the access token from sessionStorage
  * @returns {string|null} Access token or null if not found
  */
 function readTokenFromStorage() {
 	try {
-		// getToken with persist=true automatically falls back to sessionStorage if not in localStorage
-		const token = getToken('AccessToken', true);
+		const token = getToken('AccessToken');
 		return token;
 	} catch (e) {
 		console.error('Failed to read token from storage:', e);
@@ -27,8 +25,6 @@ function createApi(options = {}) {
 	});
 
 	// Attach Bearer token automatically for every request
-	// Note: Token is read on each request to ensure we always use the latest token
-	// (important when tokens are refreshed). The deobfuscation is fast (simple XOR).
 	apiAxios.interceptors.request.use(
 		(cfg) => {
 			const token = readTokenFromStorage();
@@ -41,55 +37,8 @@ function createApi(options = {}) {
 		(err) => Promise.reject(err),
 	);
 
-	// Track whether a token refresh is already in progress to avoid concurrent refreshes
-	let isRefreshing = false;
-	let refreshPromise = null;
-
 	function clearAuthStateForRelogin() {
-		// Delegate auth state cleanup to the token storage layer to avoid
-		// duplicating the list of auth-related keys in multiple places.
 		clearAllTokens();
-	}
-
-	/**
-	 * Attempt to refresh the access token using the stored refresh token.
-	 * Returns true if the token was refreshed and the caller should retry.
-	 */
-	async function tryRefreshToken() {
-		const refreshTokenValue = getToken('refreshToken', true);
-		if (!refreshTokenValue) return false;
-
-		if (isRefreshing) {
-			// Another call is already refreshing – wait for it
-			return refreshPromise;
-		}
-
-		isRefreshing = true;
-		refreshPromise = (async () => {
-			try {
-				const res = await axios.post(`${baseURL}/auth/refresh`, { refreshToken: refreshTokenValue });
-				const data = res?.data;
-				if (data?.Success && data.AccessToken) {
-					storeToken('AccessToken', data.AccessToken, true);
-					if (data.RefreshToken) {
-						storeToken('refreshToken', data.RefreshToken, true);
-					}
-					if (data.User) {
-						localStorage.setItem('userData', JSON.stringify(data.User));
-					}
-					localStorage.setItem('lastActivity', Date.now().toString());
-					return true;
-				}
-				return false;
-			} catch {
-				return false;
-			} finally {
-				isRefreshing = false;
-				refreshPromise = null;
-			}
-		})();
-
-		return refreshPromise;
 	}
 
 	// Lightweight fetch wrapper that returns response.data
@@ -100,31 +49,7 @@ function createApi(options = {}) {
 		} catch (error) {
 			const statusCode = error?.response?.status;
 
-			// On 401, try refreshing the token once before giving up
-			if (statusCode === 401) {
-				// Avoid refreshing in a loop if the refresh call itself was the 401 source
-				const isRefreshCall = url?.includes('/auth/refresh');
-				if (!isRefreshCall) {
-					const refreshed = await tryRefreshToken();
-					if (refreshed) {
-						// Retry the original request with the new token
-						try {
-							const retryRes = await apiAxios.request({ url, ...config });
-							return retryRes.data;
-						} catch (retryError) {
-							// Retry also failed – fall through to redirect
-						}
-					}
-				}
-				const toast = window?.$toast;
-				if (toast && typeof toast.alert === 'function') {
-					toast.alert('Access denied. Please log in again.');
-				}
-				clearAuthStateForRelogin();
-				router.push('/login');
-				return null;
-			}
-			if (statusCode === 403) {
+			if (statusCode === 401 || statusCode === 403) {
 				const toast = window?.$toast;
 				if (toast && typeof toast.alert === 'function') {
 					toast.alert('Access denied. Please log in again.');
