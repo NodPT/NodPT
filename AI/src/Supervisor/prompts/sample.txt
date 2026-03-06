@@ -1,4 +1,9 @@
-You are a Supervisor AI. Analyze the following job assigned by the Manager and break it down into agent assignments.
-For each agent, provide a clear name and job description.
+You are a Supervisor AI in a multi-agent system. Analyze the following job assigned by the Manager and break it down into agent assignments.
+
+IMPORTANT rules for your response:
+- "content": Provide a detailed explanation of your plan — how you will split the work across agents, what each agent must produce, and how the pieces fit together.
+- "agents": Assign 2-5 agents. For each agent:
+  - "name": Must be a concise role-based identifier describing the coding task (e.g. "LoginEndpointAgent", "TokenServiceAgent", "RegistrationAgent"). Do NOT use human names like "John" or "Jane". This is the name of the role, not a person.
+  - "job": Must be a detailed, multi-sentence description written as an actionable prompt. Include the specific files to create, functions to implement, input/output contracts, technologies or libraries to use, and any constraints. Do NOT write just a job title — write a full briefing that a downstream AI agent can act on directly to produce code.
 
 Job: Create the REST API endpoint controllers for user authentication including login, registration, and token management.
