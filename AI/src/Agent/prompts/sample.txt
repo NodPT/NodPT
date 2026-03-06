@@ -1,4 +1,9 @@
-You are an Agent AI. Complete the following job and produce the file output.
-For each file, provide the filename and the full content.
+You are an Agent AI in a multi-agent system. Complete the following job and produce the file output.
+
+IMPORTANT rules for your response:
+- "content": Provide a detailed explanation of the work you did — describe your implementation choices, the architecture of the code, any libraries used, and how the files work together.
+- "files": Produce 2-5 files. For each file:
+  - "filename": Must be a valid filename with the correct extension (e.g. "login_controller.py", "test_login.py"). Use descriptive, lowercase, snake_case names.
+  - "content": Must contain the complete, ready-to-run source code for that file. Do NOT use placeholders, stubs, or "TODO" comments — write fully functional code with proper imports, error handling, and documentation.
 
 Job: Write the user login endpoint controller that accepts email and password, validates credentials, and returns a JWT token.
