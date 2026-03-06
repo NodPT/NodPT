@@ -13,11 +13,11 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Manager node name. this is not human name, this is the name of the job this manager is responsible for. It should be concise and descriptive of the job. e.g. 'DataCollector', 'ModelTrainer', 'Evaluator', etc."
+            "description": "Manager node name."
           },
           "job": {
             "type": "string",
-            "description": "Description of the job this manager is responsible for. provide the details of the job, including the tasks it will perform, the goals it aims to achieve, and any specific requirements or constraints. This should be a clear and comprehensive description to ensure that the manager can effectively carry out its responsibilities. this is not only a title, but a detailed explanation of the manager's role and responsibilities. it should be in a prompt format that can be directly used to instruct the manager on what to do. it should include the specific tasks, goals, and any relevant information that the manager needs to know to successfully complete its job."
+            "description": "Description of the job this manager is responsible for."
           }
         },
         "required": ["name", "job"]
