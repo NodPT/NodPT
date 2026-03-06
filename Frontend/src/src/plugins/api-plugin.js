@@ -46,11 +46,9 @@ function createApi(options = {}) {
 	let refreshPromise = null;
 
 	function clearAuthStateForRelogin() {
+		// Delegate auth state cleanup to the token storage layer to avoid
+		// duplicating the list of auth-related keys in multiple places.
 		clearAllTokens();
-		localStorage.removeItem('userData');
-		sessionStorage.removeItem('userData');
-		localStorage.removeItem('rememberMeTimestamp');
-		localStorage.removeItem('lastActivity');
 	}
 
 	/**
