@@ -1,7 +1,7 @@
 // src/plugins/api-plugin.js
 import axios from 'axios';
 import { router } from '@riotjs/route';
-import { getToken, storeToken } from './tokenStorage';
+import { getToken, storeToken, clearAllTokens } from './tokenStorage';
 
 /**
  * Read the access token from storage using the existing tokenStorage service
@@ -44,6 +44,12 @@ function createApi(options = {}) {
 	// Track whether a token refresh is already in progress to avoid concurrent refreshes
 	let isRefreshing = false;
 	let refreshPromise = null;
+
+	function clearAuthStateForRelogin() {
+		// Delegate auth state cleanup to the token storage layer to avoid
+		// duplicating the list of auth-related keys in multiple places.
+		clearAllTokens();
+	}
 
 	/**
 	 * Attempt to refresh the access token using the stored refresh token.
@@ -114,6 +120,7 @@ function createApi(options = {}) {
 				if (toast && typeof toast.alert === 'function') {
 					toast.alert('Access denied. Please log in again.');
 				}
+				clearAuthStateForRelogin();
 				router.push('/login');
 				return null;
 			}
@@ -122,6 +129,7 @@ function createApi(options = {}) {
 				if (toast && typeof toast.alert === 'function') {
 					toast.alert('Access denied. Please log in again.');
 				}
+				clearAuthStateForRelogin();
 				router.push('/login');
 				return null;
 			}
