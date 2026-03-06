@@ -39,25 +39,25 @@ The `run.py` script sends requests to the Ollama API with a selected node type f
 ### List available prompts for a node type
 
 ```bash
-python3 run.py director
-python3 run.py manager
-python3 run.py supervisor
-python3 run.py agent
+python run.py director
+python run.py manager
+python run.py supervisor
+python run.py agent
 ```
 
 ### Send a request using a prompt file
 
 ```bash
-python3 run.py director --prompt sample.txt
-python3 run.py manager --prompt sample.txt --model llama3.1:8b
-python3 run.py agent --prompt sample.txt --model mistral:7b
+python run.py director --prompt sample.txt
+python run.py manager --prompt sample.txt --model llama3.1:8b
+python run.py agent --prompt sample.txt --model mistral:7b
 ```
 
 ### Send a request with custom prompt text
 
 ```bash
-python3 run.py director --prompt-text "Build a chat application with real-time messaging"
-python3 run.py agent --prompt-text "Write a user login endpoint in Python Flask"
+python run.py director --prompt-text "Build a chat application with real-time messaging"
+python run.py agent --prompt-text "Write a user login endpoint in Python Flask"
 ```
 
 ### Options
@@ -99,9 +99,9 @@ AI/src/Agent/prompts/write-auth-controller.txt
 Then use them:
 
 ```bash
-python3 run.py director --prompt my-custom-prompt.txt
-python3 run.py manager --prompt backend-planning.txt
-python3 run.py agent --prompt write-auth-controller.txt
+python run.py director --prompt my-custom-prompt.txt
+python run.py manager --prompt backend-planning.txt
+python run.py agent --prompt write-auth-controller.txt
 ```
 
 ## Running Tests
