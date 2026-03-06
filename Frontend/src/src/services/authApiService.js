@@ -1,7 +1,7 @@
-import { auth, googleProvider, facebookProvider, microsoftProvider, signOutAll as firebaseSignOutAll } from '../plugins/firebase';
+import { auth, googleProvider, facebookProvider, microsoftProvider } from '../plugins/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { bus, EVENT_TYPES } from '../plugins/bus';
-import { storeToken, clearAllTokens } from '../plugins/tokenStorage';
+import { storeToken } from '../plugins/tokenStorage';
 
 class AuthApiService {
 	constructor() {
@@ -64,8 +64,6 @@ class AuthApiService {
 	async logout() {
 		try {
 			await this.logoutApi();
-			// await firebaseSignOuAll();
-			// Event is emitted by signOutAll function
 		} catch (error) {
 			console.error('Logout error:', error);
 			throw error;
@@ -113,6 +111,9 @@ class AuthApiService {
 				FirebaseToken: tokenToSend,
 			});
 
+			// Clear any legacy localStorage auth state from previous sessions
+			['AccessToken', 'FirebaseToken', 'refreshToken', 'userData', 'rememberMeTimestamp', 'lastActivity'].forEach(k => localStorage.removeItem(k));
+
 			// Store user data in sessionStorage
 			if (response && response.User) {
 				sessionStorage.setItem('userData', JSON.stringify(response.User));
@@ -151,23 +152,6 @@ class AuthApiService {
 		const response = await this.login(firebaseToken, providerName);
 		this.notifySignIn(); // Notify other parts of the app about sign-in
 		return response;
-	}
-
-	/**
-	 * Refresh authentication token
-	 * @param {string} refreshToken - Refresh token
-	 * @returns {Promise<Object>} API response with new tokens
-	 */
-	async refresh(refreshToken) {
-		try {
-			const response = await this.api.post(`${this.baseURL}/refresh`, {
-				refreshToken,
-			});
-			return response;
-		} catch (error) {
-			console.error('Failed to refresh token:', error);
-			throw error;
-		}
 	}
 
 	/**

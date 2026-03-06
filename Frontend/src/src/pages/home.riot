@@ -435,6 +435,10 @@
         this.onScroll = this.handleScroll.bind(this)
         window.addEventListener('scroll', this.onScroll)
         this.createParticles()
+        const userData = authApiService.getUserData()
+        if (userData) {
+          this.update({ isLoggedIn: true, userPhotoUrl: userData.PhotoUrl || null })
+        }
       },
       onBeforeUnmount() {
         window.removeEventListener('scroll', this.onScroll)

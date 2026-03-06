@@ -125,6 +125,10 @@ namespace NodPT.API.Controllers
                 }
 #endif
 
+                // Invalidate any existing refresh tokens
+                user.RefreshToken = null;
+                user.RefreshTokenExpiry = null;
+
                 session.Save(user);
                 session.CommitTransaction();
 

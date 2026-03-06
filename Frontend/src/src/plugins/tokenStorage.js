@@ -52,35 +52,25 @@ const getObfuscationKey = () => {
 };
 
 /**
- * Store token with basic obfuscation
+ * Store token with basic obfuscation in sessionStorage
  * @param {string} key - Storage key
  * @param {string} value - Token value
- * @param {boolean} persist - Use localStorage (true) or sessionStorage (false)
  */
-export function storeToken(key, value, persist = false) {
+export function storeToken(key, value) {
 	if (!value) return;
 
-	const storage = persist ? localStorage : sessionStorage;
 	const obfuscated = obfuscate(value, getObfuscationKey());
-	storage.setItem(key, obfuscated);
+	sessionStorage.setItem(key, obfuscated);
 }
 
 /**
- * Retrieve and deobfuscate token
+ * Retrieve and deobfuscate token from sessionStorage
  * @param {string} key - Storage key
- * @param {boolean} persist - Check localStorage (true) or sessionStorage (false)
  * @returns {string|null} Token value or null
  */
-export function getToken(key, persist = false) {
-	const storage = persist ? localStorage : sessionStorage;
-	const obfuscated = storage.getItem(key);
-
-	if (!obfuscated) {
-		// Try the other storage as fallback
-		const altStorage = persist ? sessionStorage : localStorage;
-		const altObfuscated = altStorage.getItem(key);
-		return altObfuscated ? deobfuscate(altObfuscated, getObfuscationKey()) : null;
-	}
+export function getToken(key) {
+	const obfuscated = sessionStorage.getItem(key);
+	if (!obfuscated) return null;
 
 	var tk = deobfuscate(obfuscated, getObfuscationKey());
 	console.log('Retrieved token for key', key, ':', tk ? '***' : 'null');
@@ -96,19 +86,11 @@ export function removeToken(key) {
 	sessionStorage.removeItem(key);
 }
 
-const AUTH_TOKEN_KEYS = ['FirebaseToken', 'AccessToken', 'refreshToken'];
+const AUTH_TOKEN_KEYS = ['FirebaseToken', 'AccessToken'];
 
 /**
  * Clear all auth tokens
  */
 export function clearAllTokens() {
 	AUTH_TOKEN_KEYS.forEach((key) => removeToken(key));
-}
-
-/**
- * Clear auth tokens from localStorage only, leaving sessionStorage untouched.
- * Use this when purging a remembered session without affecting an active non-remembered session.
- */
-export function clearLocalStorageTokens() {
-	AUTH_TOKEN_KEYS.forEach((key) => localStorage.removeItem(key));
 }
