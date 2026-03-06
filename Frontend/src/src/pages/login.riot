@@ -55,11 +55,6 @@
                       <span>Continue with Google</span>
                     </button>
                   </div>
-                  <div class="form-check mb-3">
-                    <input class="form-check-input" type="checkbox" checked={state.rememberMe}
-                           onchange={toggleRememberMe} id="rememberMe" />
-                    <label class="form-check-label" for="rememberMe"> Remember me for 30 days </label>
-                  </div>
                   <p class="small text-muted">By signing in, you agree to our <a href="/terms">Terms and Conditions</a>. </p>
                 </div>
               </div>
@@ -75,7 +70,6 @@
 
     export default {
       state: {
-        rememberMe: false,
         isLoading: false,
         loginMessage: '',
         loginMessageClass: '',
@@ -85,15 +79,6 @@
       async onMounted() {
         authApiService.setApi(this.api)
         this.loadTheme()
-        // If user already has a valid remembered session, restore it and skip login
-        if (authApiService.isSessionValid()) {
-          const restored = await authApiService.restoreSession()
-          if (restored) {
-            authApiService.notifySignIn()
-            router.push('/project')
-            return
-          }
-        }
       },
       applyBodyTheme(isDark) {
         if (typeof document !== 'undefined' && document.body) {
@@ -105,9 +90,6 @@
         const isDark = savedTheme ? savedTheme === 'dark' : true
         this.update({ isDarkTheme: isDark })
         this.applyBodyTheme(isDark)
-      },
-      toggleRememberMe(event) {
-        this.update({ rememberMe: event.target.checked })
       },
       showMessage(message, isError = false) {
         this.update({
@@ -127,7 +109,7 @@
 
         try {
           // Perform the social login
-          await authApiService.loginAndStore(this.state.rememberMe, providerName)
+          await authApiService.loginAndStore(providerName)
           this.showMessage('Login successful! Redirecting...', false)
           // Redirect to the editor after a short delay
           setTimeout(() => {

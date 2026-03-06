@@ -435,7 +435,6 @@
         this.onScroll = this.handleScroll.bind(this)
         window.addEventListener('scroll', this.onScroll)
         this.createParticles()
-        this.checkSession()
       },
       onBeforeUnmount() {
         window.removeEventListener('scroll', this.onScroll)
@@ -456,18 +455,6 @@
         const isDark = savedTheme ? savedTheme === 'dark' : true
         this.update({ isDarkTheme: isDark })
         this.applyBodyTheme(isDark)
-      },
-      async checkSession() {
-        if (authApiService.isSessionValid()) {
-          const restored = await authApiService.restoreSession()
-          if (restored) {
-            const userData = authApiService.getUserData()
-            this.update({
-              isLoggedIn: true,
-              userPhotoUrl: userData?.PhotoUrl || null
-            })
-          }
-        }
       },
       clearUserPhoto() {
         this.update({ userPhotoUrl: null })

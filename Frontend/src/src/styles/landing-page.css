@@ -103,7 +103,7 @@
   background-color: rgba(7, 11, 30, 0.9);
 }
 
-/* User session button group (shown when rememberMe session is active) */
+/* User session button group */
 .user-session-group {
   display: inline-flex;
   align-items: center;
