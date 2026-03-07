@@ -1,7 +1,7 @@
 import { auth, googleProvider, facebookProvider, microsoftProvider } from '../plugins/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { bus, EVENT_TYPES } from '../plugins/bus';
-import { storeToken } from '../plugins/tokenStorage';
+import { storeToken, getToken } from '../plugins/tokenStorage';
 
 class AuthApiService {
 	constructor() {
@@ -123,6 +123,9 @@ class AuthApiService {
 			if (response?.AccessToken) {
 				storeToken('AccessToken', response.AccessToken);
 			}
+			if (response?.RefreshToken) {
+				storeToken('RefreshToken', response.RefreshToken);
+			}
 
 			return response;
 		} catch (error) {
@@ -152,6 +155,40 @@ class AuthApiService {
 		const response = await this.login(firebaseToken, providerName);
 		this.notifySignIn(); // Notify other parts of the app about sign-in
 		return response;
+	}
+
+	/**
+	 * Refresh the access token using the stored refresh token.
+	 * On success, updates AccessToken and RefreshToken in sessionStorage.
+	 * Returns true if the refresh succeeded, false otherwise.
+	 * @returns {Promise<boolean>}
+	 */
+	async refreshToken() {
+		try {
+			const refreshToken = getToken('RefreshToken');
+			if (!refreshToken) {
+				return false;
+			}
+
+			const response = await this.api.post(`${this.baseURL}/refresh`, {
+				RefreshToken: refreshToken,
+			});
+
+			if (response?.AccessToken) {
+				storeToken('AccessToken', response.AccessToken);
+			}
+			if (response?.RefreshToken) {
+				storeToken('RefreshToken', response.RefreshToken);
+			}
+			if (response?.User) {
+				sessionStorage.setItem('userData', JSON.stringify(response.User));
+			}
+
+			return true;
+		} catch (error) {
+			console.error('Token refresh failed:', error);
+			return false;
+		}
 	}
 
 	/**

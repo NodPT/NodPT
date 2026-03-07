@@ -22,10 +22,17 @@
 
   <script>
     import { Router, Route } from '@riotjs/route'
+    import { router } from '@riotjs/route'
     import lazy from '@riotjs/lazy'
     import Loader from './components/loader.riot'
     import NotFound from './pages/not-found.riot'
     import Create from './pages/create.riot'
+    import authApiService from './services/authApiService'
+    import { bus, EVENT_TYPES } from './plugins/bus'
+
+    // Access tokens expire after 15 minutes; refresh 1 minute before that window closes.
+    const TOKEN_REFRESH_INTERVAL_MS = 14 * 60 * 1000
+
     export default {
       components: {
         Router,
@@ -41,6 +48,44 @@
       },
       state: {
         showNotFound: false,
+      },
+      _refreshTimer: null,
+      _refreshing: false,
+      onMounted() {
+        authApiService.setApi(this.api)
+        this.startTokenRefresh()
+        bus.on(EVENT_TYPES.AUTH_SIGNED_IN, this.startTokenRefresh)
+        bus.on(EVENT_TYPES.AUTH_SIGNED_OUT, this.stopTokenRefresh)
+        bus.on(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, this.stopTokenRefresh)
+      },
+      onBeforeUnmount() {
+        this.stopTokenRefresh()
+        bus.off(EVENT_TYPES.AUTH_SIGNED_IN, this.startTokenRefresh)
+        bus.off(EVENT_TYPES.AUTH_SIGNED_OUT, this.stopTokenRefresh)
+        bus.off(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, this.stopTokenRefresh)
+      },
+      startTokenRefresh() {
+        this.stopTokenRefresh()
+        this._refreshTimer = setInterval(async () => {
+          if (this._refreshing) return
+          this._refreshing = true
+          try {
+            const ok = await authApiService.refreshToken()
+            if (!ok) {
+              this.stopTokenRefresh()
+              bus.trigger(EVENT_TYPES.AUTH_REQUIRES_RELOGIN, { reason: 'refresh_failed' })
+              router.push('/login')
+            }
+          } finally {
+            this._refreshing = false
+          }
+        }, TOKEN_REFRESH_INTERVAL_MS)
+      },
+      stopTokenRefresh() {
+        if (this._refreshTimer) {
+          clearInterval(this._refreshTimer)
+          this._refreshTimer = null
+        }
       },
     }
   </script>

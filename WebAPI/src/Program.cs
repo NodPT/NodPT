@@ -4,12 +4,15 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using NodPT.API.BackgroundServices;
 using NodPT.API.Hubs;
+using NodPT.API.Services;
 using NodPT.Data.Services;
 using RedisService.Cache;
 using RedisService.Queue;
 using StackExchange.Redis;
 using System;
 using System.Linq;
+using System.Text;
+using System.IdentityModel.Tokens.Jwt;
 using NodPT.Utils;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args); // 🔹 Create builder
@@ -21,6 +24,9 @@ DatabaseInitializer.Initialize(builder);
 
 // Redis configuration
 Common.SetupRedis<Program>(builder);
+
+// 🔹 Register TokenService (JWT generation + Redis-backed token management)
+builder.Services.AddScoped<TokenService>();
 
 // 🔹 Add IHttpContextAccessor for HTTP context access
 builder.Services.AddHttpContextAccessor();
@@ -119,49 +125,68 @@ catch (Exception ex)
 
 
 
-//! Add authentication using Firebase JWTs via JWT Bearer
+//! Add authentication using our own HMAC-SHA256-signed JWTs
+// Firebase tokens are only used inside AuthController.Login for initial identity
+// verification (via Firebase Admin SDK). All subsequent API calls use our own
+// shorter-lived JWTs so we can enforce 15-minute expiry and token revocation.
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        string JwksUrl = $"https://securetoken.google.com/{firebaseProjectId}";
-        options.Authority = JwksUrl; // 🔹 Set the authority to Firebase JWKS URL
-        options.Audience = firebaseProjectId; // Audience must match project id
+        // Resolve the signing key via the centralized static helper on TokenService so the
+        // same secret-resolution logic (config → env var → dev fallback) is used here and
+        // in the scoped TokenService instance that generates tokens.
+        var signingKey = TokenService.ResolveSigningKey(builder.Configuration);
+        var issuer = builder.Configuration["Jwt:Issuer"] ?? "nodpt-api";
+        var audience = builder.Configuration["Jwt:Audience"] ?? "nodpt-client";
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true, // 🔹 Validate the issuer of the token
-            ValidIssuer = JwksUrl,
+            ValidateIssuer = true,
+            ValidIssuer = issuer,
             ValidateAudience = true,
-            ValidAudience = firebaseProjectId,
+            ValidAudience = audience,
             ValidateLifetime = true,
-            // Provide signing keys from Google's JWKS (Firebase)
-            IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
-            {
-                var keys = FirebaseHelper.FirebaseKeysProvider.GetSigningKeys(); // Get signing keys from Firebase 
-                if (!string.IsNullOrEmpty(kid))
-                {
-                    // Match the key id (kid) with the keys from Firebase
-                    var matched = keys.Where(k => (k.KeyId?.Equals(kid, StringComparison.Ordinal)) == true).ToList<SecurityKey>();
-                    if (matched.Count > 0)
-                        return matched; // Return matched key(s)
-                }
-                return keys.ToList<SecurityKey>(); // Fallback to all keys if no key match
-            }
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = signingKey,
+            // Zero clock-skew: the 15-minute access token window is tight
+            ClockSkew = TimeSpan.Zero,
         };
 
-        // Include error details in development
         options.IncludeErrorDetails = builder.Environment.IsDevelopment();
 
-        // Configure for SignalR to use query string token
         options.Events = new JwtBearerEvents
         {
+            // Check whether the access token has been revoked (e.g., after logout).
+            // Revoked JTIs are stored in Redis with a TTL equal to the token's
+            // remaining validity and are therefore auto-cleaned without a cron job.
+            OnTokenValidated = async context =>
+            {
+                var jti = context.Principal?
+                    .FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+
+                if (!string.IsNullOrEmpty(jti))
+                {
+                    var tokenService = context.HttpContext.RequestServices
+                        .GetRequiredService<TokenService>();
+
+                    if (await tokenService.IsAccessTokenRevokedAsync(jti))
+                    {
+                        context.Fail("Token has been revoked.");
+                    }
+                }
+            },
+
+            // Allow SignalR to pass the access token via query-string parameters
+            // "access_token" or "token" when connecting to the /signalr hub.
             OnMessageReceived = context =>
             {
                 var accessToken = context.Request.Query["access_token"];
                 if (string.IsNullOrEmpty(accessToken))
                     accessToken = context.Request.Query["token"];
-                var path = context.HttpContext.Request.Path;
 
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/signalr", StringComparison.OrdinalIgnoreCase))
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/signalr", StringComparison.OrdinalIgnoreCase))
                 {
                     context.Token = accessToken;
                 }

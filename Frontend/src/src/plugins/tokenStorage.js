@@ -86,7 +86,7 @@ export function removeToken(key) {
 	sessionStorage.removeItem(key);
 }
 
-const AUTH_TOKEN_KEYS = ['FirebaseToken', 'AccessToken'];
+const AUTH_TOKEN_KEYS = ['FirebaseToken', 'AccessToken', 'RefreshToken'];
 
 /**
  * Clear all auth tokens

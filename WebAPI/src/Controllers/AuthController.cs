@@ -7,6 +7,7 @@ using NodPT.Data.DTOs;
 using NodPT.Data.Models;
 using Microsoft.IdentityModel.JsonWebTokens;
 using System.Linq;
+using NodPT.API.Services;
 
 namespace NodPT.API.Controllers
 {
@@ -15,9 +16,12 @@ namespace NodPT.API.Controllers
     public class AuthController : ControllerBase
     {
         UnitOfWork? session;
-        public AuthController(UnitOfWork _unitOfWork)
+        private readonly TokenService _tokenService;
+
+        public AuthController(UnitOfWork _unitOfWork, TokenService tokenService)
         {
             this.session = _unitOfWork;
+            _tokenService = tokenService;
         }
 
         private static readonly HttpClient httpClient = new();
@@ -125,12 +129,21 @@ namespace NodPT.API.Controllers
                 }
 #endif
 
-                // Invalidate any existing refresh tokens
+                // Invalidate any existing refresh tokens (clear DB fields + Redis)
+                if (!string.IsNullOrEmpty(user.RefreshToken))
+                {
+                    await _tokenService.RevokeRefreshTokenAsync(user.FirebaseUid!, user.RefreshToken);
+                }
                 user.RefreshToken = null;
                 user.RefreshTokenExpiry = null;
 
                 session.Save(user);
                 session.CommitTransaction();
+
+                // Generate HMAC-SHA256 signed access token (15 min) and refresh token (30 days)
+                var accessToken = _tokenService.GenerateAccessToken(user);
+                var refreshToken = TokenService.GenerateRefreshToken();
+                await _tokenService.StoreRefreshTokenAsync(refreshToken, user.FirebaseUid!);
 
 #if !DEBUG
                 // Log successful login
@@ -154,8 +167,9 @@ namespace NodPT.API.Controllers
                         CreatedAt = user.CreatedAt,
                         LastLoginAt = user.LastLoginAt
                     },
-                    AccessToken = request.FirebaseToken, // In real implementation, generate JWT
-                    ExpiresAt = DateTime.UtcNow.AddHours(1)
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken,
+                    ExpiresAt = DateTime.UtcNow.Add(TokenService.AccessTokenExpiry)
                 });
             }
             catch (Exception ex)
@@ -186,11 +200,22 @@ namespace NodPT.API.Controllers
 
             try
             {
+                // Look up the firebaseUid that owns this refresh token from Redis
+                var firebaseUid = await _tokenService.GetRefreshTokenOwnerAsync(request.RefreshToken);
+
+                if (string.IsNullOrEmpty(firebaseUid))
+                {
+                    return Unauthorized(new AuthResponseDto
+                    {
+                        Success = false,
+                        Message = "Invalid or expired refresh token"
+                    });
+                }
 
                 session!.BeginTransaction();
 
-                // Find user by refresh token
-                var user = session.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("RefreshToken", request.RefreshToken));
+                // Load the user from the database using the firebaseUid stored in Redis
+                var user = session.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("FirebaseUid", firebaseUid));
 
                 if (user == null || !user.Active)
                 {
@@ -199,34 +224,6 @@ namespace NodPT.API.Controllers
                     {
                         Success = false,
                         Message = "Invalid or expired refresh token"
-                    });
-                }
-
-                // Check refresh token expiry (3-month maximum); null means no expiry was set (pre-migration), treat as expired
-                if (!user.RefreshTokenExpiry.HasValue || user.RefreshTokenExpiry.Value < DateTime.UtcNow)
-                {
-                    user.RefreshToken = null;
-                    user.RefreshTokenExpiry = null;
-                    session.Save(user);
-                    session.CommitTransaction();
-                    return Unauthorized(new AuthResponseDto
-                    {
-                        Success = false,
-                        Message = "Refresh token has expired. Please login again."
-                    });
-                }
-
-                // Check inactivity: if user has not logged in for more than 7 days, expire the session
-                if (user.LastLoginAt < DateTime.UtcNow.AddDays(-7))
-                {
-                    user.RefreshToken = null;
-                    user.RefreshTokenExpiry = null;
-                    session.Save(user);
-                    session.CommitTransaction();
-                    return Unauthorized(new AuthResponseDto
-                    {
-                        Success = false,
-                        Message = "Session expired due to inactivity. Please login again."
                     });
                 }
 
@@ -241,13 +238,15 @@ namespace NodPT.API.Controllers
 
                 // Update last login time
                 user.LastLoginAt = DateTime.UtcNow;
-
-                // Generate new refresh token
-                var newRefreshToken = GenerateRefreshToken();
-                user.RefreshToken = newRefreshToken;
-
                 session.Save(user);
                 session.CommitTransaction();
+
+                // Rotate: revoke old refresh token and issue new ones
+                await _tokenService.RevokeRefreshTokenAsync(firebaseUid, request.RefreshToken);
+                var newRefreshToken = TokenService.GenerateRefreshToken();
+                await _tokenService.StoreRefreshTokenAsync(newRefreshToken, firebaseUid);
+
+                var newAccessToken = _tokenService.GenerateAccessToken(user);
 
                 // Log successful token refresh
                 await LogUserAccessAsync(user, "refresh_token", true);
@@ -270,9 +269,9 @@ namespace NodPT.API.Controllers
                         CreatedAt = user.CreatedAt,
                         LastLoginAt = user.LastLoginAt
                     },
-                    AccessToken = $"mock_token_{user.FirebaseUid}", // Mock token
+                    AccessToken = newAccessToken,
                     RefreshToken = newRefreshToken,
-                    ExpiresAt = user.RefreshTokenExpiry ?? DateTime.UtcNow.AddHours(1)
+                    ExpiresAt = DateTime.UtcNow.Add(TokenService.AccessTokenExpiry)
                 });
             }
             catch (Exception ex)
@@ -287,20 +286,17 @@ namespace NodPT.API.Controllers
         }
 
         /// <summary>
-        /// Logout and invalidate refresh token
+        /// Logout and invalidate the current access token and refresh token
         /// </summary>
         [HttpGet("logout")]
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
             try
             {
-                session!.BeginTransaction();
-
                 string? uid = UserService.GetFirebaseUIDFromContent(User);
 
                 if (string.IsNullOrEmpty(uid))
                 {
-                    session.RollbackTransaction();
                     return Unauthorized(new AuthResponseDto
                     {
                         Success = false,
@@ -308,23 +304,41 @@ namespace NodPT.API.Controllers
                     });
                 }
 
-                // Find user by the user who was login with the jwt token
-                var user = session.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("FirebaseUid", uid));
+                // Revoke the current access token JTI so it cannot be reused.
+                // The revoked entry in Redis auto-expires when the token would have
+                // expired naturally (≤ 15 min), avoiding any memory accumulation.
+                var rawToken = Request.Headers["Authorization"].ToString()
+                    .Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase).Trim();
 
+                if (!string.IsNullOrEmpty(rawToken))
+                {
+                    var (jti, expiry) = _tokenService.ParseTokenClaims(rawToken);
+                    if (!string.IsNullOrEmpty(jti) && expiry.HasValue)
+                    {
+                        await _tokenService.RevokeAccessTokenAsync(jti, expiry.Value);
+                    }
+                }
+
+                // Remove the user's active refresh token from Redis so it cannot be reused.
+                session!.BeginTransaction();
+                var user = session.FindObject<User>(new DevExpress.Data.Filtering.BinaryOperator("FirebaseUid", uid));
                 if (user != null)
                 {
-                    // Clear refresh token
-                    user.RefreshToken = null;
-                    session.Save(user);
+                    // Clear any legacy DB refresh-token field
+                    if (!string.IsNullOrEmpty(user.RefreshToken))
+                    {
+                        user.RefreshToken = null;
+                        session.Save(user);
+                    }
                     session.CommitTransaction();
-
-                    // Log successful logout
-                    // LogUserAccess(user, "logout", true);
                 }
                 else
                 {
                     session.RollbackTransaction();
                 }
+
+                // Revoke refresh token stored in Redis (keyed by uid, regardless of DB state)
+                await _tokenService.RevokeRefreshTokenByUserAsync(uid);
 
                 return Ok(new AuthResponseDto
                 {
@@ -403,17 +417,6 @@ namespace NodPT.API.Controllers
         }
 
         /// <summary>
-        /// Generate a secure refresh token
-        /// </summary>
-        private string GenerateRefreshToken()
-        {
-            using var rng = RandomNumberGenerator.Create();
-            var tokenData = new byte[64];
-            rng.GetBytes(tokenData);
-            return Convert.ToBase64String(tokenData);
-        }
-
-        /// <summary>
         /// Log user access activity
         /// </summary>
         private async Task LogUserAccessAsync(User? user, string action, bool success, string? errorMessage = null)
@@ -433,7 +436,7 @@ namespace NodPT.API.Controllers
             // Database logging in background task to avoid transaction conflicts
             try
             {
-                var freshUser = session.GetObjectByKey<User>(user.Oid);
+                var freshUser = session!.GetObjectByKey<User>(user.Oid);
                 if (freshUser == null)
                     return;
 
