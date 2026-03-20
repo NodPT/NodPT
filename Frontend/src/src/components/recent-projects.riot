@@ -37,11 +37,13 @@
         recentProjects: [],
         error: false
       },
-      onBeforeMount() {
+      onMounted() {
         authApiService.setApi(this.api)
         projectApiService.setApi(this.api)
-      },
-      onMounted() {
+        const modalElement = document.getElementById('openProjectModal')
+        if (modalElement) {
+          modalElement.addEventListener('show.bs.modal', () => this.loadProjects())
+        }
         this.loadProjects()
       },
       formatDate(dateString) {

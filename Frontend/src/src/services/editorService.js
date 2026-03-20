@@ -421,7 +421,13 @@ export const initGraph = (canvas, container, options = {}) => {
       return
     }
     lastSelectedNodeId = nextId
-    emitEvent(EVENT_TYPES.NODE_SELECTED, node)
+    emitEvent(EVENT_TYPES.NODE_SELECTED, node ? {
+      id: node.id,
+      type: (node.properties?.nodeType || 'agent').toLowerCase(),
+      name: node.title,
+      title: node.title,
+      properties: node.properties
+    } : null)
     console.log(`selected node`, lastSelectedNodeId)
   }
   // when node is deselected, emit with null
