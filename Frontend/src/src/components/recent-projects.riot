@@ -42,9 +42,17 @@
         projectApiService.setApi(this.api)
         const modalElement = document.getElementById('openProjectModal')
         if (modalElement) {
-          modalElement.addEventListener('show.bs.modal', () => this.loadProjects())
+          this.modalShowHandler = () => this.loadProjects()
+          modalElement.addEventListener('show.bs.modal', this.modalShowHandler)
         }
         this.loadProjects()
+      },
+      onBeforeUnmount() {
+        const modalElement = document.getElementById('openProjectModal')
+        if (modalElement && this.modalShowHandler) {
+          modalElement.removeEventListener('show.bs.modal', this.modalShowHandler)
+          this.modalShowHandler = null
+        }
       },
       formatDate(dateString) {
         if (!dateString) return ''
