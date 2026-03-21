@@ -59,18 +59,15 @@
         currentProjectId: null,
         isRenaming: false
       },
-      onBeforeMount() {
-        projectApiService.setApi(this.api)
-      },
       onMounted() {
+        projectApiService.setApi(this.api)
         const modalElement = document.getElementById('renameProjectModal')
         if (modalElement) {
           modalElement.addEventListener('show.bs.modal', async () => {
-            const urlParams = new URLSearchParams(window.location.search)
-            const projectId = urlParams.get('pid') || urlParams.get('projectId')
+            const projectId = projectApiService.getProjectId()
 
             if (!projectId) {
-              console.warn('No project ID found in URL')
+              console.warn('No project ID found')
               return
             }
 

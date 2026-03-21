@@ -37,12 +37,22 @@
         recentProjects: [],
         error: false
       },
-      onBeforeMount() {
+      onMounted() {
         authApiService.setApi(this.api)
         projectApiService.setApi(this.api)
-      },
-      onMounted() {
+        const modalElement = document.getElementById('openProjectModal')
+        if (modalElement) {
+          this.modalShowHandler = () => this.loadProjects()
+          modalElement.addEventListener('show.bs.modal', this.modalShowHandler)
+        }
         this.loadProjects()
+      },
+      onBeforeUnmount() {
+        const modalElement = document.getElementById('openProjectModal')
+        if (modalElement && this.modalShowHandler) {
+          modalElement.removeEventListener('show.bs.modal', this.modalShowHandler)
+          this.modalShowHandler = null
+        }
       },
       formatDate(dateString) {
         if (!dateString) return ''
