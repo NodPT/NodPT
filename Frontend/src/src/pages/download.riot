@@ -1,0 +1,140 @@
+<download-page>
+  <div class="container py-5" data-theme={state.isDarkTheme ? 'dark' : 'light'}>
+    <div class="row justify-content-center">
+      <div class="col-lg-9">
+        <div class="text-center mb-5">
+          <h1 class="display-5 fw-bold mb-3">
+            Download <span class="gradient-text">NodPT</span>
+          </h1>
+          <p class="lead text-white-50">
+            The desktop client runs locally on your machine and uses
+            <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a>
+            for fully offline AI &mdash; no account, no cloud, no login required.
+          </p>
+        </div>
+
+        <div if={state.detectedOs} class="card bg-transparent border-light border-opacity-25 shadow-sm mb-5">
+          <div class="card-body p-4 text-center">
+            <p class="text-uppercase text-white-50 small mb-2">Recommended for your system</p>
+            <h3 class="fw-semibold text-white mb-3">
+              <i class={state.recommended.icon + ' me-2 text-primary'}></i>
+              { state.recommended.label }
+            </h3>
+            <a href={state.recommended.url} class="btn btn-primary btn-lg px-5" download>
+              <i class="bi bi-download me-2"></i>Download for { state.recommended.label }
+            </a>
+            <p class="small text-white-50 mt-3 mb-0">Detected platform: { state.detectedOs }</p>
+          </div>
+        </div>
+
+        <h4 class="text-white fw-semibold mb-3">All downloads</h4>
+        <div class="row g-3">
+          <div each={opt in state.options} class="col-md-4">
+            <div class={"card h-100 bg-transparent border-light border-opacity-25 shadow-sm" + (opt.key === state.recommended.key ? ' border-primary' : '')}>
+              <div class="card-body text-center p-4">
+                <i class={opt.icon + ' display-5 text-primary mb-3 d-block'}></i>
+                <h5 class="text-white fw-semibold mb-2">{ opt.label }</h5>
+                <p class="small text-white-50 mb-3">{ opt.note }</p>
+                <a href={opt.url} class="btn btn-outline-primary" download>
+                  <i class="bi bi-download me-1"></i>Download
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-secondary mt-5">
+          <h5 class="alert-heading">
+            <i class="bi bi-info-circle me-2"></i>Before you start
+          </h5>
+          <p class="mb-2">
+            NodPT runs models through Ollama. Install Ollama first, then start it with
+            <code>ollama serve</code> and pull a model such as <code>ollama pull llama3.2:3b</code>.
+          </p>
+          <p class="mb-0">
+            By default the desktop client connects to <code>http://localhost:11434</code>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * Replace these URLs with the actual GitHub Releases asset URLs once
+     * ThickClient builds are published.
+     */
+    const RELEASES_BASE = 'https://github.com/NodPT/NodPT/releases/latest'
+    const OPTIONS = [
+      {
+        key: 'windows',
+        label: 'Windows',
+        icon: 'bi bi-windows',
+        url: RELEASES_BASE + '/download/NodPT-Setup.exe',
+        note: '64-bit installer (.exe). Windows 10 or later.',
+      },
+      {
+        key: 'mac',
+        label: 'macOS',
+        icon: 'bi bi-apple',
+        url: RELEASES_BASE + '/download/NodPT.dmg',
+        note: 'Universal disk image (.dmg). macOS 12+.',
+      },
+      {
+        key: 'linux',
+        label: 'Linux',
+        icon: 'bi bi-ubuntu',
+        url: RELEASES_BASE + '/download/NodPT.AppImage',
+        note: 'AppImage. Works on most modern distros.',
+      },
+    ]
+
+    /**
+     * Heuristically detect the user's operating system from the browser's
+     * userAgentData (preferred) or the legacy userAgent string.
+     */
+    function detectOs() {
+      try {
+        const uaData = navigator.userAgentData
+        if (uaData && uaData.platform) {
+          const p = uaData.platform.toLowerCase()
+          if (p.includes('win')) return 'windows'
+          if (p.includes('mac')) return 'mac'
+          if (p.includes('linux')) return 'linux'
+        }
+      } catch (_) { /* ignore */ }
+
+      const ua = (navigator.userAgent || '').toLowerCase()
+      if (ua.includes('windows')) return 'windows'
+      if (ua.includes('mac os') || ua.includes('macintosh')) return 'mac'
+      if (ua.includes('linux') || ua.includes('x11')) return 'linux'
+      return 'linux'
+    }
+
+    export default {
+      state: {
+        isDarkTheme: true,
+        detectedOs: '',
+        options: OPTIONS,
+        recommended: OPTIONS[2],
+      },
+      onMounted() {
+        this.loadTheme()
+        const os = detectOs()
+        const rec = OPTIONS.find((o) => o.key === os) || OPTIONS[2]
+        this.update({ detectedOs: os, recommended: rec })
+      },
+      applyBodyTheme(isDark) {
+        if (typeof document !== 'undefined' && document.body) {
+          document.body.setAttribute('data-theme', isDark ? 'dark' : 'light')
+        }
+      },
+      loadTheme() {
+        const savedTheme = localStorage.getItem('appTheme')
+        const isDark = savedTheme ? savedTheme === 'dark' : true
+        this.update({ isDarkTheme: isDark })
+        this.applyBodyTheme(isDark)
+      },
+    }
+  </script>
+</download-page>

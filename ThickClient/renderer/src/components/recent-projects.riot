@@ -1,0 +1,112 @@
+<recent-projects>
+  <div class="recent-projects">
+    <h5 class="mb-3">Recent Projects</h5>
+    <div class="project-list">
+      <div each={project in state.recentProjects} key={project.Id}
+        class="project-item d-flex align-items-center mb-2 py-2 px-1 hover-shadow cursor-pointer"
+        data-project-id={project.Id} onclick={openProject}>
+        <div class="project-icon me-3">
+          <i class={project.TemplateIcon}></i>
+        </div>
+        <div class="project-details flex-grow-1">
+          <h6 class="mb-0 fw-bold">{project.Name}</h6>
+          <small class="text-muted">{formatDate(project.UpdatedAt)}</small>
+        </div>
+      </div>
+
+      <div if={state.recentProjects.length===0 && !state.error} class="text-center text-muted py-4">
+        <i class="bi bi-folder2-open fs-1 mb-2"></i>
+        <p>No recent projects found</p>
+      </div>
+
+      <div if={state.error} class="text-center text-danger py-4">
+        <i class="bi bi-folder2-open fs-1 mb-2"></i>
+        <p>Internal Server Error</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { router } from '@riotjs/route'
+    import { Modal } from 'bootstrap'
+    import authApiService from '../services/authApiService'
+    import projectApiService from '../services/projectApiService'
+
+    export default {
+      state: {
+        recentProjects: [],
+        error: false
+      },
+      onMounted() {
+        authApiService.setApi(this.api)
+        projectApiService.setApi(this.api)
+        const modalElement = document.getElementById('openProjectModal')
+        if (modalElement) {
+          this.modalShowHandler = () => this.loadProjects()
+          modalElement.addEventListener('show.bs.modal', this.modalShowHandler)
+        }
+        this.loadProjects()
+      },
+      onBeforeUnmount() {
+        const modalElement = document.getElementById('openProjectModal')
+        if (modalElement && this.modalShowHandler) {
+          modalElement.removeEventListener('show.bs.modal', this.modalShowHandler)
+          this.modalShowHandler = null
+        }
+      },
+      formatDate(dateString) {
+        if (!dateString) return ''
+
+        const date = new Date(dateString)
+        const now = new Date()
+        const diffTime = Math.abs(now - date)
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+        if (diffDays === 1) return 'Yesterday'
+        if (diffDays < 7) return `${diffDays} days ago`
+        if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`
+        return date.toLocaleDateString()
+      },
+      openProject(event) {
+        const projectId = event?.currentTarget?.dataset?.projectId
+        const project = this.state.recentProjects.find((p) => String(p.Id) === String(projectId))
+        if (!project) return
+
+        const modalElement = document.getElementById('openProjectModal')
+        if (modalElement) {
+          const modal = Modal.getInstance(modalElement)
+          if (modal) {
+            modal.hide()
+          }
+        }
+
+        projectApiService.setProjectId(project.Id)
+        router.push(`/editor`)
+      },
+      async loadProjects() {
+        try {
+          const userData = authApiService.getUserData()
+
+          if (!userData) {
+            console.warn('No user data found, cannot load projects')
+            return
+          }
+
+          let projects = await projectApiService.getUserProjects()
+
+          if (!projects)
+            projects = []
+
+          const recentProjects = projects
+            .filter((project) => project.IsActive)
+            .sort((a, b) => new Date(b.UpdatedAt) - new Date(a.UpdatedAt))
+
+          this.update({ recentProjects, error: false })
+        } catch (error) {
+          console.error('Failed to load recent projects:', error)
+          this.update({ recentProjects: [], error: true })
+        }
+      }
+    }
+  </script>
+</recent-projects>
