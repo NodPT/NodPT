@@ -78,7 +78,8 @@ async function dispatch(method, url, body) {
 		// /nodes/:projectId          - same, alternative shape
 		if (method === 'GET' && a && !b) {
 			const id = parseId(a)
-			// Numeric id => list-by-project; otherwise treat as a node id lookup.
+			// Project IDs are numeric (SQLite INTEGER PRIMARY KEY) while Node IDs
+			// are UUID strings, so the parse result reliably disambiguates the two.
 			if (typeof id === 'number') return ipc.nodes.list(id)
 			return ipc.nodes.get(a)
 		}
