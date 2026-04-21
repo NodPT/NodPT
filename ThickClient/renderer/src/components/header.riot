@@ -73,7 +73,7 @@
       <div class="d-flex align-items-center">
         <div class="input-group me-2">
           <input type="text" class="form-control"
-            splaceholder="Search nodes..." value={state.searchTerm}
+    placeholder="Search nodes..." value={state.searchTerm}
             oninput={handleSearchInput} onkeyup={handleSearchKey} ref={searchInputRef} />
           <button if={state.searchTerm} class="btn btn-outline-secondary"
             type="button" onclick={clearSearch}

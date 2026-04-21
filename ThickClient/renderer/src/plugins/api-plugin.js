@@ -41,6 +41,7 @@ function parseId(seg) {
  *   GET    /templates                      -> nodpt.templates.list()
  *   GET    /templates/:id                  -> nodpt.templates.get(id)
  *   GET    /nodes/:projectId               -> nodpt.nodes.list(projectId)
+ *   GET    /nodes/project/:projectId       -> nodpt.nodes.list(projectId)
  *   POST   /nodes                          -> nodpt.nodes.create(body)
  *   PUT    /nodes/:id                      -> nodpt.nodes.update(id, body)
  *   DELETE /nodes/:id                      -> nodpt.nodes.delete(id)
@@ -72,7 +73,15 @@ async function dispatch(method, url, body) {
 	}
 
 	if (resource === 'nodes') {
-		if (method === 'GET' && a) return ipc.nodes.list(parseId(a))
+		// /nodes/project/:projectId  - list nodes for a project
+		if (method === 'GET' && a === 'project' && b) return ipc.nodes.list(parseId(b))
+		// /nodes/:projectId          - same, alternative shape
+		if (method === 'GET' && a && !b) {
+			const id = parseId(a)
+			// Numeric id => list-by-project; otherwise treat as a node id lookup.
+			if (typeof id === 'number') return ipc.nodes.list(id)
+			return ipc.nodes.get(a)
+		}
 		if (method === 'POST' && !a) return ipc.nodes.create(body)
 		if (method === 'PUT' && a) return ipc.nodes.update(a, body)
 		if (method === 'DELETE' && a) return ipc.nodes.delete(a)

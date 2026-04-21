@@ -8,7 +8,7 @@
         </div>
         <div class={"editor-splitter " + (state.rightPanelVisible ? '' : 'is-hidden')} 
           onmousedown={startResize}></div>
-        <div class={" editor-right " + (state.rightPanelVisible ? '' : 'is-hidden')} style=" {rightPanelStyle}">
+        <div class={" editor-right " + (state.rightPanelVisible ? '' : 'is-hidden')} style={rightPanelStyle}>
           <div class=" main-editor-right-panel docked">
             <right-panel selectedNode={state.selectedNode}
                          isDarkTheme={state.isDarkTheme} />
@@ -79,13 +79,14 @@
         this.bus.on(this.EVENT_TYPES.ARRANGE_NODES, this.handleArrangeNodes)
         this.bus.on(this.EVENT_TYPES.ZOOM_FIT, this.handleZoomFit)
         this.bus.on(this.EVENT_TYPES.EDITOR_READY, this.handleEditorReady)
-        // start the SignalR connection
+        // start the local IPC-backed event service (replaces SignalR in the desktop client)
         signalRService
-          .initialize(this.bus, this.EVENT_TYPES, this.api)
+          .start()
           .then(() => {
-            this.update({ connectionStatus: signalRService.getConnectionStatus() })
+            this.update({ connectionStatus: 'connected' })
           }).catch((error) => {
-            console.error('Failed to initialize SignalR:', error)
+            console.error('Failed to start signalRService:', error)
+            this.update({ connectionStatus: 'disconnected' })
           })
       },
       onBeforeUnmount() {
@@ -160,9 +161,12 @@
           // if project not found, log and return
           if (!project) {
             console.error('Project not found for ID:', projectId)
-            this.toast.alert('Project not found or could not be loaded.')
+            const toast = window?.$toast
+            if (toast && typeof toast.alert === 'function') {
+              toast.alert('Project not found or could not be loaded.')
+            }
             setTimeout(() => {
-              router.push('/projects')
+              router.push('/project')
             }, 1000);
             return
           }

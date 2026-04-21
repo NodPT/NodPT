@@ -1,7 +1,13 @@
-import { ref } from 'vue';
+// Lightweight, framework-agnostic theme hook for the ThickClient renderer.
+// The original `Frontend/` version of this file used Vue's `ref` for shared
+// state, but ThickClient is a Riot.js app and does not depend on Vue.
+//
+// This module exposes the same `{ isDarkTheme, toggleTheme, setTheme,
+// loadTheme }` surface used by callers, but `isDarkTheme` is a plain object
+// with a `value` property instead of a Vue ref - so existing call sites that
+// read `isDarkTheme.value` keep working without modification.
 
-// Shared theme state across all components
-const isDarkTheme = ref(true);
+const isDarkTheme = { value: true };
 
 function applyBodyTheme() {
 	if (typeof document !== 'undefined' && document.body) {
@@ -10,24 +16,23 @@ function applyBodyTheme() {
 }
 
 export function useTheme() {
-	// Load theme from localStorage on first use
 	const loadTheme = () => {
-		const savedTheme = localStorage.getItem('appTheme');
+		const savedTheme = typeof localStorage !== 'undefined'
+			? localStorage.getItem('appTheme')
+			: null;
 		isDarkTheme.value = savedTheme ? savedTheme === 'dark' : true;
 		applyBodyTheme();
 	};
 
-	// Toggle theme
 	const toggleTheme = () => {
 		isDarkTheme.value = !isDarkTheme.value;
-		localStorage.setItem('appTheme', isDarkTheme.value ? 'dark' : 'light');
+		try { localStorage.setItem('appTheme', isDarkTheme.value ? 'dark' : 'light'); } catch (_) {}
 		applyBodyTheme();
 	};
 
-	// Set theme explicitly
 	const setTheme = (theme) => {
 		isDarkTheme.value = theme === 'dark';
-		localStorage.setItem('appTheme', theme);
+		try { localStorage.setItem('appTheme', theme); } catch (_) {}
 		applyBodyTheme();
 	};
 

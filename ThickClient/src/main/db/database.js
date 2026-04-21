@@ -155,7 +155,8 @@ function applySchema(database) {
       NodeId TEXT NOT NULL UNIQUE,
       Summary TEXT,
       CreatedAt TEXT NOT NULL,
-      UpdatedAt TEXT NOT NULL
+      UpdatedAt TEXT NOT NULL,
+      FOREIGN KEY (NodeId) REFERENCES Nodes(Id) ON DELETE CASCADE
     );
   `)
 }

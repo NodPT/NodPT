@@ -5,6 +5,7 @@ const path = require('node:path')
 
 const { initDatabase, closeDatabase } = require('./db/database')
 const { registerIpcHandlers } = require('./ipc/registerIpcHandlers')
+const templateService = require('./services/templateService')
 
 const isDev = process.env.NODPT_DEV === '1'
 
@@ -19,7 +20,7 @@ function createMainWindow() {
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
     },
   })
 
@@ -38,6 +39,8 @@ function createMainWindow() {
 app.whenReady().then(() => {
   // Initialize SQLite (creates tables if missing) before exposing IPC.
   initDatabase()
+  // Seed a default template so the project tiles are usable on a fresh install.
+  templateService.ensureDefaultTemplate()
   registerIpcHandlers(ipcMain)
 
   createMainWindow()

@@ -52,6 +52,7 @@
         errorMessage: '',
         selectedNode: null,
         canAddChild: false,
+        childNodeType: null,
         hierarchyInfo: 'Please select a node first'
       },
       onMounted() {
@@ -119,6 +120,7 @@
         this.update({
           selectedNode: nodeData,
           canAddChild: canAddChild,
+          childNodeType: hierarchy ? hierarchy.child : null,
           hierarchyInfo: hierarchyInfo
         })
       },
@@ -155,6 +157,7 @@
 
           const nodeData = {
             Name: this.state.nodeName.trim(),
+            NodeType: this.state.childNodeType || 'Agent',
             MessageType: 'Discussion',
             ParentId: this.state.selectedNode.id,
             ProjectId: parseInt(projectId),
