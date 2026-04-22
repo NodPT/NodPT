@@ -158,23 +158,3 @@
   height: 26px;
   object-fit: cover;
 }
-
-/* Download page: keep cards translucent on the landing gradient */
-.landing-page .download-recommended,
-.landing-page .download-info,
-.landing-page .use-case-grid .card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(6px);
-  color: #f8f9fa;
-}
-
-.landing-page .download-recommended {
-  box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.35);
-}
-
-.landing-page .download-info code {
-  background: rgba(13, 110, 253, 0.12);
-  padding: 0.1rem 0.35rem;
-  border-radius: 0.25rem;
-}

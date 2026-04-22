@@ -1,0 +1,196 @@
+<editor>
+  <div class="app-container main-editor" data-theme={state.isDarkTheme ? 'dark' : 'light' }>
+    <header-bar isDarkTheme={state.isDarkTheme} showMenu={true} />
+    <div class="main-content main-editor-content position-relative">
+      <div class="editor-split">
+        <div class="editor-left">
+          <Graph />
+        </div>
+        <div class={"editor-splitter " + (state.rightPanelVisible ? '' : 'is-hidden')} 
+          onmousedown={startResize}></div>
+        <div class={" editor-right " + (state.rightPanelVisible ? '' : 'is-hidden')} style={rightPanelStyle}>
+          <div class=" main-editor-right-panel docked">
+            <right-panel selectedNode={state.selectedNode}
+                         isDarkTheme={state.isDarkTheme} />
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer-bar
+                selectedNode={state.selectedNode}
+                totalNodes={state.totalNodes}
+                progress={state.buildProgress}
+                minimapVisible={state.minimapVisible}
+                connectionStatus={state.connectionStatus} />
+    <add-node-modal />
+  </div>
+  <script>
+    import '../styles/components-dark.css'
+    import '../styles/main-editor.css'
+    import '../styles/main-editor-dark.css'
+    import HeaderBar from '../components/header.riot'
+    import FooterBar from '../components/footer.riot'
+    import { arrangeNodes, zoomFit, loadProjectNodes, resizeEditor } from '../services/editorService'
+    import signalRService from '../services/signalRService'
+    import projectApiService from '../services/projectApiService'
+    import nodeApiService from '../services/nodeApiService'
+    // import lazy from '@riotjs/lazy'
+    // import Loader from '../components/loader.riot'
+    import { router, route } from '@riotjs/route'
+    import Graph from '../components/graph.riot'
+    import RightPanel from '../components/right-panel.riot'
+    import AddNodeModal from '../components/add-node-modal.riot'
+
+    export default {
+      components: {
+        HeaderBar,
+        FooterBar,
+        Graph,
+        RightPanel,
+        AddNodeModal
+      },
+      state: {
+        minimapVisible: false,
+        selectedNode: null,
+        totalNodes: 0,
+        buildProgress: 0,
+        connectionStatus: 'disconnected',
+        rightPanelVisible: true,
+        rightPanelWidth: 416
+      },
+      onMounted() {
+        // set api
+        projectApiService.setApi(this.api)
+        nodeApiService.setApi(this.api)
+        // add events
+        this.handleSignalRStatus = (status) => this.update({ connectionStatus: status })
+        this.handleNodeSelected = (nodeData) => this.update({ selectedNode: nodeData })
+        this.handleToggleRightPanel = () => {
+          this.update({ rightPanelVisible: !this.state.rightPanelVisible })
+          resizeEditor()
+        }
+        this.handleArrangeNodes = () => arrangeNodes()
+        this.handleZoomFit = () => zoomFit()
+        this.handleEditorReady = () => this.loadProject()
+
+        this.bus.on(this.EVENT_TYPES.SIGNALR_STATUS_CHANGED, this.handleSignalRStatus)
+        this.bus.on(this.EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
+        this.bus.on(this.EVENT_TYPES.TOGGLE_RIGHT_PANEL, this.handleToggleRightPanel)
+        this.bus.on(this.EVENT_TYPES.ARRANGE_NODES, this.handleArrangeNodes)
+        this.bus.on(this.EVENT_TYPES.ZOOM_FIT, this.handleZoomFit)
+        this.bus.on(this.EVENT_TYPES.EDITOR_READY, this.handleEditorReady)
+        // start the local IPC-backed event service (replaces SignalR in the desktop client)
+        signalRService
+          .start()
+          .then(() => {
+            this.update({ connectionStatus: 'connected' })
+          }).catch((error) => {
+            console.error('Failed to start signalRService:', error)
+            this.update({ connectionStatus: 'disconnected' })
+          })
+      },
+      onBeforeUnmount() {
+        this.bus.off(this.EVENT_TYPES.SIGNALR_STATUS_CHANGED, this.handleSignalRStatus)
+        this.bus.off(this.EVENT_TYPES.NODE_SELECTED, this.handleNodeSelected)
+        this.bus.off(this.EVENT_TYPES.TOGGLE_RIGHT_PANEL, this.handleToggleRightPanel)
+        this.bus.off(this.EVENT_TYPES.ARRANGE_NODES, this.handleArrangeNodes)
+        this.bus.off(this.EVENT_TYPES.ZOOM_FIT, this.handleZoomFit)
+        this.bus.off(this.EVENT_TYPES.EDITOR_READY, this.handleEditorReady)
+        // clean up any in-progress resize listeners
+        this.stopResize()
+        // stop the signalr
+        signalRService
+          .stop()
+          .catch((error) => console.error('Error stopping SignalR:', error))
+      },
+      get rightPanelStyle() {
+        return `width: ${this.state.rightPanelWidth}px;`
+      },
+      startResize(event) {
+        if (!this.state.rightPanelVisible || this.isResizing) {
+          return
+        }
+        event.preventDefault()
+        this.isResizing = true
+        this.onResizeMove = this.handleResizeMove.bind(this)
+        this.onResizeUp = this.stopResize.bind(this)
+        document.addEventListener('mousemove', this.onResizeMove)
+        document.addEventListener('mouseup', this.onResizeUp)
+        document.body.style.cursor = 'ew-resize'
+        document.body.style.userSelect = 'none'
+      },
+      handleResizeMove(event) {
+        if (!this.isResizing) {
+          return
+        }
+        const minWidth = 280
+        const maxWidth = Math.min(640, window.innerWidth * 0.6)
+        const newWidth = Math.max(minWidth, Math.min(maxWidth, window.innerWidth - event.clientX))
+        this.update({ rightPanelWidth: newWidth })
+      },
+      stopResize() {
+        if (!this.isResizing) {
+          return
+        }
+        this.isResizing = false
+        if (this.onResizeMove) {
+          document.removeEventListener('mousemove', this.onResizeMove)
+          this.onResizeMove = null
+        }
+        if (this.onResizeUp) {
+          document.removeEventListener('mouseup', this.onResizeUp)
+          this.onResizeUp = null
+        }
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
+      },
+      async loadProject() {
+        try {
+          // get projectId from querystring
+          const projectId = projectApiService.getProjectId()
+          console.log('Editor pid querystring:', projectId)
+
+          if (!projectId) {
+            console.warn('No project ID found in URL')
+            return
+          }
+
+          console.debug('Loading project with ID:', projectId)
+          const project = await projectApiService.getProject(projectId)
+
+          // if project not found, log and return
+          if (!project) {
+            console.error('Project not found for ID:', projectId)
+            const toast = window?.$toast
+            if (toast && typeof toast.alert === 'function') {
+              toast.alert('Project not found or could not be loaded.')
+            }
+            setTimeout(() => {
+              router.push('/project')
+            }, 1000);
+            return
+          }
+
+          // publish the project name to other components
+          if (project && project.Name) {
+            this.bus.trigger(this.EVENT_TYPES.PROJECT_NAME_UPDATE, project.Name)
+          }
+
+          // Load nodes from the project
+          console.debug('Project data contains no nodes, fetching from nodes API')
+          // Fallback: try to fetch nodes using the nodeApiService
+          const nodes = await nodeApiService.getNodesByProject(projectId)
+          if (nodes && nodes.length > 0) {
+            loadProjectNodes(nodes)
+          } else {
+            console.warn('No nodes found for project:', projectId)
+          }
+
+        } catch (error) {
+          console.error('Failed to load project:', error)
+        }
+      }
+
+    }
+  </script>
+</editor>

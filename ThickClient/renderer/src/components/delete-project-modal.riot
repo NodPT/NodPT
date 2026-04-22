@@ -1,0 +1,166 @@
+<delete-project-modal>
+  <div class="modal fade" id="deleteProjectModal" tabindex="-1"
+   aria-labelledby="deleteProjectModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header border-danger">
+          <h5 class="modal-title text-danger" id="deleteProjectModalLabel">
+            <i class="bi bi-trash me-2"></i>Delete Project
+          </h5>
+          <button type="button" class="btn-close btn-close-white" 
+          data-bs-dismiss="modal" aria-label="Close"
+            onclick={resetModal}></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger delete-warning mb-3" role="alert">
+            <div class="d-flex align-items-start">
+              <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
+              <div>
+                <strong>Warning:</strong> This action cannot be undone. All project data will be permanently deleted.
+              </div>
+            </div>
+          </div>
+          <p class="text-muted mb-3">You are about to delete <strong>{state.currentProjectName}</strong></p>
+          <div class="mb-3">
+            <label for="deleteProjectNameInput" class="form-label">
+              Type <strong>{state.currentProjectName}</strong> to confirm deletion:
+            </label>
+            <input type="text" class="form-control border-danger" id="deleteProjectNameInput"
+              value={state.confirmProjectName} oninput={handleNameInput} onkeyup={handleKeyUp}
+              placeholder={"Type " + state.currentProjectName + " to confirm"} ref={projectNameInputRef} 
+              autofocus>
+            <div class="form-text text-muted">
+              This will permanently delete the project
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-danger">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick={resetModal}
+            disabled={state.isDeleting}>Cancel</button>
+          <button type="button" class="btn btn-danger" onclick={deleteProject}
+           disabled={state.confirmProjectName!==state.currentProjectName || state.isDeleting}>
+            <span if={state.isDeleting}>
+              <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              Deleting...
+            </span>
+            <span if={!state.isDeleting}>
+              <i class="bi bi-trash me-1"></i>Delete Project
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { route } from '@riotjs/route'
+    import { Modal } from 'bootstrap'
+    import projectApiService from '../services/projectApiService'
+
+    export default {
+      state: {
+        confirmProjectName: '',
+        currentProjectName: 'Untitled Project',
+        currentProjectId: null,
+        isDeleting: false
+      },
+      onMounted() {
+        projectApiService.setApi(this.api)
+        const modalElement = document.getElementById('deleteProjectModal')
+        if (modalElement) {
+          modalElement.addEventListener('show.bs.modal', async () => {
+            const projectId = projectApiService.getProjectId()
+
+            if (!projectId) {
+              console.warn('No project ID found')
+              return
+            }
+
+            try {
+              const project = await projectApiService.getProject(projectId)
+              const projectName = project?.Name || 'Untitled Project'
+              
+              this.update({
+                currentProjectName: projectName,
+                currentProjectId: parseInt(projectId, 10) || null,
+                confirmProjectName: ''
+              })
+
+              setTimeout(() => {
+                if (this.projectNameInputEl) {
+                  this.projectNameInputEl.focus()
+                }
+              }, 100)
+            } catch (error) {
+              console.error('Failed to load project:', error)
+              this.update({
+                currentProjectName: 'Untitled Project',
+                currentProjectId: parseInt(projectId, 10) || null,
+                confirmProjectName: ''
+              })
+            }
+          })
+        }
+      },
+      projectNameInputRef(el) {
+        this.projectNameInputEl = el
+      },
+      notify(type, message) {
+        const toast = window?.$toast
+        if (toast && typeof toast[type] === 'function') {
+          toast[type](message)
+          return
+        }
+        console.log(message)
+      },
+      handleNameInput(event) {
+        this.update({ confirmProjectName: event.target.value })
+      },
+      handleKeyUp(event) {
+        if (event.key === 'Enter' && this.state.confirmProjectName === this.state.currentProjectName && !this.state.isDeleting) {
+          this.deleteProject()
+        }
+      },
+      resetModal() {
+        this.update({ confirmProjectName: '', isDeleting: false })
+      },
+      async deleteProject() {
+        if (this.state.confirmProjectName !== this.state.currentProjectName || this.state.isDeleting) {
+          return
+        }
+
+        try {
+          this.update({ isDeleting: true })
+
+          if (this.state.currentProjectId) {
+            const deletedProject = await projectApiService.deleteProject(this.state.currentProjectId)
+
+            if (!deletedProject) {
+              this.notify('alert', 'Failed to delete project. Please try again.')
+              this.update({ isDeleting: false })
+              return
+            }
+
+            const modalElement = document.getElementById('deleteProjectModal')
+            const modal = Modal.getInstance(modalElement)
+            if (modal) {
+              modal.hide()
+            }
+
+            this.notify('success', `Project "${this.state.currentProjectName}" has been deleted`)
+
+            router.push('/project')
+
+            setTimeout(() => {
+              this.resetModal()
+            }, 500)
+          }
+        } catch (error) {
+          this.notify('alert', 'Failed to delete project. Please try again.')
+          this.update({ isDeleting: false })
+        }
+      }
+    }
+  </script>
+</delete-project-modal>

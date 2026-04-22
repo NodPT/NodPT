@@ -1,0 +1,60 @@
+{
+  "name": "nodpt-thickclient",
+  "version": "1.0.0",
+  "description": "NodPT desktop client (Electron). Local-first multi-agent AI workflows powered by Ollama, with SQLite persistence. Reuses the Riot.js renderer from the original Frontend project.",
+  "license": "ISC",
+  "author": "miller.nguyen",
+  "main": "src/main/index.js",
+  "scripts": {
+    "dev:renderer": "vite --config renderer/vite.config.js",
+    "dev:electron": "wait-on http://localhost:5173 && cross-env NODPT_DEV=1 electron .",
+    "dev": "concurrently -k -n renderer,electron -c blue,green \"npm:dev:renderer\" \"npm:dev:electron\"",
+    "build:renderer": "vite --config renderer/vite.config.js build",
+    "start": "electron .",
+    "package": "npm run build:renderer && electron-builder",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "dependencies": {
+    "@microsoft/signalr": "^10.0.0",
+    "@riotjs/hot-reload": "^10.0.0",
+    "@riotjs/lazy": "^10.0.0",
+    "@riotjs/observable": "^4.1.1",
+    "@riotjs/route": "^10.0.0",
+    "axios": "^1.13.5",
+    "better-sqlite3": "^11.5.0",
+    "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.13.1",
+    "dompurify": "^3.2.6",
+    "litegraph.js": "^0.7.18",
+    "marked": "^17.0.1",
+    "riot": "^10.0.0",
+    "uuid": "^11.0.3"
+  },
+  "devDependencies": {
+    "@riotjs/compiler": "^10.0.0",
+    "@riotjs/register": "^10.0.0",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^41.0.0",
+    "electron-builder": "^25.1.8",
+    "rollup-plugin-riot": "^10.0.0",
+    "vite": "^7.3.1",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.nodpt.thickclient",
+    "productName": "NodPT",
+    "files": [
+      "src/main/**/*",
+      "src/preload/**/*",
+      "renderer/dist/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist-electron"
+    },
+    "mac": { "target": "dmg" },
+    "win": { "target": "nsis" },
+    "linux": { "target": "AppImage" }
+  }
+}

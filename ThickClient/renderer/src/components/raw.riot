@@ -1,0 +1,47 @@
+<raw>
+    <p></p>
+    <script>
+        import { marked } from 'marked'
+        import DOMPurify from 'dompurify'
+
+        const renderer = new marked.Renderer()
+        renderer.link = ({ href, title, text }) => {
+            const isExternal = /^https?:\/\//i.test(href || '')
+            const titleAttr = title ? ` title="${title}"` : ''
+            const externalAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : ''
+            return `<a href="${href}"${titleAttr}${externalAttrs}>${text}</a>`
+        }
+        marked.use({ breaks: true, gfm: true, renderer })
+
+        export default {
+            state: {
+                default: null
+            },
+            setInnerHTML() {
+                this.root.innerHTML = this.renderMarkdown(this.props.html || '');
+                if (this.props.class) {
+                    this.root.className = this.props.class;
+                }
+            },
+            onMounted() {
+                this.setInnerHTML();
+            },
+            onUpdated() {
+                this.setInnerHTML();
+            },
+            // render markdown and sanitize the resulting HTML
+            renderMarkdown(content) {
+                if (!content) return ''
+                const rawHtml = marked(content)
+                return DOMPurify.sanitize(rawHtml, {
+                    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'b', 'i', 'code', 'pre', 'a', 'ul', 'ol', 'li',
+                        'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'span',
+                        'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+                    ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'class'],
+                    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):)/i,
+                    FORBID_ATTR: ['style', 'onerror', 'onload']
+                })
+            }
+        }
+    </script>
+</raw>

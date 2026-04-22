@@ -1,0 +1,6 @@
+node_modules/
+renderer/dist/
+dist-electron/
+.nodpt-data/
+*.log
+.DS_Store

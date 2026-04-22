@@ -1,0 +1,301 @@
+/* Chat.vue styles - Bootstrap 5 based */
+
+/* Define custom properties */
+:root {
+  /* --chat-input-min-height: 60px; */
+  --chat-input-max-height: 150px;
+}
+
+/* Chat container structure */
+.chat-container {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  height: calc(100vh - var(--navbar-height) - var(--footer-height) - 56px);
+  min-height: 100%;
+  /* background-color: var(--bs-body-bg, #fff); */
+  position: relative;
+
+}
+
+.chat-messages {
+  overflow-y: auto; /* Always show scrollbar */
+  padding: 1rem;
+  margin: 5px;
+  border-radius: 10px;
+  /* border: 1px solid rgb(11, 88, 197); */
+  /* background-color: var(--bs-light, #9a9a9b); */
+}
+
+/* Always visible scrollbar */
+.chat-messages::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(60, 110, 220, 0.55);
+  border-radius: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(60, 110, 220, 0.85);
+}
+
+/* Firefox */
+.chat-messages {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(60, 110, 220, 0.55) rgba(0, 0, 0, 0.06);
+}
+
+/* Dark theme */
+[data-theme="dark"] .chat-messages::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.7);
+}
+
+[data-theme="dark"] .chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 1);
+}
+
+[data-theme="dark"] .chat-messages {
+  scrollbar-color: rgba(102, 126, 234, 0.7) rgba(255, 255, 255, 0.05);
+}
+
+/* Fixed chat input at bottom */
+.chat-input-container {
+  position: relative;
+  background-color: transparent;
+  /* min-height: var(--chat-input-min-height); */
+  max-height: var(--chat-input-max-height);
+}
+
+.chat-input-box {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgb(9, 104, 237);
+  padding: 3px;
+  border-radius: 5px;
+  margin: 5px;
+}
+
+.chat-input-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.chat-textarea {
+  flex: 1;
+  resize: none;
+  overflow-y: hidden;
+  padding: 3px;
+  border-radius: 0;
+  border: 0;
+  font-family: inherit;
+  font-size: 0.875rem;
+  /* min-height: 20px; */
+  max-height: var(--chat-input-max-height);
+}
+
+.chat-textarea:focus {
+  outline: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.send-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+}
+
+/* Message styling - AI messages on left, User messages on right */
+.message {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+  max-width: 75%;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* AI message - left aligned with blue background */
+.ai-message {
+  align-self: flex-start;
+  margin-right: 50px;
+}
+
+.ai-message .message-content {
+  background-color: var(--bs-primary, #0d6efd);
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  border-top-left-radius: 0.25rem;
+  word-wrap: break-word;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Markdown content styling in AI messages */
+.ai-message .message-content p {
+  margin-bottom: 0.5rem;
+}
+
+.ai-message .message-content p:last-child {
+  margin-bottom: 0;
+}
+
+.ai-message .message-content code {
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+}
+
+.ai-message .message-content pre {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+
+.ai-message .message-content pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.ai-message .message-content a {
+  color: white;
+  text-decoration: underline;
+}
+
+/* User message - right aligned with success/green background */
+.user-message {
+  align-self: flex-end;
+  margin-left: 50px;
+}
+
+.user-message .message-content {
+  background-color: var(--bs-success, #198754);
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  border-top-right-radius: 0.25rem;
+  word-wrap: break-word;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Markdown content styling in user messages */
+.user-message .message-content p {
+  margin-bottom: 0.5rem;
+}
+
+.user-message .message-content p:last-child {
+  margin-bottom: 0;
+}
+
+.user-message .message-content code {
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+}
+
+.user-message .message-content pre {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+
+.user-message .message-content pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.user-message .message-content a {
+  color: white;
+  text-decoration: underline;
+}
+
+/* Message actions and controls */
+.message-actions {
+  display: flex;
+  align-items: center;
+  margin-top: 0.5rem;
+  gap: 0.25rem;
+}
+
+.message-controls {
+  margin-top: 0.5rem;
+}
+
+.chat-response-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+/* Action buttons - small, no border, no background, bold icons */
+.action-btn {
+  background: none;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  color: var(--bs-secondary, #6c757d);
+  transition: color 0.2s ease;
+  font-size: 1rem;
+}
+
+.action-btn:hover {
+  color: var(--bs-primary, #0d6efd);
+}
+
+.action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.action-btn i {
+  font-size: 1rem;
+}
+
+/* Time stamp styling */
+.message-time {
+  font-size: 0.75rem;
+  color: var(--bs-secondary, #6c757d);
+  margin-top: 0.25rem;
+  opacity: 0.7;
+}
+
+.ai-message .message-time {
+  align-self: flex-start;
+}
+
+.user-message .message-time {
+  align-self: flex-end;
+}
+
+
+
+.thinking {
+  opacity: 0.6;
+  font-style: italic;
+}
