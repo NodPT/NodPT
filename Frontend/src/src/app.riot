@@ -9,6 +9,9 @@
     <route path="/login">
       <Login />
     </route>
+    <route path="/download">
+      <Download />
+    </route>
     <route path="/project">
       <Project />
     </route>
@@ -36,6 +39,7 @@
         About: lazy(Loader, () => import('./pages/about.riot')),
         Terms: lazy(Loader, () => import('./pages/terms.riot')),
         Login: lazy(Loader, () => import('./pages/login.riot')),
+        Download: lazy(Loader, () => import('./pages/download.riot')),
         Project: lazy(Loader, () => import('./pages/project.riot')),
         Editor: lazy(Loader, () => import('./pages/editor.riot')),
       },

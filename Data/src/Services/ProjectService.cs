@@ -322,6 +322,12 @@ namespace NodPT.Data.Services
 
             try
             {
+
+                if (user == null)
+                {
+                    throw new InvalidOperationException("User must be provided in constructor to use this method");
+                }
+
                 var project = user.Projects.FirstOrDefault(p => p.Oid == id);
 
                 if (project == null)
@@ -371,6 +377,11 @@ namespace NodPT.Data.Services
 
             try
             {
+                if (user == null)
+                {
+                    throw new InvalidOperationException("User must be provided in constructor to use this method");
+                }
+
                 var project = user.Projects.FirstOrDefault(p => p.Oid == id);
                 if (project == null)
                 {

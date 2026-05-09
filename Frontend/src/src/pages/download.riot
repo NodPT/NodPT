@@ -1,0 +1,201 @@
+<download-page>
+  <div class="landing-page" data-theme={state.isDarkTheme ? 'dark' : 'light'}>
+    <header class="landing-header sticky-top py-2">
+      <div class="container">
+        <div class="d-flex flex-column flex-lg-row align-items-center justify-content-between gap-3">
+          <a href="/" class="d-flex align-items-center gap-2 text-decoration-none">
+            <h1 class="h3 fw-bold mb-0">
+              <span class="gradient-text">
+                <img class="rounded-3" src="/images/logo-small.png" alt="NodPT" />
+              </span>
+            </h1>
+            <span class="text-white-50 small">Intelligence, Multiplied.</span>
+          </a>
+          <nav class="d-flex flex-wrap align-items-center gap-3">
+            <a href="/" class="landing-nav-link">
+              <i class="bi bi-arrow-left me-1"></i>Back to home
+            </a>
+            <a href="https://github.com/NodPT" target="_blank" rel="noopener noreferrer"
+               class="btn btn-info btn-sm px-3">
+              <i class="bi bi-github"></i>
+            </a>
+            <button onclick={toggleTheme} class="btn btn-sm text-white" title={state.isDarkTheme
+                    ? 'Switch to Light Theme' : 'Switch to Dark Theme'}>
+              <i class={state.isDarkTheme ? 'bi bi-sun-fill' : 'bi bi-moon-fill'}></i>
+            </button>
+          </nav>
+        </div>
+      </div>
+    </header>
+
+    <section class="landing-hero position-relative py-5">
+      <div class="hero-background">
+        <div class="ai-particles"></div>
+      </div>
+      <div class="container position-relative py-4">
+        <div class="row justify-content-center">
+          <div class="col-lg-9">
+            <div class="text-center mb-5">
+              <h1 class="display-4 fw-bold mb-3">
+                Download <span class="gradient-text">NodPT</span>
+              </h1>
+              <p class="lead text-white-50 mb-0">
+                The desktop client runs locally on your machine and uses
+                <a href="https://ollama.com" target="_blank" rel="noopener" class="link-info">Ollama</a>
+                for fully offline AI &mdash; no account, no cloud, no login required.
+              </p>
+            </div>
+
+            <div if={state.detectedOs} class="card mb-5 download-recommended">
+              <div class="card-body p-4 text-center">
+                <p class="text-uppercase text-white-50 small mb-2 fw-semibold">Recommended for your system</p>
+                <h3 class="fw-semibold text-white mb-4">
+                  <i class={state.recommended.icon + ' me-2 text-primary'}></i>
+                  { state.recommended.label }
+                </h3>
+                <a href={state.recommended.url} class="btn btn-primary btn-lg px-5" download>
+                  <i class="bi bi-download me-2"></i>Download for { state.recommended.label }
+                </a>
+                <p class="small text-white-50 mt-3 mb-0">Detected platform: { state.detectedOs }</p>
+              </div>
+            </div>
+
+            <h4 class="text-white fw-semibold mb-3">All downloads</h4>
+            <div class="row g-3 use-case-grid">
+              <div each={opt in state.options} class="col-md-4">
+                <div class={"card h-100 text-center" + (opt.key === state.recommended.key ? ' border-primary' : '')}>
+                  <div class="card-body p-4">
+                    <i class={opt.icon + ' display-5 text-primary mb-3 d-block'}></i>
+                    <h5 class="text-white fw-semibold mb-2">{ opt.label }</h5>
+                    <p class="small text-white-50 mb-3">{ opt.note }</p>
+                    <a href={opt.url} class="btn btn-outline-light" download>
+                      <i class="bi bi-download me-1"></i>Download
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card mt-5 download-info">
+              <div class="card-body p-4">
+                <h5 class="text-white fw-semibold mb-3">
+                  <i class="bi bi-info-circle text-info me-2"></i>Before you start
+                </h5>
+                <p class="text-white-50 mb-2">
+                  NodPT runs models through Ollama. Install Ollama first, then start it with
+                  <code class="text-info">ollama serve</code> and pull a model such as
+                  <code class="text-info">ollama pull llama3.2:3b</code>.
+                </p>
+                <p class="text-white-50 mb-0">
+                  By default the desktop client connects to
+                  <code class="text-info">http://localhost:11434</code>.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="py-4 border-top border-light border-opacity-10">
+      <div class="container">
+        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <h3 class="h6 fw-bold mb-0 text-white">NodPT</h3>
+            <p class="text-white-50 small mb-0">Intelligence, Multiplied.</p>
+          </div>
+          <div class="d-flex flex-wrap gap-3 small">
+            <a href="/terms" class="landing-nav-link">Terms</a>
+            <a href="/" class="landing-nav-link">Home</a>
+          </div>
+          <small class="text-white-50">&copy; 2025 NodPT. All rights reserved.</small>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    /**
+     * Replace these URLs with the actual GitHub Releases asset URLs once
+     * ThickClient builds are published.
+     */
+    const RELEASES_BASE = 'https://github.com/NodPT/NodPT/releases/latest'
+    const OPTIONS = [
+      {
+        key: 'windows',
+        label: 'Windows',
+        icon: 'bi bi-windows',
+        url: RELEASES_BASE + '/download/NodPT-Setup.exe',
+        note: '64-bit installer (.exe). Windows 10 or later.',
+      },
+      {
+        key: 'mac',
+        label: 'macOS',
+        icon: 'bi bi-apple',
+        url: RELEASES_BASE + '/download/NodPT.dmg',
+        note: 'Universal disk image (.dmg). macOS 12+.',
+      },
+      {
+        key: 'linux',
+        label: 'Linux',
+        icon: 'bi bi-ubuntu',
+        url: RELEASES_BASE + '/download/NodPT.AppImage',
+        note: 'AppImage. Works on most modern distros.',
+      },
+    ]
+
+    /**
+     * Heuristically detect the user's operating system from the browser's
+     * userAgentData (preferred) or the legacy userAgent string.
+     */
+    function detectOs() {
+      try {
+        const uaData = navigator.userAgentData
+        if (uaData && uaData.platform) {
+          const p = uaData.platform.toLowerCase()
+          if (p.includes('win')) return 'windows'
+          if (p.includes('mac')) return 'mac'
+          if (p.includes('linux')) return 'linux'
+        }
+      } catch (_) { /* ignore */ }
+
+      const ua = (navigator.userAgent || '').toLowerCase()
+      if (ua.includes('windows')) return 'windows'
+      if (ua.includes('mac os') || ua.includes('macintosh')) return 'mac'
+      if (ua.includes('linux') || ua.includes('x11')) return 'linux'
+      return 'linux'
+    }
+
+    export default {
+      state: {
+        isDarkTheme: true,
+        detectedOs: '',
+        options: OPTIONS,
+        recommended: OPTIONS[2],
+      },
+      onMounted() {
+        this.loadTheme()
+        const os = detectOs()
+        const rec = OPTIONS.find((o) => o.key === os) || OPTIONS[2]
+        this.update({ detectedOs: os, recommended: rec })
+      },
+      applyBodyTheme(isDark) {
+        if (typeof document !== 'undefined' && document.body) {
+          document.body.setAttribute('data-theme', isDark ? 'dark' : 'light')
+        }
+      },
+      loadTheme() {
+        const savedTheme = localStorage.getItem('appTheme')
+        const isDark = savedTheme ? savedTheme === 'dark' : true
+        this.update({ isDarkTheme: isDark })
+        this.applyBodyTheme(isDark)
+      },
+      toggleTheme() {
+        const next = !this.state.isDarkTheme
+        this.update({ isDarkTheme: next })
+        localStorage.setItem('appTheme', next ? 'dark' : 'light')
+        this.applyBodyTheme(next)
+      },
+    }
+  </script>
+</download-page>

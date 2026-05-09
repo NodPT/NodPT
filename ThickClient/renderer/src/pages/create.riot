@@ -1,0 +1,46 @@
+<create>
+
+    <header-bar />
+    <footer-bar />
+
+    <script>
+        import '../styles/components-dark.css'
+        import '../styles/main-editor.css'
+        import '../styles/main-editor-dark.css'
+        import HeaderBar from '../components/header.riot'
+        import FooterBar from '../components/footer.riot'
+        import { arrangeNodes, zoomFit, loadProjectNodes } from '../services/editorService'
+        import signalRService from '../services/signalRService'
+        import projectApiService from '../services/projectApiService'
+        import nodeApiService from '../services/nodeApiService'
+        // import lazy from '@riotjs/lazy'
+        // import Loader from '../components/loader.riot'
+        import { router, route } from '@riotjs/route'
+        import Graph from '../components/graph.riot'
+        import RightPanel from '../components/right-panel.riot'
+        import AddNodeModal from '../components/add-node-modal.riot'
+
+
+        export default {
+            components: {
+                HeaderBar,
+                FooterBar,
+                Graph,
+                RightPanel,
+                AddNodeModal
+            },
+            state: {
+                minimapVisible: false,
+                selectedNode: null,
+                totalNodes: 0,
+                buildProgress: 0,
+                connectionStatus: 'disconnected',
+                rightPanelVisible: true,
+                rightPanelWidth: 416
+            },
+            onMounted() {
+                console.log('Create page mounted');
+            }
+        }
+    </script>
+</create>

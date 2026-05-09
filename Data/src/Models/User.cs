@@ -19,6 +19,7 @@ namespace NodPT.Data.Models
         private DateTime _createdAt = DateTime.UtcNow;
         private DateTime _lastLoginAt = DateTime.UtcNow;
         private string? _refreshToken;
+        private DateTime? _refreshTokenExpiry;
 
         public User(Session session) : base(session) { }
         public User() : base(Session.DefaultSession) { }
@@ -131,6 +132,15 @@ namespace NodPT.Data.Models
         {
             get => _refreshToken;
             set => SetPropertyValue(nameof(RefreshToken), ref _refreshToken, value);
+        }
+
+        /// <summary>
+        /// When the refresh token expires (maximum 3 months from login)
+        /// </summary>
+        public DateTime? RefreshTokenExpiry
+        {
+            get => _refreshTokenExpiry;
+            set => SetPropertyValue(nameof(RefreshTokenExpiry), ref _refreshTokenExpiry, value);
         }
 
         /// <summary>

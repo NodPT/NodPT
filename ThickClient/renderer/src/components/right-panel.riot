@@ -1,0 +1,86 @@
+<right-panel>
+  <div class="right-panel" data-theme={props.isDarkTheme ? 'dark' : 'light' }>
+    <ul class="nav nav-tabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button
+          class={"nav-link d-flex align-items-center " + (state.activeTab === 'chat' ? 'active' : '')}
+          type=" button" onclick={()=> selectTab('chat')}>
+          <i class="bi bi-chat-dots me-1"></i>
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content pt-2">
+      <div class={"tab-pane fade " + (state.activeTab === 'chat' ? 'show active' : '')}>
+        <Chat />
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import Chat from './chat.riot'
+    import '../styles/chat.css'
+
+    export default {
+      state: {
+        activeTab: 'chat',
+        autoScroll: true,
+        logsData: [],
+        propertiesData: {
+          nodeId: '',
+          name: 'No node selected',
+          type: 'none',
+          description: 'Select a node to view its properties',
+          status: 'idle',
+          properties: {},
+          performance: null
+        }
+      },
+      components: {
+        Chat
+      },
+      onMounted() {
+        this.loadTabData('default')
+      },
+      selectTab(tab) {
+        this.update({ activeTab: tab })
+      },
+      handleClose() {
+        this.bus.trigger(this.EVENT_TYPES.TOGGLE_RIGHT_PANEL)
+      },
+      logsContainerRef(el) {
+        this.logsContainer = el
+      },
+      toggleAutoScroll(event) {
+        this.update({ autoScroll: event.target.checked })
+      },
+      clearLogs() {
+        this.update({ logsData: [] })
+      },
+      formatTime(timestamp) {
+        if (!timestamp) return ''
+        return new Date(timestamp).toLocaleString()
+      },
+      async fetchData(type, nodeKey = 'default') {
+        try {
+          const response = await fetch(`/data/${type}-data.json`)
+          if (!response.ok) {
+            throw new Error(`Failed to fetch ${type} data`)
+          }
+          const data = await response.json()
+          return data[nodeKey] || data.default || {}
+        } catch (error) {
+          console.error(`Error fetching ${type} data:`, error)
+          return type === 'logs'
+            ? [{ id: 1, level: 'info', message: 'No logs available', timestamp: new Date().toISOString() }]
+            : { nodeId: '', name: 'No node selected', type: 'none', description: 'Select a node to view its properties', properties: {} }
+        }
+      },
+      async loadTabData(nodeKey) {
+        // const logsData = await this.fetchData('logs', nodeKey)
+        // const propertiesData = await this.fetchData('properties', nodeKey)
+        // this.update({ logsData, propertiesData })
+      }
+    }
+  </script>
+</right-panel>

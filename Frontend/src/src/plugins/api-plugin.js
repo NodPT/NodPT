@@ -1,17 +1,15 @@
 // src/plugins/api-plugin.js
 import axios from 'axios';
 import { router } from '@riotjs/route';
-import { getToken } from './tokenStorage';
+import { getToken, clearAllTokens } from './tokenStorage';
 
 /**
- * Read the access token from storage using the existing tokenStorage service
- * The tokenStorage service automatically checks both localStorage and sessionStorage
+ * Read the access token from sessionStorage
  * @returns {string|null} Access token or null if not found
  */
 function readTokenFromStorage() {
 	try {
-		// getToken with persist=true automatically falls back to sessionStorage if not in localStorage
-		const token = getToken('AccessToken', true);
+		const token = getToken('AccessToken');
 		return token;
 	} catch (e) {
 		console.error('Failed to read token from storage:', e);
@@ -27,8 +25,6 @@ function createApi(options = {}) {
 	});
 
 	// Attach Bearer token automatically for every request
-	// Note: Token is read on each request to ensure we always use the latest token
-	// (important when tokens are refreshed). The deobfuscation is fast (simple XOR).
 	apiAxios.interceptors.request.use(
 		(cfg) => {
 			const token = readTokenFromStorage();
@@ -41,6 +37,10 @@ function createApi(options = {}) {
 		(err) => Promise.reject(err),
 	);
 
+	function clearAuthStateForRelogin() {
+		clearAllTokens();
+	}
+
 	// Lightweight fetch wrapper that returns response.data
 	async function fetch(url, config = {}) {
 		try {
@@ -48,11 +48,13 @@ function createApi(options = {}) {
 			return res.data;
 		} catch (error) {
 			const statusCode = error?.response?.status;
+
 			if (statusCode === 401 || statusCode === 403) {
 				const toast = window?.$toast;
 				if (toast && typeof toast.alert === 'function') {
 					toast.alert('Access denied. Please log in again.');
 				}
+				clearAuthStateForRelogin();
 				router.push('/login');
 				return null;
 			}

@@ -10,8 +10,6 @@ namespace NodPT.Data.Models
         private DateTime _timestamp = DateTime.UtcNow;
         private bool _markedAsSolution;
         private Node? _node;
-        private bool _liked;
-        private bool _disliked;
         private User? _user;
         private string? _connectionId;
 
@@ -49,18 +47,6 @@ namespace NodPT.Data.Models
         {
             get => _node;
             set => SetPropertyValue(nameof(Node), ref _node, value);
-        }
-
-        public bool Liked
-        {
-            get => _liked;
-            set => SetPropertyValue(nameof(Liked), ref _liked, value);
-        }
-
-        public bool Disliked
-        {
-            get => _disliked;
-            set => SetPropertyValue(nameof(Disliked), ref _disliked, value);
         }
 
         [Association("User-ChatMessages")]

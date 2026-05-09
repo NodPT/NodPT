@@ -13,11 +13,11 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Manager node name."
+            "description": "Manager node name describing its role (e.g., 'DataCollector', 'ModelTrainer')."
           },
           "job": {
             "type": "string",
-            "description": "Description of the job this manager is responsible for."
+            "description": "Detailed description of the manager's responsibilities, tasks, and goals."
           }
         },
         "required": ["name", "job"]

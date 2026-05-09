@@ -1,4 +1,4 @@
-import { auth, googleProvider, facebookProvider, microsoftProvider, signOutAll as firebaseSignOutAll } from '../plugins/firebase';
+import { auth, googleProvider, facebookProvider, microsoftProvider } from '../plugins/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { bus, EVENT_TYPES } from '../plugins/bus';
 import { storeToken } from '../plugins/tokenStorage';
@@ -64,8 +64,6 @@ class AuthApiService {
 	async logout() {
 		try {
 			await this.logoutApi();
-			// await firebaseSignOuAll();
-			// Event is emitted by signOutAll function
 		} catch (error) {
 			console.error('Logout error:', error);
 			throw error;
@@ -93,12 +91,11 @@ class AuthApiService {
 	}
 
 	/**
-	 * Login with Firebase token and optional remember me
+	 * Login with Firebase token
 	 * @param {string} FirebaseToken - Firebase ID token
-	 * @param {boolean} rememberMe - Whether to remember the user
 	 * @returns {Promise<Object>} API response with auth tokens
 	 */
-	async login(FirebaseToken, rememberMe = false, providerName = 'Google') {
+	async login(FirebaseToken, providerName = 'Google') {
 		try {
 			// Check if we're in Development mode
 			const isDevelopment = import.meta.env.VITE_ENV === 'Development';
@@ -112,21 +109,19 @@ class AuthApiService {
 
 			const response = await this.api.post(`${this.baseURL}/login`, {
 				FirebaseToken: tokenToSend,
-				rememberMe,
 			});
 
-			// Store user data including PhotoUrl in localStorage/sessionStorage
+			// Clear any legacy localStorage auth state from previous sessions
+			['AccessToken', 'FirebaseToken', 'refreshToken', 'userData', 'rememberMeTimestamp', 'lastActivity'].forEach(k => localStorage.removeItem(k));
+
+			// Store user data in sessionStorage
 			if (response && response.User) {
-				const storage = rememberMe ? localStorage : sessionStorage;
-				storage.setItem('userData', JSON.stringify(response.User));
+				sessionStorage.setItem('userData', JSON.stringify(response.User));
 			}
 
-			storeToken('FirebaseToken', tokenToSend, rememberMe);
+			storeToken('FirebaseToken', tokenToSend);
 			if (response?.AccessToken) {
-				storeToken('AccessToken', response.AccessToken, rememberMe);
-			}
-			if (response?.refreshToken && rememberMe) {
-				storeToken('refreshToken', response.refreshToken, true);
+				storeToken('AccessToken', response.AccessToken);
 			}
 
 			return response;
@@ -136,7 +131,7 @@ class AuthApiService {
 		}
 	}
 
-	async loginAndStore(rememberMe = false, provider = 'Google') {
+	async loginAndStore(provider = 'Google') {
 		const isDevelopment = import.meta.env.VITE_ENV === 'Development';
 		let firebaseToken = 'dev-mock-token';
 		const providerName = this.loginProviders[provider] ? provider : 'Google';
@@ -154,26 +149,9 @@ class AuthApiService {
 		}
 
 		// Now perform backend login with the obtained Firebase token
-		const response = await this.login(firebaseToken, rememberMe, providerName);
+		const response = await this.login(firebaseToken, providerName);
 		this.notifySignIn(); // Notify other parts of the app about sign-in
 		return response;
-	}
-
-	/**
-	 * Refresh authentication token
-	 * @param {string} refreshToken - Refresh token
-	 * @returns {Promise<Object>} API response with new tokens
-	 */
-	async refresh(refreshToken) {
-		try {
-			const response = await this.api.post(`${this.baseURL}/refresh`, {
-				refreshToken,
-			});
-			return response;
-		} catch (error) {
-			console.error('Failed to refresh token:', error);
-			throw error;
-		}
 	}
 
 	/**
@@ -182,7 +160,7 @@ class AuthApiService {
 	 */
 	getUserData() {
 		try {
-			const userData = localStorage.getItem('userData') || sessionStorage.getItem('userData');
+			const userData = sessionStorage.getItem('userData');
 			return userData ? JSON.parse(userData) : null;
 		} catch (error) {
 			console.error('Failed to parse user data:', error);

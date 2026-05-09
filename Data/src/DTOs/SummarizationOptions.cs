@@ -24,6 +24,6 @@ namespace NodPT.Data.DTOs
         /// <summary>
         /// Maximum length of the summary in characters.
         /// </summary>
-        public int MaxSummaryLength { get; set; } = 4000;
+        public int MaxSummaryLength { get; set; } = 2000;
     }
 }

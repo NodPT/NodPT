@@ -6,7 +6,7 @@ namespace NodPT.Data.Models
     public class ChatResponse : XPObject
     {
         private ChatMessage? _chatMessage;
-        private string? _action; // "like", "dislike", "regenerate"
+        private string? _action; // "regenerate"
         private DateTime _timestamp = DateTime.UtcNow;
         private User? _user;
 

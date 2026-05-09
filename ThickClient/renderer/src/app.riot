@@ -1,0 +1,42 @@
+<app>
+  <router>
+    <route path="/">
+      <Project />
+    </route>
+    <route path="/terms">
+      <Terms />
+    </route>
+    <route path="/project">
+      <Project />
+    </route>
+    <route path="/create">
+      <create></create>
+    </route>
+    <route path="/editor">
+      <editor></editor>
+    </route>
+  </router>
+
+  <script>
+    import { Router, Route } from '@riotjs/route'
+    import lazy from '@riotjs/lazy'
+    import Loader from './components/loader.riot'
+    import NotFound from './pages/not-found.riot'
+    import Create from './pages/create.riot'
+    export default {
+      components: {
+        Router,
+        Route,
+        Create,
+        NotFound,
+        About: lazy(Loader, () => import('./pages/about.riot')),
+        Terms: lazy(Loader, () => import('./pages/terms.riot')),
+        Project: lazy(Loader, () => import('./pages/project.riot')),
+        Editor: lazy(Loader, () => import('./pages/editor.riot')),
+      },
+      state: {
+        showNotFound: false,
+      },
+    }
+  </script>
+</app>

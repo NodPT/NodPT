@@ -1,0 +1,128 @@
+<footer-bar>
+  <footer class="navbar studio-footer p-0 fixed-bottom">
+    <div class="container-fluid d-flex align-items-center py-1">
+      <div class="d-flex align-items-center me-3">
+        <span if={props.selectedNode} class="badge text-bg-primary me-2">
+          <i class="bi bi-node-plus me-1"></i> {selectedNodeLabel}
+        </span>
+        <span class="badge text-bg-secondary me-2">
+          <i class="bi bi-diagram-3"></i> {props.totalNodes}
+        </span>
+      </div>
+
+      <div class="progress flex-grow-1 mx-2 footer-progress">
+        <div class="progress-bar bg-info footer-progress-bar" ref={progressBarRef} role="progressbar"
+          aria-valuenow={progressValue} aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
+
+      <div class="d-flex align-items-center ms-2">
+        <span class={"badge " + connectionStatusClass + (state.isQAMode ? ' qa-toggle' : '')} title={connectionStatusTitle} onclick={handleSignalRClick}>
+          <i class={" bi " + connectionStatusIcon}></i>
+        </span>
+      </div>
+
+      <button class=" btn btn-sm ms-2 shadow-none" onclick={handleZoomFit} title="Zoom to Fit All Nodes">
+          <i class="bi bi-arrows-fullscreen"></i>
+          </button>
+
+          <button class="btn btn-sm ms-2 shadow-none" onclick={handleArrangeNodes} title="Auto Arrange Nodes">
+            <i class="bi bi-grid-3x3"></i>
+          </button>
+
+          <button class="btn btn-sm ms-2 shadow-none" onclick={handleToggleMinimap} title="Toggle Minimap">
+            <i class={"bi " + (props.minimapVisible ? 'bi-eye-slash' : 'bi-eye')}></i>
+      </button>
+
+      <button class=" btn btn-sm ms-2 shadow-none" onclick={handleToggleRightPanel} title="Toggle Right Panel">
+              <i class="bi bi-layout-sidebar-reverse"></i>
+          </button>
+      </div>
+  </footer>
+
+  <script>
+    export default {
+      state: {
+        isQAMode: false
+      },
+      onMounted() {
+        if (import.meta.env && import.meta.env.VITE_ENV === 'QA') {
+          this.update({ isQAMode: true })
+        }
+        this.lastProgressValue = 0
+        this.applyProgressWidth()
+      },
+      onBeforeUpdate() {
+        this.applyProgressWidth()
+      },
+      progressBarRef(element) {
+        this.progressBar = element
+      },
+      get connectionStatusClass() {
+        const statusMap = {
+          connected: 'text-bg-success',
+          connecting: 'text-bg-warning',
+          reconnecting: 'text-bg-warning',
+          disconnected: 'text-bg-secondary'
+        }
+        return statusMap[this.props.connectionStatus] || 'text-bg-secondary'
+      },
+      get connectionStatusIcon() {
+        const iconMap = {
+          connected: 'bi-wifi',
+          connecting: 'bi-hourglass-split',
+          reconnecting: 'bi-arrow-repeat',
+          disconnected: 'bi-wifi-off'
+        }
+        return iconMap[this.props.connectionStatus] || 'bi-wifi-off'
+      },
+      get connectionStatusTitle() {
+        const titleMap = {
+          connected: 'SignalR: Connected',
+          connecting: 'SignalR: Connecting...',
+          reconnecting: 'SignalR: Reconnecting...',
+          disconnected: 'SignalR: Disconnected'
+        }
+        const baseTitle = titleMap[this.props.connectionStatus] || 'SignalR: Disconnected'
+        return this.state.isQAMode ? `${baseTitle} (Click to toggle)` : baseTitle
+      },
+      get progressValue() {
+        const value = Number(this.props.progress) || 0
+        return Math.max(0, Math.min(100, value))
+      },
+      get selectedNodeLabel() {
+        const node = this.props.selectedNode
+        if (!node) {
+          return ''
+        }
+        const typeValue = node.properties?.nodeType || node.nodeType || node.type || 'Node'
+        const type = typeValue.toString().toLowerCase()
+        const name = node.title || node.label || node.name || node.id || 'Untitled'
+        return `${type}/${name}`
+      },
+      applyProgressWidth() {
+        if (!this.progressBar || Math.abs(this.lastProgressValue - this.progressValue) < 0.01) {
+          return
+        }
+        this.progressBar.style.setProperty('--progress-width', `${this.progressValue}%`)
+        this.lastProgressValue = this.progressValue
+      },
+      handleZoomFit() {
+        this.bus.trigger(this.EVENT_TYPES.ZOOM_FIT)
+      },
+      handleArrangeNodes() {
+        this.bus.trigger(this.EVENT_TYPES.ARRANGE_NODES)
+      },
+      handleToggleMinimap() {
+        this.bus.trigger(this.EVENT_TYPES.TOGGLE_MINIMAP)
+      },
+      handleToggleRightPanel() {
+        this.bus.trigger(this.EVENT_TYPES.TOGGLE_RIGHT_PANEL)
+      },
+      handleSignalRClick() {
+        if (this.state.isQAMode) {
+          this.bus.trigger(this.EVENT_TYPES.SIGNALR_TOGGLE_CONNECTION)
+        }
+      }
+    }
+  </script>
+</footer-bar>

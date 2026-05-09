@@ -63,6 +63,7 @@ namespace NodPT.API.Controllers
                         null,
                         true);
                     isNewUser = true;
+                    Console.WriteLine($"DEBUG MODE: No valid user found, created development user with FirebaseUid 'dev-user' {isNewUser}");
                 }
                 else
                 {
@@ -124,13 +125,9 @@ namespace NodPT.API.Controllers
                 }
 #endif
 
-                // Generate refresh token if remember me is enabled
-                string? refreshToken = null;
-                if (request.RememberMe)
-                {
-                    refreshToken = GenerateRefreshToken();
-                    user.RefreshToken = refreshToken;
-                }
+                // Invalidate any existing refresh tokens
+                user.RefreshToken = null;
+                user.RefreshTokenExpiry = null;
 
                 session.Save(user);
                 session.CommitTransaction();
@@ -158,8 +155,7 @@ namespace NodPT.API.Controllers
                         LastLoginAt = user.LastLoginAt
                     },
                     AccessToken = request.FirebaseToken, // In real implementation, generate JWT
-                    RefreshToken = refreshToken,
-                    ExpiresAt = DateTime.UtcNow.AddHours(1) // Mock expiration
+                    ExpiresAt = DateTime.UtcNow.AddHours(1)
                 });
             }
             catch (Exception ex)
@@ -206,6 +202,34 @@ namespace NodPT.API.Controllers
                     });
                 }
 
+                // Check refresh token expiry (3-month maximum); null means no expiry was set (pre-migration), treat as expired
+                if (!user.RefreshTokenExpiry.HasValue || user.RefreshTokenExpiry.Value < DateTime.UtcNow)
+                {
+                    user.RefreshToken = null;
+                    user.RefreshTokenExpiry = null;
+                    session.Save(user);
+                    session.CommitTransaction();
+                    return Unauthorized(new AuthResponseDto
+                    {
+                        Success = false,
+                        Message = "Refresh token has expired. Please login again."
+                    });
+                }
+
+                // Check inactivity: if user has not logged in for more than 7 days, expire the session
+                if (user.LastLoginAt < DateTime.UtcNow.AddDays(-7))
+                {
+                    user.RefreshToken = null;
+                    user.RefreshTokenExpiry = null;
+                    session.Save(user);
+                    session.CommitTransaction();
+                    return Unauthorized(new AuthResponseDto
+                    {
+                        Success = false,
+                        Message = "Session expired due to inactivity. Please login again."
+                    });
+                }
+
                 // Validate user status (banned and approved checks)
                 var validationError = ValidateUserStatus(user);
                 if (validationError != null)
@@ -248,7 +272,7 @@ namespace NodPT.API.Controllers
                     },
                     AccessToken = $"mock_token_{user.FirebaseUid}", // Mock token
                     RefreshToken = newRefreshToken,
-                    ExpiresAt = DateTime.UtcNow.AddHours(1)
+                    ExpiresAt = user.RefreshTokenExpiry ?? DateTime.UtcNow.AddHours(1)
                 });
             }
             catch (Exception ex)

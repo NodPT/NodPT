@@ -1,0 +1,175 @@
+{
+  "default": {
+    "nodeId": "",
+    "name": "No node selected",
+    "type": "none",
+    "description": "Select a node to view its properties",
+    "status": "inactive",
+    "created": "",
+    "modified": "",
+    "properties": {}
+  },
+  "Process Data": {
+    "nodeId": "process_data_node",
+    "name": "Data Processing Node",
+    "type": "processor",
+    "description": "Transforms and validates input data according to specified rules",
+    "status": "active",
+    "created": "2024-01-20T10:05:00Z",
+    "modified": "2024-01-20T10:20:00Z",
+    "properties": {
+      "inputFormat": {
+        "label": "Input Format",
+        "type": "select",
+        "value": "json",
+        "options": ["json", "csv", "xml"],
+        "required": true
+      },
+      "processingMode": {
+        "label": "Processing Mode",
+        "type": "select", 
+        "value": "batch",
+        "options": ["batch", "stream", "realtime"],
+        "required": true
+      },
+      "batchSize": {
+        "label": "Batch Size",
+        "type": "number",
+        "value": 1000,
+        "min": 1,
+        "max": 10000,
+        "required": true
+      },
+      "validationRules": {
+        "label": "Validation Rules",
+        "type": "textarea",
+        "value": "{\n  \"required\": [\"id\", \"name\"],\n  \"types\": {\n    \"id\": \"string\",\n    \"name\": \"string\",\n    \"value\": \"number\"\n  }\n}",
+        "required": false
+      },
+      "enableLogging": {
+        "label": "Enable Logging",
+        "type": "checkbox",
+        "value": true,
+        "required": false
+      },
+      "logLevel": {
+        "label": "Log Level",
+        "type": "select",
+        "value": "info",
+        "options": ["debug", "info", "warning", "error"],
+        "required": false
+      }
+    },
+    "connections": {
+      "inputs": ["data_source"],
+      "outputs": ["node_2", "node_3"]
+    },
+    "performance": {
+      "avgProcessingTime": "2.3s",
+      "throughput": "434 records/s",
+      "errorRate": "0.5%",
+      "lastRun": "2024-01-20T10:15:00Z"
+    }
+  },
+  "Filter Results": {
+    "nodeId": "filter_results_node",
+    "name": "Filter Results Node",
+    "type": "filter",
+    "description": "Filters and refines data based on specified criteria",
+    "status": "active",
+    "created": "2024-01-20T10:08:00Z",
+    "modified": "2024-01-20T10:18:00Z",
+    "properties": {
+      "filterType": {
+        "label": "Filter Type",
+        "type": "select",
+        "value": "rule-based",
+        "options": ["rule-based", "pattern-matching", "statistical"],
+        "required": true
+      },
+      "filterCriteria": {
+        "label": "Filter Criteria",
+        "type": "textarea",
+        "value": "{\n  \"rules\": [\n    {\"field\": \"value\", \"operator\": \">\", \"threshold\": 100},\n    {\"field\": \"status\", \"operator\": \"=\", \"value\": \"active\"}\n  ]\n}",
+        "required": true
+      },
+      "strictMode": {
+        "label": "Strict Mode",
+        "type": "checkbox",
+        "value": true,
+        "required": false
+      }
+    },
+    "connections": {
+      "inputs": ["Process Data"],
+      "outputs": ["Output"]
+    },
+    "performance": {
+      "avgFilterTime": "0.8s",
+      "filterAccuracy": "99.5%",
+      "recordsFiltered": "1,245",
+      "lastRun": "2024-01-20T10:18:00Z"
+    }
+  },
+  "Output": {
+    "nodeId": "output_node",
+    "name": "Output Export Node",
+    "type": "output",
+    "description": "Exports processed data to various formats and destinations",
+    "status": "active",
+    "created": "2024-01-20T10:10:00Z",
+    "modified": "2024-01-20T10:15:30Z",
+    "properties": {
+      "exportFormat": {
+        "label": "Export Format",
+        "type": "select",
+        "value": "json",
+        "options": ["json", "csv", "xml", "parquet"],
+        "required": true
+      },
+      "outputPath": {
+        "label": "Output Path",
+        "type": "text",
+        "value": "/exports/data.json",
+        "required": true
+      },
+      "compressionEnabled": {
+        "label": "Enable Compression",
+        "type": "checkbox",
+        "value": true,
+        "required": false
+      },
+      "compressionType": {
+        "label": "Compression Type",
+        "type": "select",
+        "value": "gzip",
+        "options": ["gzip", "zip", "brotli"],
+        "required": false
+      },
+      "includeMetadata": {
+        "label": "Include Metadata",
+        "type": "checkbox",
+        "value": true,
+        "required": false
+      },
+      "maxFileSize": {
+        "label": "Max File Size (MB)",
+        "type": "number",
+        "value": 100,
+        "min": 1,
+        "max": 1000,
+        "required": false
+      }
+    },
+    "connections": {
+      "inputs": ["node_1"],
+      "outputs": []
+    },
+    "performance": {
+      "avgExportTime": "1.8s",
+      "successRate": "99.2%",
+      "lastExport": "2024-01-20T10:15:30Z",
+      "totalExports": 47
+    }
+  }
+}

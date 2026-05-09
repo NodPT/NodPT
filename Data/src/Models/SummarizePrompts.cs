@@ -11,14 +11,14 @@ namespace NodPT.Data.Models
     {
         public SummarizePrompts(Session session) : base(session) { }
         bool active;
-        private string role;
-        public string Role
+        private string? role;
+        public string? Role
         {
             get => role;
             set => SetPropertyValue(nameof(Role), ref role, value);
         }
-        private string prompt;
-        public string Prompt
+        private string? prompt;
+        public string? Prompt
         {
             get => prompt;
             set => SetPropertyValue(nameof(Prompt), ref prompt, value);
